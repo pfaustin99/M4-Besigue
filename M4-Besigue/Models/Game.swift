@@ -4,8 +4,9 @@ import Foundation
 enum GamePhase {
     case setup
     case dealing
-    case melding
+    case dealerDetermination // Added for dealer selection phase
     case playing
+    case endgame // No more cards to draw, stricter rules
     case scoring
     case gameOver
 }
@@ -17,21 +18,40 @@ class Game: ObservableObject {
     @Published var currentPhase: GamePhase = .setup
     @Published var currentPlayerIndex: Int = 0
     @Published var trumpSuit: Suit?
-    @Published var currentTrick: [Card] = []
+    @Published var currentTrick: [PlayerCard] = []
     @Published var currentTrickLeader: Int = 0
-    @Published var trickHistory: [[Card]] = []
+    @Published var trickHistory: [[PlayerCard]] = []
     @Published var roundNumber: Int = 1
     @Published var gameNumber: Int = 1
-    @Published var winningScore: Int = 1000 // Default winning score
+    @Published var canPlayerMeld: Bool = false
+    @Published var brisques: [UUID: Int] = [:] // Track brisques per player
+    
+    // Dealer determination state
+    @Published var dealerDeterminationCards: [Card] = []
+    @Published var dealerDeterminedMessage: String = ""
+    @Published var awaitingMeldChoice: Bool = false
+    @Published var mustDrawCard: Bool = false
+    
+    let settings: GameSettings
+    
+    // AI Service
+    private let aiService: AIService
     
     // Game settings
     let playerCount: Int
     let isOnline: Bool
     
-    init(playerCount: Int = 2, isOnline: Bool = false) {
+    // Computed property to check if we're in endgame
+    var isEndgame: Bool {
+        return deck.isEmpty
+    }
+    
+    init(playerCount: Int = 2, isOnline: Bool = false, aiDifficulty: AIService.Difficulty = .medium, settings: GameSettings = GameSettings(playerCount: 2)) {
         self.playerCount = playerCount
         self.isOnline = isOnline
         self.deck = Deck()
+        self.aiService = AIService(difficulty: aiDifficulty)
+        self.settings = settings
         setupPlayers()
     }
     
@@ -45,6 +65,11 @@ class Game: ObservableObject {
         // Create AI players
         for i in 1..<playerCount {
             players.append(Player(name: "AI Player \(i)", type: .ai))
+        }
+        
+        // Initialize brisques for each player
+        for player in players {
+            brisques[player.id] = 0
         }
     }
     
@@ -64,6 +89,12 @@ class Game: ObservableObject {
         currentTrickLeader = 0
         trickHistory.removeAll()
         roundNumber = 1
+        canPlayerMeld = false
+        
+        // Reset brisques
+        for player in players {
+            brisques[player.id] = 0
+        }
         
         // Determine dealer (first Jack drawn)
         let dealerIndex = deck.findFirstJackDrawer(playerCount: playerCount)
@@ -72,8 +103,18 @@ class Game: ObservableObject {
         // Deal cards
         dealCards()
         
-        // Move to melding phase
-        currentPhase = .melding
+        // Move to playing phase
+        currentPhase = .playing
+        
+        // The player to the right of the dealer leads the first trick
+        currentPlayerIndex = (dealerIndex + 1) % playerCount
+        
+        // Start AI turn if AI is first
+        if currentPlayer.type == .ai {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.processAITurn()
+            }
+        }
     }
     
     // Deal cards to all players
@@ -103,6 +144,31 @@ class Game: ObservableObject {
                 player.isCurrentPlayer = false
             }
         }
+        
+        // Process AI turn if it's an AI player's turn
+        if currentPlayer.type == .ai {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.processAITurn()
+            }
+        }
+    }
+    
+    // Process AI turn
+    private func processAITurn() {
+        guard currentPlayer.type == .ai else { return }
+        
+        // If AI can meld (it just won a trick), it decides on melds first.
+        if canPlayerMeld {
+            let meldsToDeclare = aiService.decideMeldsToDeclare(for: currentPlayer, in: self)
+            for meld in meldsToDeclare {
+                declareMeld(meld, by: currentPlayer)
+            }
+        }
+        
+        // AI then plays a card
+        if let cardToPlay = aiService.chooseCardToPlay(for: currentPlayer, in: self) {
+            playCard(cardToPlay, from: currentPlayer)
+        }
     }
     
     // Start a new trick
@@ -110,17 +176,20 @@ class Game: ObservableObject {
         currentTrick.removeAll()
         currentTrickLeader = currentPlayerIndex
         currentPhase = .playing
+        
+        // If AI is leading, make AI decision
+        if currentPlayer.type == .ai {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.processAITurn()
+            }
+        }
     }
     
     // Play a card
-    func playCard(_ card: Card, from player: Player) {
-        // Remove card from player's hand
+    func playCard(_ card: PlayerCard, from player: Player) {
+        canPlayerMeld = false
         player.removeCard(card)
-        
-        // Add to current trick
         currentTrick.append(card)
-        
-        // Check if trick is complete
         if currentTrick.count == playerCount {
             completeTrick()
         } else {
@@ -130,33 +199,46 @@ class Game: ObservableObject {
     
     // Complete the current trick
     private func completeTrick() {
-        // Determine winner of the trick
         let winnerIndex = determineTrickWinner()
         let winner = players[winnerIndex]
-        
-        // Award the trick
-        winner.tricksWon += 1
-        
-        // Add brisque points (Aces and 10s)
+        // Track brisques (Aces and 10s)
         for card in currentTrick {
-            winner.addPoints(card.brisqueValue)
+            if card.value == .ace || card.value == .ten {
+                brisques[winner.id, default: 0] += 1
+            }
+        }
+        trickHistory.append(currentTrick)
+        currentPlayerIndex = winnerIndex
+        
+        // Check if we should transition to endgame
+        if deck.isEmpty && currentPhase == .playing {
+            currentPhase = .endgame
+            print("Endgame phase: No more cards to draw, stricter rules in effect")
         }
         
-        // Store trick in history
-        trickHistory.append(currentTrick)
+        // In endgame, no more melds allowed
+        canPlayerMeld = currentPhase != .endgame
         
-        // Set winner as next player
-        currentPlayerIndex = winnerIndex
-        currentPlayer.isCurrentPlayer = true
-        
-        // Clear current trick
+        // Winner and then other players draw cards (only if not in endgame)
+        if !deck.isEmpty {
+            for i in 0..<playerCount {
+                let playerIndexToDraw = (winnerIndex + i) % playerCount
+                if let card = deck.drawCard() {
+                    players[playerIndexToDraw].addCards([card])
+                }
+            }
+        }
         currentTrick.removeAll()
-        
-        // Check if round is over
         if allPlayersHaveEmptyHands() {
+            // Award final trick bonus before scoring
+            winner.addPoints(settings.finalTrickBonus)
             endRound()
         } else {
-            startNewTrick()
+            if currentPlayer.type == .ai {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    self.processAITurn()
+                }
+            }
         }
     }
     
@@ -186,15 +268,10 @@ class Game: ObservableObject {
     // End the current round
     private func endRound() {
         currentPhase = .scoring
-        
-        // Calculate final scores
         calculateFinalScores()
-        
-        // Check if game is over
         if hasWinner() {
             currentPhase = .gameOver
         } else {
-            // Start new round
             roundNumber += 1
             startNewGame()
         }
@@ -202,23 +279,38 @@ class Game: ObservableObject {
     
     // Calculate final scores for the round
     private func calculateFinalScores() {
+        // Brisques scoring
+        let brisqueCutoffReached = players.contains { $0.totalPoints >= settings.brisqueCutoff }
         for player in players {
-            // Add meld points (already added during declaration)
-            // Add trick points (already added during play)
-            // Add brisque points (already added during play)
-            
-            print("\(player.name): \(player.totalPoints) points")
+            let brisqueCount = brisques[player.id, default: 0]
+            var eligible = true
+            if brisqueCutoffReached {
+                eligible = false
+            } else if brisqueCount < settings.minBrisques {
+                eligible = false
+            } else if player.totalPoints < settings.minScoreForBrisques {
+                eligible = false
+            }
+            if eligible {
+                player.addPoints(brisqueCount * settings.brisqueValue)
+            } else {
+                player.addPoints(settings.penalty)
+            }
+        }
+        // Print scores for debugging
+        for player in players {
+            print("\(player.name): \(player.totalPoints) points (Brisques: \(brisques[player.id, default: 0]))")
         }
     }
     
     // Check if there's a winner
     private func hasWinner() -> Bool {
-        return players.contains { $0.totalPoints >= winningScore }
+        return players.contains { $0.totalPoints >= settings.winningScore }
     }
     
     // Get the winner
     var winner: Player? {
-        return players.first { $0.totalPoints >= winningScore }
+        return players.first { $0.totalPoints >= settings.winningScore }
     }
     
     // Set trump suit
@@ -227,29 +319,118 @@ class Game: ObservableObject {
     }
     
     // Get playable cards for current player
-    func getPlayableCards() -> [Card] {
+    func getPlayableCards() -> [PlayerCard] {
         let leadSuit = currentTrick.first?.suit
-        return currentPlayer.getPlayableCards(leadSuit: leadSuit, trumpSuit: trumpSuit)
+        let playableCards = currentPlayer.getPlayableCards(leadSuit: leadSuit, trumpSuit: trumpSuit)
+        
+        // In endgame, enforce stricter rules
+        if isEndgame {
+            return getEndgamePlayableCards(leadSuit: leadSuit, trumpSuit: trumpSuit, allCards: playableCards)
+        }
+        
+        return playableCards
+    }
+    
+    // Get playable cards with endgame rules
+    private func getEndgamePlayableCards(leadSuit: Suit?, trumpSuit: Suit?, allCards: [PlayerCard]) -> [PlayerCard] {
+        guard let leadSuit = leadSuit else {
+            return allCards // Leading, can play any card
+        }
+        
+        let canFollowSuit = currentPlayer.canFollowSuit(leadSuit: leadSuit)
+        
+        if canFollowSuit {
+            // Must follow suit and play higher if possible
+            let suitCards = currentPlayer.cardsOfSuit(leadSuit)
+            let currentWinningCard = findCurrentWinningCard(leadSuit: leadSuit, trumpSuit: trumpSuit)
+            
+            if let winningCard = currentWinningCard {
+                // Must play higher if possible
+                let higherCards = suitCards.filter { $0.canBeat(winningCard, trumpSuit: trumpSuit, leadSuit: leadSuit) }
+                return higherCards.isEmpty ? suitCards : higherCards
+            } else {
+                return suitCards
+            }
+        } else {
+            // Can't follow suit, must trump if possible
+            if let trumpSuit = trumpSuit {
+                let trumpCards = currentPlayer.cardsOfSuit(trumpSuit)
+                if !trumpCards.isEmpty {
+                    return trumpCards
+                }
+            }
+            // No trump cards, can play any card
+            return allCards
+        }
+    }
+    
+    // Find current winning card in the trick
+    private func findCurrentWinningCard(leadSuit: Suit, trumpSuit: Suit?) -> PlayerCard? {
+        guard !currentTrick.isEmpty else { return nil }
+        
+        var winningCard = currentTrick[0]
+        
+        for card in currentTrick {
+            if card.canBeat(winningCard, trumpSuit: trumpSuit, leadSuit: leadSuit) {
+                winningCard = card
+            }
+        }
+        
+        return winningCard
     }
     
     // Check if a meld can be declared
     func canDeclareMeld(_ meld: Meld, by player: Player) -> Bool {
-        // Check if player has all the cards in the meld
+        guard player.id == currentPlayer.id && canPlayerMeld else {
+            return false
+        }
+        // Only one meld per opportunity
+        if player.meldsDeclared.last?.roundNumber == roundNumber {
+            return false
+        }
+        if trumpSuit == nil {
+            return meld.type == .commonMarriage
+        }
         for card in meld.cards {
             if !player.hasCard(card) {
                 return false
             }
         }
-        
-        // Check if meld hasn't been declared before
         return !player.meldsDeclared.contains { $0.type == meld.type }
     }
     
     // Declare a meld
     func declareMeld(_ meld: Meld, by player: Player) {
         if canDeclareMeld(meld, by: player) {
-            player.declareMeld(meld)
-            print("\(player.name) declared \(meld.type.name) for \(meld.pointValue) points")
+            var finalMeld = meld
+            
+            // If this is the first marriage, it sets the trump suit and becomes a Royal Marriage
+            if trumpSuit == nil, meld.type == .commonMarriage {
+                trumpSuit = meld.cards.first?.suit
+                finalMeld = Meld(cards: meld.cards, type: .royalMarriage, roundNumber: self.roundNumber)
+                print("Trump suit set to \(trumpSuit?.rawValue ?? "")")
+            } else if meld.type == .commonMarriage, let trump = trumpSuit, meld.cards.first?.suit == trump {
+                // This is a marriage in the trump suit, so it's a Royal Marriage
+                finalMeld = Meld(cards: meld.cards, type: .royalMarriage, roundNumber: self.roundNumber)
+            }
+            
+            player.declareMeld(finalMeld)
+            print("\(player.name) declared \(finalMeld.type.name) for \(finalMeld.pointValue) points")
+            
+            // Handle point doubling for four-of-a-kind in trump suit
+            if let trump = trumpSuit {
+                let isTrumpMeld = finalMeld.cards.allSatisfy { $0.suit == trump }
+                if isTrumpMeld {
+                    switch finalMeld.type {
+                    case .fourAces, .fourKings, .fourQueens, .fourJacks:
+                        // player.declareMeld already added points once, so just add them again to double.
+                        player.addPoints(finalMeld.pointValue)
+                        print("Doubled points for \(finalMeld.type.name) in trump suit!")
+                    default:
+                        break
+                    }
+                }
+            }
         }
     }
     
@@ -268,33 +449,42 @@ class Game: ObservableObject {
         // Check for four of a kind
         possibleMelds.append(contentsOf: checkForFourOfAKind(in: player.hand))
         
+        // Check for four jokers
+        if let fourJokersMeld = checkForFourJokers(in: player.hand) {
+            possibleMelds.append(fourJokersMeld)
+        }
+        
+        // Check for sequence
+        if let sequenceMeld = checkForSequence(in: player.hand) {
+            possibleMelds.append(sequenceMeld)
+        }
+        
         return possibleMelds
     }
     
     // Check for Bésigue meld
-    private func checkForBesigue(in hand: [Card]) -> Meld? {
-        let queenOfSpades = hand.first { $0.suit == .spades && $0.value == .queen }
-        let jackOfDiamonds = hand.first { $0.suit == .diamonds && $0.value == .jack }
+    private func checkForBesigue(in hand: [PlayerCard]) -> Meld? {
+        let queenOfSpades = hand.first { $0.suit == .spades && $0.value == .queen && !$0.usedInMeldTypes.contains(.besigue) }
+        let jackOfDiamonds = hand.first { $0.suit == .diamonds && $0.value == .jack && !$0.usedInMeldTypes.contains(.besigue) }
         
         if let queen = queenOfSpades, let jack = jackOfDiamonds {
-            return Meld(cards: [queen, jack], type: .besigue)
+            return Meld(cards: [queen, jack], type: .besigue, roundNumber: self.roundNumber)
         }
         
         return nil
     }
     
     // Check for marriage melds
-    private func checkForMarriages(in hand: [Card]) -> [Meld] {
+    private func checkForMarriages(in hand: [PlayerCard]) -> [Meld] {
         var marriages: [Meld] = []
         
         for suit in Suit.allCases {
-            let king = hand.first { $0.suit == suit && $0.value == .king }
-            let queen = hand.first { $0.suit == suit && $0.value == .queen }
+            let king = hand.first { $0.suit == suit && $0.value == .king && !$0.usedInMeldTypes.contains(.commonMarriage) && !$0.usedInMeldTypes.contains(.royalMarriage) }
+            let queen = hand.first { $0.suit == suit && $0.value == .queen && !$0.usedInMeldTypes.contains(.commonMarriage) && !$0.usedInMeldTypes.contains(.royalMarriage) }
             
             if let king = king, let queen = queen {
-                let isTrump = suit == trumpSuit
-                let meldType: MeldType = isTrump ? .royalMarriage : .commonMarriage
-                marriages.append(Meld(cards: [king, queen], type: meldType))
+                let meldType: MeldType = .commonMarriage
+                marriages.append(Meld(cards: [king, queen], type: meldType, roundNumber: self.roundNumber))
             }
         }
         
@@ -302,27 +492,106 @@ class Game: ObservableObject {
     }
     
     // Check for four of a kind melds
-    private func checkForFourOfAKind(in hand: [Card]) -> [Meld] {
+    private func checkForFourOfAKind(in hand: [PlayerCard]) -> [Meld] {
         var fourOfAKinds: [Meld] = []
         
-        // Group cards by value
         let groupedByValue = Dictionary(grouping: hand.filter { !$0.isJoker }) { $0.value }
         
         for (value, cards) in groupedByValue {
-            if cards.count >= 4 {
+            let unusedCards = cards.filter { card in
+                switch value {
+                case .jack: return !card.usedInMeldTypes.contains(.fourJacks)
+                case .queen: return !card.usedInMeldTypes.contains(.fourQueens)
+                case .king: return !card.usedInMeldTypes.contains(.fourKings)
+                case .ace: return !card.usedInMeldTypes.contains(.fourAces)
+                default: return false
+                }
+            }
+            if unusedCards.count >= 4 {
                 let meldType: MeldType
                 switch value {
                 case .jack: meldType = .fourJacks
                 case .queen: meldType = .fourQueens
                 case .king: meldType = .fourKings
                 case .ace: meldType = .fourAces
-                default: meldType = .fourOfAKind
+                default: continue
                 }
                 
-                fourOfAKinds.append(Meld(cards: Array(cards.prefix(4)), type: meldType))
+                fourOfAKinds.append(Meld(cards: Array(unusedCards.prefix(4)), type: meldType, roundNumber: self.roundNumber))
             }
         }
         
         return fourOfAKinds
+    }
+    
+    // Check for four jokers
+    private func checkForFourJokers(in hand: [PlayerCard]) -> Meld? {
+        let jokers = hand.filter { $0.isJoker && !$0.usedInMeldTypes.contains(.fourJokers) }
+        if jokers.count == 4 {
+            return Meld(cards: Array(jokers.prefix(4)), type: .fourJokers, roundNumber: self.roundNumber)
+        }
+        return nil
+    }
+    
+    // Check for sequence in trump suit
+    private func checkForSequence(in hand: [PlayerCard]) -> Meld? {
+        guard let trumpSuit = trumpSuit else { return nil }
+        
+        let requiredValues: [CardValue] = [.ace, .ten, .king, .queen, .jack]
+        var sequenceCards: [PlayerCard] = []
+        
+        for value in requiredValues {
+            if let card = hand.first(where: { $0.suit == trumpSuit && $0.value == value && !$0.usedInMeldTypes.contains(.sequence) }) {
+                sequenceCards.append(card)
+            } else {
+                return nil // Missing a card for the sequence
+            }
+        }
+        
+        if sequenceCards.count == requiredValues.count {
+            // Ensure royal marriage is present and intact
+            let hasRoyalMarriage = hand.contains(where: { $0.suit == trumpSuit && $0.value == .king && $0.usedInMeldTypes.contains(.royalMarriage) }) &&
+                                   hand.contains(where: { $0.suit == trumpSuit && $0.value == .queen && $0.usedInMeldTypes.contains(.royalMarriage) })
+            if hasRoyalMarriage {
+                return Meld(cards: sequenceCards, type: .sequence, roundNumber: self.roundNumber)
+            }
+        }
+        
+        return nil
+    }
+    
+    var dealerDetermined: Bool {
+        return currentPhase != .dealerDetermination
+    }
+    
+    func canPlayCard() -> Bool {
+        // Player can play if not awaiting meld choice, not in dealer determination, and not required to draw
+        return !awaitingMeldChoice && !mustDrawCard && currentPhase == .playing
+    }
+    
+    // Draw card for dealer determination phase
+    func drawCardForDealerDetermination() {
+        guard currentPhase == .dealerDetermination else { return }
+        if let card = deck.drawCard() {
+            dealerDeterminationCards.append(card)
+            // If a Jack is drawn, set dealer and proceed
+            if !card.isJoker && card.value == .jack {
+                let dealerIndex = (dealerDeterminationCards.count - 1) % playerCount
+                for (i, player) in players.enumerated() {
+                    player.isDealer = (i == dealerIndex)
+                }
+                dealerDeterminedMessage = "Dealer is \(players[dealerIndex].name)!"
+                currentPhase = .dealing
+                // Return drawn cards to deck and shuffle
+                deck.cards.append(contentsOf: dealerDeterminationCards)
+                deck.shuffle()
+                dealerDeterminationCards.removeAll()
+                // Proceed to deal cards
+                dealCards()
+                // Move to playing phase
+                currentPhase = .playing
+                currentPlayerIndex = (dealerIndex + 1) % playerCount
+            }
+        }
     }
 } 

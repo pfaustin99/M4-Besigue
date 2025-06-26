@@ -11,7 +11,7 @@ class Player: ObservableObject, Identifiable {
     let id = UUID()
     let name: String
     let type: PlayerType
-    @Published var hand: [Card] = []
+    @Published var hand: [PlayerCard] = []
     @Published var score: Int = 0
     @Published var tricksWon: Int = 0
     @Published var meldsDeclared: [Meld] = []
@@ -25,33 +25,33 @@ class Player: ObservableObject, Identifiable {
     
     // Add cards to hand
     func addCards(_ cards: [Card]) {
-        hand.append(contentsOf: cards)
+        hand.append(contentsOf: cards.map { PlayerCard(card: $0) })
     }
     
     // Remove card from hand
-    func removeCard(_ card: Card) {
+    func removeCard(_ card: PlayerCard) {
         if let index = hand.firstIndex(of: card) {
             hand.remove(at: index)
         }
     }
     
     // Check if player has a specific card
-    func hasCard(_ card: Card) -> Bool {
+    func hasCard(_ card: PlayerCard) -> Bool {
         return hand.contains(card)
     }
     
     // Get cards of a specific suit
-    func cardsOfSuit(_ suit: Suit) -> [Card] {
+    func cardsOfSuit(_ suit: Suit) -> [PlayerCard] {
         return hand.filter { !$0.isJoker && $0.suit == suit }
     }
     
     // Get all non-joker cards
-    var regularCards: [Card] {
+    var regularCards: [PlayerCard] {
         return hand.filter { !$0.isJoker }
     }
     
     // Get all joker cards
-    var jokerCards: [Card] {
+    var jokerCards: [PlayerCard] {
         return hand.filter { $0.isJoker }
     }
     
@@ -61,7 +61,7 @@ class Player: ObservableObject, Identifiable {
     }
     
     // Get playable cards based on lead suit and trump
-    func getPlayableCards(leadSuit: Suit?, trumpSuit: Suit?) -> [Card] {
+    func getPlayableCards(leadSuit: Suit?, trumpSuit: Suit?) -> [PlayerCard] {
         // If no lead suit, all cards are playable
         guard let leadSuit = leadSuit else {
             return hand
@@ -85,6 +85,12 @@ class Player: ObservableObject, Identifiable {
     func declareMeld(_ meld: Meld) {
         meldsDeclared.append(meld)
         addPoints(meld.pointValue)
+        // Mark meld usage on the involved PlayerCards
+        for card in meld.cards {
+            if let idx = hand.firstIndex(of: card) {
+                hand[idx].usedInMeldTypes.insert(meld.type)
+            }
+        }
     }
     
     // Reset player for new game
@@ -104,21 +110,23 @@ class Player: ObservableObject, Identifiable {
     
     // Get total points (melds + brisques)
     var totalPoints: Int {
-        return score + meldPoints
+        return score
     }
 }
 
 // MARK: - Meld Model
 struct Meld: Identifiable, Equatable {
     let id = UUID()
-    let cards: [Card]
+    let cards: [PlayerCard]
     let type: MeldType
     let pointValue: Int
+    let roundNumber: Int // Track the round when the meld was declared
     
-    init(cards: [Card], type: MeldType) {
+    init(cards: [PlayerCard], type: MeldType, roundNumber: Int) {
         self.cards = cards
         self.type = type
         self.pointValue = type.pointValue
+        self.roundNumber = roundNumber
     }
 }
 
@@ -127,22 +135,24 @@ enum MeldType: CaseIterable {
     case besigue // Queen of Spades + Jack of Diamonds (40 points)
     case royalMarriage // King + Queen of same suit (40 points)
     case commonMarriage // King + Queen of same suit (20 points)
-    case fourOfAKind // Four cards of same rank (100 points)
     case fourJacks // Four Jacks (40 points)
     case fourQueens // Four Queens (60 points)
     case fourKings // Four Kings (80 points)
     case fourAces // Four Aces (100 points)
+    case fourJokers // Four Jokers (200 points)
+    case sequence // Ace, 10, King, Queen, Jack of trump suit (250 points)
     
     var pointValue: Int {
         switch self {
         case .besigue: return 40
         case .royalMarriage: return 40
         case .commonMarriage: return 20
-        case .fourOfAKind: return 100
         case .fourJacks: return 40
         case .fourQueens: return 60
         case .fourKings: return 80
         case .fourAces: return 100
+        case .fourJokers: return 200
+        case .sequence: return 250
         }
     }
     
@@ -151,11 +161,22 @@ enum MeldType: CaseIterable {
         case .besigue: return "Bésigue"
         case .royalMarriage: return "Royal Marriage"
         case .commonMarriage: return "Common Marriage"
-        case .fourOfAKind: return "Four of a Kind"
         case .fourJacks: return "Four Jacks"
         case .fourQueens: return "Four Queens"
         case .fourKings: return "Four Kings"
         case .fourAces: return "Four Aces"
+        case .fourJokers: return "Four Jokers"
+        case .sequence: return "Sequence"
+        }
+    }
+    
+    static func forValue(_ value: CardValue) -> MeldType {
+        switch value {
+        case .jack: return .fourJacks
+        case .queen: return .fourQueens
+        case .king: return .fourKings
+        case .ace: return .fourAces
+        default: fatalError("No four-of-a-kind meld for this value")
         }
     }
 } 

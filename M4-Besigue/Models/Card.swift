@@ -178,3 +178,25 @@ extension Card {
         ]
     }
 }
+
+// MARK: - PlayerCard: Card + Meld Usage
+struct PlayerCard: Identifiable, Equatable, Hashable {
+    let card: Card
+    var usedInMeldTypes: Set<MeldType> = []
+    
+    var id: UUID { card.id }
+    
+    // Proxy properties for convenience
+    var suit: Suit? { card.suit }
+    var value: CardValue? { card.value }
+    var jokerType: JokerType? { card.jokerType }
+    var isJoker: Bool { card.isJoker }
+    var imageName: String { card.imageName }
+    var displayName: String { card.displayName }
+    var brisqueValue: Int { card.brisqueValue }
+    var rank: Int { card.rank }
+    
+    func canBeat(_ other: PlayerCard, trumpSuit: Suit?, leadSuit: Suit?) -> Bool {
+        card.canBeat(other.card, trumpSuit: trumpSuit, leadSuit: leadSuit)
+    }
+}
