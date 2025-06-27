@@ -115,46 +115,34 @@ class Player: ObservableObject, Identifiable {
 }
 
 // MARK: - Meld Model
+/// Represents a meld declared by a player in Bésigue.
 struct Meld: Identifiable, Equatable {
     let id = UUID()
     let cards: [PlayerCard]
     let type: MeldType
-    let pointValue: Int
+    let pointValue: Int // Now set dynamically from GameSettings
     let roundNumber: Int // Track the round when the meld was declared
     
-    init(cards: [PlayerCard], type: MeldType, roundNumber: Int) {
+    init(cards: [PlayerCard], type: MeldType, pointValue: Int, roundNumber: Int) {
         self.cards = cards
         self.type = type
-        self.pointValue = type.pointValue
+        self.pointValue = pointValue
         self.roundNumber = roundNumber
     }
 }
 
 // MARK: - Meld Types
-enum MeldType: CaseIterable {
-    case besigue // Queen of Spades + Jack of Diamonds (40 points)
-    case royalMarriage // King + Queen of same suit (40 points)
-    case commonMarriage // King + Queen of same suit (20 points)
-    case fourJacks // Four Jacks (40 points)
-    case fourQueens // Four Queens (60 points)
-    case fourKings // Four Kings (80 points)
-    case fourAces // Four Aces (100 points)
-    case fourJokers // Four Jokers (200 points)
-    case sequence // Ace, 10, King, Queen, Jack of trump suit (250 points)
-    
-    var pointValue: Int {
-        switch self {
-        case .besigue: return 40
-        case .royalMarriage: return 40
-        case .commonMarriage: return 20
-        case .fourJacks: return 40
-        case .fourQueens: return 60
-        case .fourKings: return 80
-        case .fourAces: return 100
-        case .fourJokers: return 200
-        case .sequence: return 250
-        }
-    }
+/// Types of melds in Bésigue. Points should be sourced from GameSettings.
+enum MeldType: String, CaseIterable, Codable, Hashable {
+    case besigue
+    case royalMarriage
+    case commonMarriage
+    case fourJacks
+    case fourQueens
+    case fourKings
+    case fourAces
+    case fourJokers
+    case sequence
     
     var name: String {
         switch self {
@@ -170,13 +158,14 @@ enum MeldType: CaseIterable {
         }
     }
     
-    static func forValue(_ value: CardValue) -> MeldType {
+    /// Helper for four-of-a-kind melds
+    static func forValue(_ value: CardValue) -> MeldType? {
         switch value {
         case .jack: return .fourJacks
         case .queen: return .fourQueens
         case .king: return .fourKings
         case .ace: return .fourAces
-        default: fatalError("No four-of-a-kind meld for this value")
+        default: return nil
         }
     }
 } 
