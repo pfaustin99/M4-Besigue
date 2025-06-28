@@ -515,8 +515,8 @@ struct GameBoardView: View {
     // Dealer determination view
     private var dealerDeterminationView: some View {
         VStack(spacing: 15) {
-            if game.dealerDetermined {
-                // Show dealer determined message
+            if game.currentPhase == .dealing {
+                // Show dealer determined message and dealing progress
                 VStack(spacing: 10) {
                     Text("🎉 Dealer Determined! 🎉")
                         .font(.title2)
@@ -528,7 +528,7 @@ struct GameBoardView: View {
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.center)
                     
-                    Text("Returning cards to deck and dealing...")
+                    Text("Dealing cards...")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .italic()
@@ -552,7 +552,7 @@ struct GameBoardView: View {
                         
                         // Single stack of cards with rotation and Z offset
                         ZStack {
-                            ForEach(Array(game.dealerDeterminationCards.enumerated()), id: \ .offset) { index, card in
+                            ForEach(Array(game.dealerDeterminationCards.enumerated()), id: \.offset) { index, card in
                                 let rotation = Double((index * 13) % 21 - 10) // -10 to +10 degrees
                                 let zOffset = Double(index) * 2
                                 VStack(spacing: 4) {
