@@ -393,16 +393,6 @@ struct GameBoardView: View {
                 .disabled(selectedCards.count < 2 || selectedCards.count > 4)
                 .font(.headline)
             }
-            // Draw Card button: only when mustDrawCard is true (not during meld choice)
-            if game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human {
-                Button("Draw Card") {
-                    withAnimation {
-                        game.drawCardForCurrentPlayer()
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .font(.headline)
-            }
         }
         .padding(.horizontal)
     }
@@ -504,16 +494,28 @@ struct GameBoardView: View {
     
     // Draw pile stack view
     private var drawPileView: some View {
-        HStack(spacing: -12) {
-            ForEach(0..<min(game.deck.remainingCount, 5), id: \ .self) { i in
-                Image("card_back")
-                    .resizable()
-                    .frame(width: 32, height: 48)
-                    .cornerRadius(4)
-                    .matchedGeometryEffect(id: "drawpile-\(i)", in: drawPileNamespace)
-                    .opacity(Double(1.0 - Double(i) * 0.15))
+        Button(action: {
+            if game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human {
+                withAnimation {
+                    game.drawCardForCurrentPlayer()
+                }
+            }
+        }) {
+            HStack(spacing: -12) {
+                ForEach(0..<min(game.deck.remainingCount, 5), id: \ .self) { i in
+                    Image("card_back")
+                        .resizable()
+                        .frame(width: 32, height: 48)
+                        .cornerRadius(4)
+                        .matchedGeometryEffect(id: "drawpile-\(i)", in: drawPileNamespace)
+                        .opacity(Double(1.0 - Double(i) * 0.15))
+                }
             }
         }
+        .disabled(!(game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human))
+        .opacity((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.0 : 0.5)
+        .scaleEffect((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.0 : 0.9)
+        .animation(.easeInOut(duration: 0.2), value: game.mustDrawCard)
         .padding(.vertical, 4)
     }
     
@@ -861,11 +863,24 @@ struct TrickView: View {
             Text("Current Trick")
                 .font(.headline)
                 .foregroundColor(.secondary)
+            
             if cards.isEmpty {
                 Text("No cards played yet")
                     .foregroundColor(.secondary)
                     .italic()
             } else {
+                // Show winner message if available
+                if let winningIndex = winningIndex, winningIndex < playerNames.count {
+                    Text("🎉 \(playerNames[winningIndex]) wins! 🎉")
+                        .font(.title3)
+                        .bold()
+                        .foregroundColor(.green)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(Color.green.opacity(0.2))
+                        .cornerRadius(8)
+                }
+                
                 HStack(spacing: 12) {
                     ForEach(Array(cards.enumerated()), id: \.offset) { index, card in
                         let rotation = Double((index * 17) % 21 - 10) // -10 to +10 degrees
@@ -879,20 +894,23 @@ struct TrickView: View {
                                 // No action for played cards
                             }
                             .overlay(
-                                // Highlight winning card with a green border
+                                // Highlight winning card with a green border and glow
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(winningIndex == index ? Color.green : Color.clear, lineWidth: 3)
                             )
-                            .scaleEffect(winningIndex == index ? 1.05 : 1.0)
-                            .shadow(color: winningIndex == index ? .green.opacity(0.5) : .clear, radius: 4)
+                            .scaleEffect(winningIndex == index ? 1.1 : 1.0)
+                            .shadow(color: winningIndex == index ? .green.opacity(0.8) : .clear, radius: 6)
                             .rotationEffect(.degrees(rotation))
                             .zIndex(Double(index))
                             .offset(y: zOffset)
+                            .animation(.easeInOut(duration: 0.3), value: winningIndex)
+                            
                             if index < playerNames.count {
                                 Text(playerNames[index])
                                     .font(.caption)
                                     .foregroundColor(winningIndex == index ? .green : .secondary)
                                     .fontWeight(winningIndex == index ? .bold : .regular)
+                                    .offset(y: zOffset)
                             }
                         }
                     }

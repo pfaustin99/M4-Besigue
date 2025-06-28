@@ -283,6 +283,7 @@ class Game: ObservableObject {
             // Human player gets choice to meld first
             canPlayerMeld = true
             awaitingMeldChoice = true
+            mustDrawCard = true
         }
         
         // Don't automatically draw cards - winner will draw when they choose to
@@ -354,6 +355,23 @@ class Game: ObservableObject {
         }
         
         return winningPlayerIndex
+    }
+    
+    // Determine trick winner index for UI display
+    func determineTrickWinnerIndex() -> Int? {
+        guard !currentTrick.isEmpty else { return nil }
+        
+        var winningCard = currentTrick[0]
+        var winningIndex = 0
+        
+        for (index, card) in currentTrick.enumerated() {
+            if card.canBeat(winningCard, trumpSuit: trumpSuit, leadSuit: currentTrick.first?.suit) {
+                winningCard = card
+                winningIndex = index
+            }
+        }
+        
+        return winningIndex
     }
     
     // Check if all players have empty hands
@@ -734,17 +752,6 @@ class Game: ObservableObject {
                 self.processAITurn()
             }
         }
-    }
-    
-    func determineTrickWinnerIndex() -> Int? {
-        // Stub: Return the winner index of the last trick if available
-        // You can implement actual logic later
-        if let last = trickHistory.last, !last.isEmpty {
-            // Find the player who won the last trick
-            let winnerIndex = determineTrickWinner()
-            return winnerIndex
-        }
-        return nil
     }
     
     func playInvalidMeldAnimation() {
