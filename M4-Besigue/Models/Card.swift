@@ -10,6 +10,19 @@ enum Suit: String, CaseIterable {
     var name: String {
         return self.rawValue
     }
+    
+    var symbol: String {
+        switch self {
+        case .hearts: return "♥"
+        case .diamonds: return "♦"
+        case .clubs: return "♣"
+        case .spades: return "♠"
+        }
+    }
+    
+    var displayName: String {
+        return "\(symbol) \(name.capitalized)"
+    }
 }
 
 // MARK: - Card Value

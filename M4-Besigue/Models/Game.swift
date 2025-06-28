@@ -31,6 +31,7 @@ class Game: ObservableObject {
     @Published var dealerDeterminedMessage: String = ""
     @Published var awaitingMeldChoice: Bool = false
     @Published var mustDrawCard: Bool = false
+    @Published var jackDrawnForDealer: Card? = nil
     
     let settings: GameSettings
     
@@ -98,6 +99,7 @@ class Game: ObservableObject {
         canPlayerMeld = false
         dealerDeterminationCards.removeAll()
         dealerDeterminedMessage = ""
+        jackDrawnForDealer = nil
         
         // Reset brisques
         for player in players {
@@ -106,6 +108,16 @@ class Game: ObservableObject {
         
         // Start with the first player for dealer determination
         currentPlayerIndex = 0
+        
+        // Set the first player as current player
+        currentPlayer.isCurrentPlayer = true
+        
+        // Clear other players' current status
+        for (index, player) in players.enumerated() {
+            if index != currentPlayerIndex {
+                player.isCurrentPlayer = false
+            }
+        }
         
         print("🎯 Dealer determination phase started. Current player: \(currentPlayer.name)")
         
@@ -126,28 +138,8 @@ class Game: ObservableObject {
         // AI draws a card for dealer determination
         drawCardForDealerDetermination()
         
-        // If dealer is not yet determined, continue to next player
-        if currentPhase == .dealerDetermination {
-            // Move to next player
-            currentPlayerIndex = (currentPlayerIndex + 1) % playerCount
-            currentPlayer.isCurrentPlayer = true
-            
-            // Clear previous player's current status
-            for (index, player) in players.enumerated() {
-                if index != currentPlayerIndex {
-                    player.isCurrentPlayer = false
-                }
-            }
-            
-            print("🔄 Moving to next player: \(currentPlayer.name)")
-            
-            // If next player is also AI, continue the process
-            if currentPlayer.type == .ai {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    self.processAIDealerDetermination()
-                }
-            }
-        }
+        // Note: Player transition is now handled in drawCardForDealerDetermination
+        // No need to duplicate the logic here
     }
     
     // Deal cards to all players
@@ -697,6 +689,7 @@ class Game: ObservableObject {
             
             // If a Jack is drawn, set dealer and show message
             if !card.isJoker && card.value == .jack {
+                jackDrawnForDealer = card
                 let dealerIndex = (dealerDeterminationCards.count - 1) % playerCount
                 for (i, player) in players.enumerated() {
                     player.isDealer = (i == dealerIndex)
@@ -714,6 +707,25 @@ class Game: ObservableObject {
                 }
             } else {
                 print("🔄 No Jack drawn, continuing dealer determination...")
+                // Move to next player for dealer determination
+                currentPlayerIndex = (currentPlayerIndex + 1) % playerCount
+                currentPlayer.isCurrentPlayer = true
+                
+                // Clear previous player's current status
+                for (index, player) in players.enumerated() {
+                    if index != currentPlayerIndex {
+                        player.isCurrentPlayer = false
+                    }
+                }
+                
+                print("🔄 Moving to next player: \(currentPlayer.name)")
+                
+                // If next player is AI, continue the process
+                if currentPlayer.type == .ai {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        self.processAIDealerDetermination()
+                    }
+                }
             }
         } else {
             print("❌ No cards left in deck for dealer determination")
@@ -726,6 +738,7 @@ class Game: ObservableObject {
         deck.cards.append(contentsOf: dealerDeterminationCards)
         deck.shuffle()
         dealerDeterminationCards.removeAll()
+        jackDrawnForDealer = nil
         
         // Deal cards
         dealCards()

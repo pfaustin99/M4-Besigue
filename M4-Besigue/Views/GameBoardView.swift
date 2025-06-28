@@ -55,7 +55,7 @@ struct GameBoardView: View {
     // MARK: - Subviews for Top Section
     private var turnBannerView: some View {
         Group {
-            if game.currentPhase == .playing || game.currentPhase == .endgame {
+            if game.currentPhase == .playing || game.currentPhase == .endgame || game.currentPhase == .dealerDetermination {
                 HStack {
                     Spacer()
                     Text("\(game.currentPlayer.name)'s Turn")
@@ -79,7 +79,7 @@ struct GameBoardView: View {
                 .font(.headline)
             Spacer()
             if let trump = game.trumpSuit {
-                Text("Trump: \(trump.rawValue.capitalized)")
+                Text("Trump: \(trump.displayName)")
                     .font(.headline)
                     .foregroundColor(.red)
             } else {
@@ -501,27 +501,93 @@ struct GameBoardView: View {
                 }
             }
         }) {
-            HStack(spacing: -12) {
-                ForEach(0..<min(game.deck.remainingCount, 5), id: \ .self) { i in
-                    Image("card_back")
-                        .resizable()
-                        .frame(width: 32, height: 48)
-                        .cornerRadius(4)
-                        .matchedGeometryEffect(id: "drawpile-\(i)", in: drawPileNamespace)
-                        .opacity(Double(1.0 - Double(i) * 0.15))
+            VStack(spacing: 0) {
+                // Angled stack of cards
+                ZStack {
+                    // Background cards (stacked behind)
+                    ForEach(0..<min(game.deck.remainingCount - 1, 4), id: \.self) { i in
+                        Image("card_back")
+                            .resizable()
+                            .frame(width: 32, height: 48)
+                            .cornerRadius(4)
+                            .rotationEffect(.degrees(Double(i) * 2 - 3)) // Slight angle variation
+                            .offset(x: Double(i) * 0.5, y: Double(i) * 1.5)
+                            .opacity(Double(1.0 - Double(i) * 0.2))
+                            .zIndex(Double(i))
+                    }
+                    
+                    // Top card (most prominent)
+                    if game.deck.remainingCount > 0 {
+                        Image("card_back")
+                            .resizable()
+                            .frame(width: 36, height: 54)
+                            .cornerRadius(4)
+                            .shadow(radius: 3)
+                            .scaleEffect((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.1 : 1.0)
+                            .zIndex(10)
+                    }
+                }
+                
+                // Draw instruction text
+                if game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human {
+                    Text("Draw a card")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .bold()
+                        .padding(.top, 4)
                 }
             }
         }
         .disabled(!(game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human))
-        .opacity((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.0 : 0.5)
+        .opacity((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.0 : 0.6)
         .scaleEffect((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.0 : 0.9)
-        .animation(.easeInOut(duration: 0.2), value: game.mustDrawCard)
+        .animation(.easeInOut(duration: 0.3), value: game.mustDrawCard)
         .padding(.vertical, 4)
     }
     
     // Dealer determination view
     private var dealerDeterminationView: some View {
         VStack(spacing: 15) {
+            // Show the Jack that determined the dealer prominently (if drawn)
+            if let jackCard = game.jackDrawnForDealer {
+                VStack(spacing: 12) {
+                    Text("🎴 JACK DRAWN! 🎴")
+                        .font(.title)
+                        .bold()
+                        .foregroundColor(.orange)
+                    
+                    Text(game.dealerDeterminedMessage)
+                        .font(.title2)
+                        .bold()
+                        .foregroundColor(.green)
+                        .multilineTextAlignment(.center)
+                    
+                    Image(jackCard.imageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 160, height: 240) // 2x size (was 80x120)
+                        .cornerRadius(12)
+                        .shadow(radius: 8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.orange, lineWidth: 4)
+                        )
+                        .scaleEffect(1.05)
+                        .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: jackCard.id)
+                }
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.orange.opacity(0.15))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.orange, lineWidth: 2)
+                        )
+                )
+                .scaleEffect(1.02)
+                .animation(.easeInOut(duration: 0.3), value: jackCard.id)
+            }
+            
             if game.currentPhase == .dealing {
                 // Show dealer determined message and drawn cards
                 VStack(spacing: 10) {
@@ -535,10 +601,10 @@ struct GameBoardView: View {
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.center)
                     
-                    // Show drawn cards even when dealer is determined
+                    // Show all drawn cards
                     if !game.dealerDeterminationCards.isEmpty {
                         VStack(spacing: 8) {
-                            Text("Cards Drawn:")
+                            Text("All Cards Drawn:")
                                 .font(.headline)
                             
                             // Single stack of cards with rotation and Z offset
