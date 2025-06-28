@@ -14,7 +14,6 @@ struct GameBoardView: View {
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
-                // Top section - AI players and game info
                 topSection
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
@@ -23,12 +22,8 @@ struct GameBoardView: View {
                             }
                         }
                     }
-                
-                // Center section - Game board and current trick
                 centerSection
                     .frame(height: geometry.size.height * 0.4)
-                
-                // Bottom section - Human player's hand
                 bottomSection
                     .frame(height: geometry.size.height * 0.3)
             }
@@ -48,7 +43,18 @@ struct GameBoardView: View {
     // MARK: - Top Section
     private var topSection: some View {
         VStack(spacing: 10) {
-            // Turn banner
+            turnBannerView
+            gameInfoView
+            badgeLegendButton
+            playersInfoView
+        }
+        .padding(.vertical, 10)
+        .background(Color.gray.opacity(0.1))
+    }
+    
+    // MARK: - Subviews for Top Section
+    private var turnBannerView: some View {
+        Group {
             if game.currentPhase == .playing || game.currentPhase == .endgame {
                 HStack {
                     Spacer()
@@ -64,124 +70,127 @@ struct GameBoardView: View {
                     Spacer()
                 }
             }
-            // Game info
-            HStack {
-                Text("Round \(game.roundNumber)")
+        }
+    }
+    
+    private var gameInfoView: some View {
+        HStack {
+            Text("Round \(game.roundNumber)")
+                .font(.headline)
+            Spacer()
+            if let trump = game.trumpSuit {
+                Text("Trump: \(trump.rawValue.capitalized)")
                     .font(.headline)
-                Spacer()
-                if let trump = game.trumpSuit {
-                    Text("Trump: \(trump.rawValue.capitalized)")
-                        .font(.headline)
-                        .foregroundColor(.red)
-                }
-                Spacer()
-                Text("Phase: \(phaseName)")
-                    .font(.headline)
-                    .foregroundColor(game.isEndgame ? .orange : .primary)
+                    .foregroundColor(.red)
             }
-            .padding(.horizontal)
-            .background(game.isEndgame ? Color.orange.opacity(0.1) : Color.clear)
-            .cornerRadius(8)
-            // Badge legend button
-            HStack {
-                Spacer()
-                Button(action: { showingBadgeLegend = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "info.circle")
-                        Text("Meld Badges")
-                            .font(.caption)
+            Spacer()
+            Text("Phase: \(phaseName)")
+                .font(.headline)
+                .foregroundColor(game.isEndgame ? .orange : .primary)
+        }
+        .padding(.horizontal)
+        .background(game.isEndgame ? Color.orange.opacity(0.1) : Color.clear)
+        .cornerRadius(8)
+    }
+    
+    private var badgeLegendButton: some View {
+        HStack {
+            Spacer()
+            Button(action: { showingBadgeLegend = true }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "info.circle")
+                    Text("Meld Badges")
+                        .font(.caption)
+                }
+                .foregroundColor(.blue)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal)
+    }
+    
+    private var playersInfoView: some View {
+        HStack(alignment: .top, spacing: 20) {
+            ForEach(game.players) { player in
+                VStack(spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(player.name)
+                            .font(.headline)
+                            .foregroundColor(player.isCurrentPlayer ? .blue : .primary)
+                        Text(": ")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        Text(String(format: "%04d", player.totalPoints))
+                            .font(.headline)
+                            .foregroundColor(.green)
                     }
-                    .foregroundColor(.blue)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal)
-            // All players (including human)
-            HStack(alignment: .top, spacing: 20) {
-                ForEach(game.players) { player in
-                    VStack(spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text(player.name)
-                                .font(.headline)
-                                .foregroundColor(player.isCurrentPlayer ? .blue : .primary)
-                            Text(": ")
-                                .font(.headline)
+                    HStack(spacing: 2) {
+                        ForEach(0..<min(player.hand.count, 3), id: \.self) { _ in
+                            CardBackView {
+                                // No action
+                            }
+                            .frame(width: 24, height: 36)
+                        }
+                        if player.hand.count > 3 {
+                            Text("+")
+                                .font(.caption)
                                 .foregroundColor(.secondary)
-                            Text(String(format: "%04d", player.totalPoints))
-                                .font(.headline)
-                                .foregroundColor(.green)
                         }
-                        HStack(spacing: 2) {
-                            ForEach(0..<min(player.hand.count, 3), id: \.self) { _ in
-                                CardBackView {
-                                    // No action
-                                }
-                                .frame(width: 24, height: 36)
-                            }
-                            if player.hand.count > 3 {
-                                Text("+")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        // Meld area for each player
-                        if !player.meldsDeclared.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(player.meldsDeclared) { meld in
-                                        VStack(spacing: 2) {
-                                            HStack(spacing: 2) {
-                                                ForEach(meld.cards) { card in
-                                                    ZStack(alignment: .topTrailing) {
-                                                        Image(card.imageName)
-                                                            .resizable()
-                                                            .aspectRatio(contentMode: .fit)
-                                                            .frame(width: 20, height: 30)
-                                                            .cornerRadius(3)
-                                                        HStack(spacing: 1) {
-                                                            // Show badges for each meld type used
-                                                            if card.usedInMeldTypes.count == MeldType.allCases.count {
-                                                                Text(settings.badgeIcons.exhausted)
+                    }
+                    // Meld area for each player
+                    if !player.meldsDeclared.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(player.meldsDeclared) { meld in
+                                    VStack(spacing: 2) {
+                                        HStack(spacing: 2) {
+                                            ForEach(meld.cards) { card in
+                                                ZStack(alignment: .topTrailing) {
+                                                    Image(card.imageName)
+                                                        .resizable()
+                                                        .aspectRatio(contentMode: .fit)
+                                                        .frame(width: 20, height: 30)
+                                                        .cornerRadius(3)
+                                                    HStack(spacing: 1) {
+                                                        if card.usedInMeldTypes.count == MeldType.allCases.count {
+                                                            Text(settings.badgeIcons.exhausted)
+                                                                .font(.system(size: 10))
+                                                                .padding(1)
+                                                        } else {
+                                                            ForEach(Array(card.usedInMeldTypes), id: \ .self) { meldType in
+                                                                Text(badgeIcon(for: meldType, card: card))
                                                                     .font(.system(size: 10))
                                                                     .padding(1)
-                                                            } else {
-                                                                ForEach(Array(card.usedInMeldTypes), id: \ .self) { meldType in
-                                                                    Text(badgeIcon(for: meldType, card: card))
-                                                                        .font(.system(size: 10))
-                                                                        .padding(1)
-                                                                }
                                                             }
                                                         }
-                                                        .background(Color.white.opacity(0.7))
-                                                        .clipShape(Capsule())
-                                                        .offset(x: 2, y: -2)
                                                     }
+                                                    .background(Color.white.opacity(0.7))
+                                                    .clipShape(Capsule())
+                                                    .offset(x: 2, y: -2)
                                                 }
                                             }
-                                            Text(meld.type.name)
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
-                                            Text("+\(meld.pointValue)")
-                                                .font(.caption2)
-                                                .foregroundColor(.green)
                                         }
-                                        .padding(2)
-                                        .background(Color.yellow.opacity(0.12))
-                                        .cornerRadius(4)
+                                        Text(meld.type.name)
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                        Text("+\(meld.pointValue)")
+                                            .font(.caption2)
+                                            .foregroundColor(.green)
                                     }
+                                    .padding(2)
+                                    .background(Color.yellow.opacity(0.12))
+                                    .cornerRadius(4)
                                 }
-                                .padding(.horizontal, 2)
                             }
+                            .padding(.horizontal, 2)
                         }
                     }
-                    .padding(4)
-                    .background(player.isCurrentPlayer ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
-                    .cornerRadius(8)
                 }
+                .padding(4)
+                .background(player.isCurrentPlayer ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
+                .cornerRadius(8)
             }
         }
-        .padding(.vertical, 10)
-        .background(Color.gray.opacity(0.1))
     }
     
     // MARK: - Center Section
@@ -343,7 +352,7 @@ struct GameBoardView: View {
             if game.awaitingMeldChoice && game.currentPlayer.type == .human {
                 Button(action: {
                     if let humanPlayer = game.players.first, selectedCards.count >= 2, selectedCards.count <= 4 {
-                        let meld = Meld(cards: selectedCards, type: .besigue, roundNumber: game.roundNumber)
+                        let meld = Meld(cards: selectedCards, type: .besigue, pointValue: settings.besiguePoints, roundNumber: game.roundNumber)
                         if game.canDeclareMeld(meld, by: humanPlayer) {
                             game.declareMeld(meld, by: humanPlayer)
                             selectedCards.removeAll()
@@ -589,7 +598,7 @@ struct GameBoardView: View {
         let meldedCardIDs = Set(player.meldsDeclared.flatMap { $0.cards.map { $0.id } })
         let handCards = player.hand.filter { !meldedCardIDs.contains($0.id) }
         let possibleMeldCards: Set<UUID> = {
-            if settings.hintsEnabled {
+            if settings.gameLevel == .novice {
                 let melds = game.getPossibleMelds(for: player)
                 return Set(melds.flatMap { $0.cards.map { $0.id } })
             } else {
@@ -635,7 +644,7 @@ struct AIPlayerView: View {
             }
             // Show card backs for AI players (smaller)
             HStack(spacing: 2) {
-                ForEach(0..<min(player.hand.count, 3), id: \_.self) { _ in
+                ForEach(0..<min(player.hand.count, 3), id: \.self) { _ in
                     CardBackView {
                         // No action for AI cards
                     }
@@ -673,7 +682,7 @@ struct MeldOptionsView: View {
                         List(possibleMelds) { meld in
                             MeldRowView(meld: meld) {
                                 // When a meld is declared, attach the round number
-                                let meldWithRound = Meld(cards: meld.cards, type: meld.type, roundNumber: game.roundNumber)
+                                let meldWithRound = Meld(cards: meld.cards, type: meld.type, pointValue: settings.besiguePoints, roundNumber: game.roundNumber)
                                 game.declareMeld(meldWithRound, by: humanPlayer)
                                 dismiss()
                             }

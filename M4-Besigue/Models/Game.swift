@@ -41,6 +41,10 @@ class Game: ObservableObject {
     let playerCount: Int
     let isOnline: Bool
     
+    // Trick result state for UI
+    @Published var isShowingTrickResult: Bool = false
+    var lastTrickWinner: String? = nil
+    
     // Computed property to check if we're in endgame
     var isEndgame: Bool {
         return deck.isEmpty
@@ -407,11 +411,11 @@ class Game: ObservableObject {
             // If this is the first marriage, it sets the trump suit and becomes a Royal Marriage
             if trumpSuit == nil, meld.type == .commonMarriage {
                 trumpSuit = meld.cards.first?.suit
-                finalMeld = Meld(cards: meld.cards, type: .royalMarriage, roundNumber: self.roundNumber)
+                finalMeld = Meld(cards: meld.cards, type: .royalMarriage, pointValue: settings.royalMarriagePoints, roundNumber: self.roundNumber)
                 print("Trump suit set to \(trumpSuit?.rawValue ?? "")")
             } else if meld.type == .commonMarriage, let trump = trumpSuit, meld.cards.first?.suit == trump {
                 // This is a marriage in the trump suit, so it's a Royal Marriage
-                finalMeld = Meld(cards: meld.cards, type: .royalMarriage, roundNumber: self.roundNumber)
+                finalMeld = Meld(cards: meld.cards, type: .royalMarriage, pointValue: settings.royalMarriagePoints, roundNumber: self.roundNumber)
             }
             
             player.declareMeld(finalMeld)
@@ -468,7 +472,7 @@ class Game: ObservableObject {
         let jackOfDiamonds = hand.first { $0.suit == .diamonds && $0.value == .jack && !$0.usedInMeldTypes.contains(.besigue) }
         
         if let queen = queenOfSpades, let jack = jackOfDiamonds {
-            return Meld(cards: [queen, jack], type: .besigue, roundNumber: self.roundNumber)
+            return Meld(cards: [queen, jack], type: .besigue, pointValue: settings.besiguePoints, roundNumber: self.roundNumber)
         }
         
         return nil
@@ -484,7 +488,8 @@ class Game: ObservableObject {
             
             if let king = king, let queen = queen {
                 let meldType: MeldType = .commonMarriage
-                marriages.append(Meld(cards: [king, queen], type: meldType, roundNumber: self.roundNumber))
+                let points = (trumpSuit != nil && suit == trumpSuit) ? settings.royalMarriagePoints : settings.commonMarriagePoints
+                marriages.append(Meld(cards: [king, queen], type: meldType, pointValue: points, roundNumber: self.roundNumber))
             }
         }
         
@@ -509,15 +514,15 @@ class Game: ObservableObject {
             }
             if unusedCards.count >= 4 {
                 let meldType: MeldType
+                let points: Int
                 switch value {
-                case .jack: meldType = .fourJacks
-                case .queen: meldType = .fourQueens
-                case .king: meldType = .fourKings
-                case .ace: meldType = .fourAces
+                case .jack: meldType = .fourJacks; points = settings.fourJacksPoints
+                case .queen: meldType = .fourQueens; points = settings.fourQueensPoints
+                case .king: meldType = .fourKings; points = settings.fourKingsPoints
+                case .ace: meldType = .fourAces; points = settings.fourAcesPoints
                 default: continue
                 }
-                
-                fourOfAKinds.append(Meld(cards: Array(unusedCards.prefix(4)), type: meldType, roundNumber: self.roundNumber))
+                fourOfAKinds.append(Meld(cards: Array(unusedCards.prefix(4)), type: meldType, pointValue: points, roundNumber: self.roundNumber))
             }
         }
         
@@ -528,7 +533,7 @@ class Game: ObservableObject {
     private func checkForFourJokers(in hand: [PlayerCard]) -> Meld? {
         let jokers = hand.filter { $0.isJoker && !$0.usedInMeldTypes.contains(.fourJokers) }
         if jokers.count == 4 {
-            return Meld(cards: Array(jokers.prefix(4)), type: .fourJokers, roundNumber: self.roundNumber)
+            return Meld(cards: Array(jokers.prefix(4)), type: .fourJokers, pointValue: settings.fourJokersPoints, roundNumber: self.roundNumber)
         }
         return nil
     }
@@ -553,7 +558,7 @@ class Game: ObservableObject {
             let hasRoyalMarriage = hand.contains(where: { $0.suit == trumpSuit && $0.value == .king && $0.usedInMeldTypes.contains(.royalMarriage) }) &&
                                    hand.contains(where: { $0.suit == trumpSuit && $0.value == .queen && $0.usedInMeldTypes.contains(.royalMarriage) })
             if hasRoyalMarriage {
-                return Meld(cards: sequenceCards, type: .sequence, roundNumber: self.roundNumber)
+                return Meld(cards: sequenceCards, type: .sequence, pointValue: settings.sequencePoints, roundNumber: self.roundNumber)
             }
         }
         
@@ -592,6 +597,29 @@ class Game: ObservableObject {
                 currentPhase = .playing
                 currentPlayerIndex = (dealerIndex + 1) % playerCount
             }
+        }
+    }
+    
+    func determineTrickWinnerIndex() -> Int? {
+        // Stub: Return the winner index of the last trick if available
+        // You can implement actual logic later
+        if let last = trickHistory.last, !last.isEmpty {
+            // Find the player who won the last trick
+            let winnerIndex = determineTrickWinner()
+            return winnerIndex
+        }
+        return nil
+    }
+    
+    func playInvalidMeldAnimation() {
+        // Stub: No-op for now, can be used to trigger UI feedback
+    }
+    
+    func drawCardForCurrentPlayer() {
+        // Stub: Draw a card for the current player if possible
+        if let card = deck.drawCard() {
+            currentPlayer.addCards([card])
+            mustDrawCard = false
         }
     }
 } 

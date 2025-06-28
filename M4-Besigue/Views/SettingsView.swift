@@ -2,15 +2,17 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var settings: GameSettings
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Hints")) {
-                    Toggle(isOn: $settings.hintsEnabled) {
-                        Text("Show Hints for Human Player")
+                Section(header: Text("Game Level")) {
+                    Picker("Game Level", selection: $settings.gameLevel) {
+                        Text("Novice (Hints Enabled)").tag(GameLevel.novice)
+                        Text("Pro (No Hints)").tag(GameLevel.pro)
                     }
+                    .pickerStyle(SegmentedPickerStyle())
                 }
                 Section(header: Text("Brisques")) {
                     Stepper(value: $settings.minBrisques, in: 1...20) {
@@ -70,13 +72,9 @@ struct SettingsView: View {
             }
             .navigationTitle("Game Settings")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
+            .navigationBarItems(trailing: Button("Done") {
+                presentationMode.wrappedValue.dismiss()
+            })
         }
     }
 } 
