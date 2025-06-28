@@ -64,11 +64,11 @@ class Game: ObservableObject {
         players.removeAll()
         
         // Create human player
-        players.append(Player(name: "You", type: .human))
+        players.append(Player(name: "Player 1", type: .human))
         
         // Create AI players
         for i in 1..<playerCount {
-            players.append(Player(name: "AI Player \(i)", type: .ai))
+            players.append(Player(name: "AI-\(i)", type: .ai))
         }
         
         // Initialize brisques for each player
@@ -236,12 +236,14 @@ class Game: ObservableObject {
     private func completeTrick() {
         let winnerIndex = determineTrickWinner()
         let winner = players[winnerIndex]
+        
         // Track brisques (Aces and 10s)
         for card in currentTrick {
             if card.value == .ace || card.value == .ten {
                 brisques[winner.id, default: 0] += 1
             }
         }
+        
         trickHistory.append(currentTrick)
         currentPlayerIndex = winnerIndex
         
@@ -254,27 +256,86 @@ class Game: ObservableObject {
         // In endgame, no more melds allowed
         canPlayerMeld = currentPhase != .endgame
         
-        // Winner and then other players draw cards (only if not in endgame)
-        if !deck.isEmpty {
-            for i in 0..<playerCount {
-                let playerIndexToDraw = (winnerIndex + i) % playerCount
-                if let card = deck.drawCard() {
-                    players[playerIndexToDraw].addCards([card])
-                }
-            }
-        }
-        currentTrick.removeAll()
+        // Check if all players have empty hands (end of round)
         if allPlayersHaveEmptyHands() {
             // Award final trick bonus before scoring
             winner.addPoints(settings.finalTrickBonus)
             endRound()
-        } else {
-            if currentPlayer.type == .ai {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    self.processAITurn()
-                }
+            return
+        }
+        
+        // Set the winner as current player and give them choice to meld first
+        currentPlayer.isCurrentPlayer = true
+        
+        // Clear previous player's current status
+        for (index, player) in players.enumerated() {
+            if index != currentPlayerIndex {
+                player.isCurrentPlayer = false
             }
         }
+        
+        // If winner is AI, let AI decide on melds
+        if currentPlayer.type == .ai {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.processAITrickWinner()
+            }
+        } else {
+            // Human player gets choice to meld first
+            canPlayerMeld = true
+            awaitingMeldChoice = true
+        }
+        
+        // Don't automatically draw cards - winner will draw when they choose to
+    }
+    
+    // Process AI trick winner decision
+    private func processAITrickWinner() {
+        guard currentPlayer.type == .ai else { return }
+        
+        // AI decides whether to meld first
+        let meldsToDeclare = aiService.decideMeldsToDeclare(for: currentPlayer, in: self)
+        if !meldsToDeclare.isEmpty {
+            // AI chooses to meld
+            for meld in meldsToDeclare {
+                declareMeld(meld, by: currentPlayer)
+            }
+        }
+        
+        // AI draws a card (if available)
+        if !deck.isEmpty {
+            if let card = deck.drawCard() {
+                currentPlayer.addCards([card])
+                print("🤖 \(currentPlayer.name) drew a card")
+            }
+        }
+        
+        // Reset meld choice state
+        canPlayerMeld = false
+        awaitingMeldChoice = false
+        mustDrawCard = false
+        
+        // Start new trick
+        startNewTrick()
+    }
+    
+    // Human player draws a card (called when they choose to draw)
+    func drawCardForCurrentPlayer() {
+        guard mustDrawCard else { return }
+        
+        if !deck.isEmpty {
+            if let card = deck.drawCard() {
+                currentPlayer.addCards([card])
+                print("👤 \(currentPlayer.name) drew a card")
+            }
+        }
+        
+        // Reset meld choice state
+        canPlayerMeld = false
+        awaitingMeldChoice = false
+        mustDrawCard = false
+        
+        // Start new trick
+        startNewTrick()
     }
     
     // Determine winner of current trick
@@ -688,13 +749,5 @@ class Game: ObservableObject {
     
     func playInvalidMeldAnimation() {
         // Stub: No-op for now, can be used to trigger UI feedback
-    }
-    
-    func drawCardForCurrentPlayer() {
-        // Stub: Draw a card for the current player if possible
-        if let card = deck.drawCard() {
-            currentPlayer.addCards([card])
-            mustDrawCard = false
-        }
     }
 } 

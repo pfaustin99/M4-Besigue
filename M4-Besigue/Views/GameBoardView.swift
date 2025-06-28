@@ -83,7 +83,7 @@ struct GameBoardView: View {
                     .font(.headline)
                     .foregroundColor(.red)
             } else {
-                Text("Trump: Not set yet")
+                Text("Trump: None")
                     .font(.headline)
                     .foregroundColor(.secondary)
                     .italic()
