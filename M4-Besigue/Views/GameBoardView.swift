@@ -30,7 +30,7 @@ struct GameBoardView: View {
         }
         .background(Color.green.opacity(0.3))
         .sheet(isPresented: $showingMeldOptions) {
-            MeldOptionsView(game: game, selectedCards: $selectedCards)
+            MeldOptionsView(game: game, settings: settings, selectedCards: $selectedCards)
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(settings: settings)
@@ -112,84 +112,94 @@ struct GameBoardView: View {
     private var playersInfoView: some View {
         HStack(alignment: .top, spacing: 20) {
             ForEach(game.players) { player in
-                VStack(spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text(player.name)
-                            .font(.headline)
-                            .foregroundColor(player.isCurrentPlayer ? .blue : .primary)
-                        Text(": ")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                        Text(String(format: "%04d", player.totalPoints))
-                            .font(.headline)
-                            .foregroundColor(.green)
+                PlayerInfoCard(player: player, settings: settings)
+            }
+        }
+    }
+    
+    // MARK: - Player Info Card
+    private func PlayerInfoCard(player: Player, settings: GameSettings) -> some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 6) {
+                Text(player.name)
+                    .font(.headline)
+                    .foregroundColor(player.isCurrentPlayer ? .blue : .primary)
+                Text(": ")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                Text(String(format: "%04d", player.totalPoints))
+                    .font(.headline)
+                    .foregroundColor(.green)
+            }
+            HStack(spacing: 2) {
+                ForEach(0..<min(player.hand.count, 3), id: \.self) { _ in
+                    CardBackView {
+                        // No action
                     }
-                    HStack(spacing: 2) {
-                        ForEach(0..<min(player.hand.count, 3), id: \.self) { _ in
-                            CardBackView {
-                                // No action
-                            }
-                            .frame(width: 24, height: 36)
-                        }
-                        if player.hand.count > 3 {
-                            Text("+")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    // Meld area for each player
-                    if !player.meldsDeclared.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(player.meldsDeclared) { meld in
-                                    VStack(spacing: 2) {
-                                        HStack(spacing: 2) {
-                                            ForEach(meld.cards) { card in
-                                                ZStack(alignment: .topTrailing) {
-                                                    Image(card.imageName)
-                                                        .resizable()
-                                                        .aspectRatio(contentMode: .fit)
-                                                        .frame(width: 20, height: 30)
-                                                        .cornerRadius(3)
-                                                    HStack(spacing: 1) {
-                                                        if card.usedInMeldTypes.count == MeldType.allCases.count {
-                                                            Text(settings.badgeIcons.exhausted)
-                                                                .font(.system(size: 10))
-                                                                .padding(1)
-                                                        } else {
-                                                            ForEach(Array(card.usedInMeldTypes), id: \ .self) { meldType in
-                                                                Text(badgeIcon(for: meldType, card: card))
-                                                                    .font(.system(size: 10))
-                                                                    .padding(1)
-                                                            }
-                                                        }
-                                                    }
-                                                    .background(Color.white.opacity(0.7))
-                                                    .clipShape(Capsule())
-                                                    .offset(x: 2, y: -2)
-                                                }
+                    .frame(width: 24, height: 36)
+                }
+                if player.hand.count > 3 {
+                    Text("+")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            // Meld area for each player
+            if !player.meldsDeclared.isEmpty {
+                PlayerMeldsView(player: player, settings: settings)
+            }
+        }
+        .padding(4)
+        .background(player.isCurrentPlayer ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
+        .cornerRadius(8)
+    }
+    
+    // MARK: - Player Melds View
+    private func PlayerMeldsView(player: Player, settings: GameSettings) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(player.meldsDeclared) { meld in
+                    VStack(spacing: 2) {
+                        HStack(spacing: 2) {
+                            ForEach(meld.cards) { card in
+                                ZStack(alignment: .topTrailing) {
+                                    Image(card.imageName)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(width: 20, height: 30)
+                                        .cornerRadius(3)
+                                    HStack(spacing: 1) {
+                                        if card.usedInMeldTypes.count == MeldType.allCases.count {
+                                            Text("⚠️")
+                                                .font(.system(size: 10))
+                                                .padding(1)
+                                        } else {
+                                            ForEach(Array(card.usedInMeldTypes), id: \.self) { meldType in
+                                                Text(badgeIcon(for: meldType, card: card))
+                                                    .font(.system(size: 10))
+                                                    .padding(1)
                                             }
                                         }
-                                        Text(meld.type.name)
-                                            .font(.caption2)
-                                            .foregroundColor(.secondary)
-                                        Text("+\(meld.pointValue)")
-                                            .font(.caption2)
-                                            .foregroundColor(.green)
                                     }
-                                    .padding(2)
-                                    .background(Color.yellow.opacity(0.12))
-                                    .cornerRadius(4)
+                                    .background(Color.white.opacity(0.7))
+                                    .clipShape(Capsule())
+                                    .offset(x: 2, y: -2)
                                 }
                             }
-                            .padding(.horizontal, 2)
                         }
+                        Text(meld.type.name)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Text("+\(meld.pointValue)")
+                            .font(.caption2)
+                            .foregroundColor(.green)
                     }
+                    .padding(2)
+                    .background(Color.yellow.opacity(0.12))
+                    .cornerRadius(4)
                 }
-                .padding(4)
-                .background(player.isCurrentPlayer ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
-                .cornerRadius(8)
             }
+            .padding(.horizontal, 2)
         }
     }
     
@@ -666,6 +676,7 @@ struct AIPlayerView: View {
 // MARK: - Meld Options View
 struct MeldOptionsView: View {
     @ObservedObject var game: Game
+    @ObservedObject var settings: GameSettings
     @Binding var selectedCards: [PlayerCard]
     @Environment(\.dismiss) private var dismiss
     
@@ -682,7 +693,7 @@ struct MeldOptionsView: View {
                         List(possibleMelds) { meld in
                             MeldRowView(meld: meld) {
                                 // When a meld is declared, attach the round number
-                                let meldWithRound = Meld(cards: meld.cards, type: meld.type, pointValue: settings.besiguePoints, roundNumber: game.roundNumber)
+                                let meldWithRound = Meld(cards: meld.cards, type: meld.type, pointValue: meld.pointValue, roundNumber: game.roundNumber)
                                 game.declareMeld(meldWithRound, by: humanPlayer)
                                 dismiss()
                             }

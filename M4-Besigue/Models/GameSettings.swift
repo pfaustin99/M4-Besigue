@@ -186,4 +186,5 @@ struct MeldBadgeIcons: Codable, Equatable {
     var commonMarriage: String = "💑"
     var besigue: String = "♠️Q♦️J"
     var sequence: String = "🔗"
+    var exhausted: String = "⚠️"
 } 
