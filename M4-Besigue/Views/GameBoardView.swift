@@ -82,6 +82,11 @@ struct GameBoardView: View {
                 Text("Trump: \(trump.rawValue.capitalized)")
                     .font(.headline)
                     .foregroundColor(.red)
+            } else {
+                Text("Trump: Not set yet")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                    .italic()
             }
             Spacer()
             Text("Phase: \(phaseName)")

@@ -651,13 +651,10 @@ class Game: ObservableObject {
         // Deal cards
         dealCards()
         
-        // Set trump suit (first card of the deck after dealing)
-        if let trumpCard = deck.drawCard() {
-            trumpSuit = trumpCard.suit
-            // Put the trump card back on top of the deck
-            deck.cards.insert(trumpCard, at: 0)
-            print("🎯 Trump suit set to: \(trumpSuit?.rawValue.capitalized ?? "None")")
-        }
+        // Trump suit is NOT set here - it will be determined by the first royal marriage
+        // (King + Queen of the same suit) that is declared during play
+        trumpSuit = nil
+        print("🎯 Trump suit will be determined by the first royal marriage declared")
         
         // Move to playing phase
         currentPhase = .playing
