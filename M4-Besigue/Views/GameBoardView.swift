@@ -516,7 +516,7 @@ struct GameBoardView: View {
     private var dealerDeterminationView: some View {
         VStack(spacing: 15) {
             if game.currentPhase == .dealing {
-                // Show dealer determined message and dealing progress
+                // Show dealer determined message and drawn cards
                 VStack(spacing: 10) {
                     Text("🎉 Dealer Determined! 🎉")
                         .font(.title2)
@@ -527,6 +527,39 @@ struct GameBoardView: View {
                         .font(.headline)
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.center)
+                    
+                    // Show drawn cards even when dealer is determined
+                    if !game.dealerDeterminationCards.isEmpty {
+                        VStack(spacing: 8) {
+                            Text("Cards Drawn:")
+                                .font(.headline)
+                            
+                            // Single stack of cards with rotation and Z offset
+                            ZStack {
+                                ForEach(Array(game.dealerDeterminationCards.enumerated()), id: \.offset) { index, card in
+                                    let rotation = Double((index * 13) % 21 - 10) // -10 to +10 degrees
+                                    let zOffset = Double(index) * 2
+                                    VStack(spacing: 4) {
+                                        Image(card.imageName)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(width: 60, height: 90)
+                                            .cornerRadius(6)
+                                            .shadow(radius: 2)
+                                            .rotationEffect(.degrees(rotation))
+                                            .zIndex(Double(index))
+                                            .offset(y: zOffset)
+                                        if index < game.dealerDeterminationCards.count - 1 {
+                                            Text("\(game.players[index % game.playerCount].name)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                                .offset(y: zOffset)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     
                     Text("Dealing cards...")
                         .font(.subheadline)

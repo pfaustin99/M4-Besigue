@@ -121,14 +121,29 @@ class Game: ObservableObject {
     private func processAIDealerDetermination() {
         guard currentPhase == .dealerDetermination && currentPlayer.type == .ai else { return }
         
+        print("🤖 AI player \(currentPlayer.name) is drawing for dealer determination...")
+        
         // AI draws a card for dealer determination
         drawCardForDealerDetermination()
         
         // If dealer is not yet determined, continue to next player
         if currentPhase == .dealerDetermination {
-            nextPlayer()
+            // Move to next player
+            currentPlayerIndex = (currentPlayerIndex + 1) % playerCount
+            currentPlayer.isCurrentPlayer = true
+            
+            // Clear previous player's current status
+            for (index, player) in players.enumerated() {
+                if index != currentPlayerIndex {
+                    player.isCurrentPlayer = false
+                }
+            }
+            
+            print("🔄 Moving to next player: \(currentPlayer.name)")
+            
+            // If next player is also AI, continue the process
             if currentPlayer.type == .ai {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     self.processAIDealerDetermination()
                 }
             }
@@ -601,7 +616,7 @@ class Game: ObservableObject {
             print("🎴 \(currentPlayer.name) draws \(card.imageName) for dealer determination")
             dealerDeterminationCards.append(card)
             
-            // If a Jack is drawn, set dealer and proceed
+            // If a Jack is drawn, set dealer and show message
             if !card.isJoker && card.value == .jack {
                 let dealerIndex = (dealerDeterminationCards.count - 1) % playerCount
                 for (i, player) in players.enumerated() {
@@ -610,45 +625,56 @@ class Game: ObservableObject {
                 dealerDeterminedMessage = "Dealer is \(players[dealerIndex].name)!"
                 print("👑 Dealer determined: \(players[dealerIndex].name)")
                 
-                // Return drawn cards to deck and shuffle
-                deck.cards.append(contentsOf: dealerDeterminationCards)
-                deck.shuffle()
-                dealerDeterminationCards.removeAll()
-                
-                // Move to dealing phase
+                // Move to dealing phase but keep cards visible
                 currentPhase = .dealing
                 print("🃏 Moving to dealing phase...")
                 
-                // Deal cards
-                dealCards()
-                
-                // Set trump suit (first card of the deck after dealing)
-                if let trumpCard = deck.drawCard() {
-                    trumpSuit = trumpCard.suit
-                    // Put the trump card back on top of the deck
-                    deck.cards.insert(trumpCard, at: 0)
-                    print("🎯 Trump suit set to: \(trumpSuit?.rawValue.capitalized ?? "None")")
-                }
-                
-                // Move to playing phase
-                currentPhase = .playing
-                print("🎮 Moving to playing phase...")
-                
-                // The player to the right of the dealer leads the first trick
-                currentPlayerIndex = (dealerIndex + 1) % playerCount
-                print("🎯 First player: \(currentPlayer.name)")
-                
-                // Start AI turn if AI is first
-                if currentPlayer.type == .ai {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        self.processAITurn()
-                    }
+                // Start dealing process after a delay to show the dealer message
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    self.completeDealerDetermination()
                 }
             } else {
                 print("🔄 No Jack drawn, continuing dealer determination...")
             }
         } else {
             print("❌ No cards left in deck for dealer determination")
+        }
+    }
+    
+    // Complete the dealer determination process
+    private func completeDealerDetermination() {
+        // Return drawn cards to deck and shuffle
+        deck.cards.append(contentsOf: dealerDeterminationCards)
+        deck.shuffle()
+        dealerDeterminationCards.removeAll()
+        
+        // Deal cards
+        dealCards()
+        
+        // Set trump suit (first card of the deck after dealing)
+        if let trumpCard = deck.drawCard() {
+            trumpSuit = trumpCard.suit
+            // Put the trump card back on top of the deck
+            deck.cards.insert(trumpCard, at: 0)
+            print("🎯 Trump suit set to: \(trumpSuit?.rawValue.capitalized ?? "None")")
+        }
+        
+        // Move to playing phase
+        currentPhase = .playing
+        print("🎮 Moving to playing phase...")
+        
+        // Find the dealer index
+        let dealerIndex = players.firstIndex(where: { $0.isDealer }) ?? 0
+        
+        // The player to the right of the dealer leads the first trick
+        currentPlayerIndex = (dealerIndex + 1) % playerCount
+        print("🎯 First player: \(currentPlayer.name)")
+        
+        // Start AI turn if AI is first
+        if currentPlayer.type == .ai {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.processAITurn()
+            }
         }
     }
     
