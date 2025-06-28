@@ -32,6 +32,7 @@ class Game: ObservableObject {
     @Published var awaitingMeldChoice: Bool = false
     @Published var mustDrawCard: Bool = false
     @Published var jackDrawnForDealer: Card? = nil
+    @Published var showJackProminently: Bool = false
     
     let settings: GameSettings
     
@@ -87,8 +88,11 @@ class Game: ObservableObject {
             player.reset()
         }
         
-        // Reset game state
+        // Reset game state and ensure deck is shuffled
         deck.reset()
+        deck.shuffle() // Extra shuffle to ensure randomness
+        print("🃏 Deck shuffled for dealer determination")
+        
         currentPhase = .dealerDetermination
         currentPlayerIndex = 0
         trumpSuit = nil
@@ -100,6 +104,7 @@ class Game: ObservableObject {
         dealerDeterminationCards.removeAll()
         dealerDeterminedMessage = ""
         jackDrawnForDealer = nil
+        showJackProminently = false
         
         // Reset brisques
         for player in players {
@@ -689,22 +694,33 @@ class Game: ObservableObject {
             
             // If a Jack is drawn, set dealer and show message
             if !card.isJoker && card.value == .jack {
+                print("🎯 JACK DRAWN! Setting jackDrawnForDealer to \(card.imageName)")
                 jackDrawnForDealer = card
+                showJackProminently = true
                 let dealerIndex = (dealerDeterminationCards.count - 1) % playerCount
                 for (i, player) in players.enumerated() {
                     player.isDealer = (i == dealerIndex)
                 }
-                dealerDeterminedMessage = "Dealer is \(players[dealerIndex].name)!"
-                print("👑 Dealer determined: \(players[dealerIndex].name)")
                 
-                // Move to dealing phase but keep cards visible
+                // Set dealer message
+                let dealer = players[dealerIndex]
+                dealerDeterminedMessage = "Dealer is \(dealer.name)!"
+                print("👑 Dealer determined: \(dealer.name)")
+                print("📝 Dealer message: \(dealerDeterminedMessage)")
+                
+                // Move to dealing phase
                 currentPhase = .dealing
                 print("🃏 Moving to dealing phase...")
                 
-                // Start dealing process after a delay to show the dealer message
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                // PAUSE: Keep Jack visible for 3 seconds to ensure UI updates
+                print("⏸️ Pausing for 3 seconds to show Jack prominently...")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    print("⏰ 3 seconds passed, completing dealer determination")
+                    self.showJackProminently = false
                     self.completeDealerDetermination()
                 }
+                
+                return // Don't continue to next player
             } else {
                 print("🔄 No Jack drawn, continuing dealer determination...")
                 // Move to next player for dealer determination

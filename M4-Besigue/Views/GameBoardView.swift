@@ -215,25 +215,29 @@ struct GameBoardView: View {
             if game.currentPhase == .dealerDetermination {
                 dealerDeterminationView
             } else {
-                // Current trick
+                // Clean trick area - only cards, no text
                 TrickView(
                     cards: game.currentTrick,
-                    playerNames: trickPlayerNames,
-                    winningIndex: game.isShowingTrickResult ? game.determineTrickWinnerIndex() : nil,
                     game: game
                 )
-                // Game controls
-                gameControls
-                // Deck info and draw pile
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("Cards in deck: \(game.deck.remainingCount)")
-                            .font(.caption)
-                        drawPileView
+                
+                // Human draw button - below trick area
+                if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
+                    Button("Draw Card") {
+                        withAnimation {
+                            game.drawCardForCurrentPlayer()
+                        }
                     }
-                    Spacer()
+                    .buttonStyle(.borderedProminent)
+                    .font(.headline)
+                    .padding(.vertical, 8)
                 }
-                .padding(.horizontal)
+                
+                // Game controls (only for setup and dealer determination)
+                if game.currentPhase == .setup || game.currentPhase == .dealerDetermination {
+                    gameControls
+                }
+                
                 // Error messages
                 if showInvalidMeld {
                     Text("Invalid meld!")
@@ -241,6 +245,7 @@ struct GameBoardView: View {
                         .transition(.opacity)
                         .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showInvalidMeld = false } }
                 }
+                
                 // Show trick winner message using game state
                 if game.isShowingTrickResult, let winner = game.lastTrickWinner {
                     Text("\(winner) won the trick!")
@@ -269,6 +274,18 @@ struct GameBoardView: View {
                     meldsAreaView(humanPlayer)
                 }
                 actionButtonsView(humanPlayer)
+                
+                // Deck info and draw pile - moved to bottom section
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("Cards in deck: \(game.deck.remainingCount)")
+                            .font(.caption)
+                        drawPileView
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal)
+                
                 handView(humanPlayer)
             }
         }
@@ -492,64 +509,42 @@ struct GameBoardView: View {
         }
     }
     
-    // Draw pile stack view
-    private var drawPileView: some View {
-        Button(action: {
-            if game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human {
-                withAnimation {
-                    game.drawCardForCurrentPlayer()
-                }
-            }
-        }) {
-            VStack(spacing: 0) {
-                // Angled stack of cards
-                ZStack {
-                    // Background cards (stacked behind)
-                    ForEach(0..<min(game.deck.remainingCount - 1, 4), id: \.self) { i in
-                        Image("card_back")
-                            .resizable()
-                            .frame(width: 32, height: 48)
-                            .cornerRadius(4)
-                            .rotationEffect(.degrees(Double(i) * 2 - 3)) // Slight angle variation
-                            .offset(x: Double(i) * 0.5, y: Double(i) * 1.5)
-                            .opacity(Double(1.0 - Double(i) * 0.2))
-                            .zIndex(Double(i))
-                    }
-                    
-                    // Top card (most prominent)
-                    if game.deck.remainingCount > 0 {
-                        Image("card_back")
-                            .resizable()
-                            .frame(width: 36, height: 54)
-                            .cornerRadius(4)
-                            .shadow(radius: 3)
-                            .scaleEffect((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.1 : 1.0)
-                            .zIndex(10)
-                    }
-                }
-                
-                // Draw instruction text
-                if game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human {
-                    Text("Draw a card")
-                        .font(.caption)
-                        .foregroundColor(.blue)
-                        .bold()
-                        .padding(.top, 4)
-                }
-            }
-        }
-        .disabled(!(game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human))
-        .opacity((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.0 : 0.6)
-        .scaleEffect((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.0 : 0.9)
-        .animation(.easeInOut(duration: 0.3), value: game.mustDrawCard)
-        .padding(.vertical, 4)
-    }
-    
     // Dealer determination view
     private var dealerDeterminationView: some View {
         VStack(spacing: 15) {
-            // Show the Jack that determined the dealer prominently (if drawn)
-            if let jackCard = game.jackDrawnForDealer {
+            // Debug info
+            if game.jackDrawnForDealer != nil {
+                Text("DEBUG: Jack detected in UI!")
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .bold()
+            }
+            
+            // Debug: Show when showJackProminently is true
+            if game.showJackProminently {
+                Text("🎴 SHOW JACK PROMINENTLY FLAG IS TRUE! 🎴")
+                    .font(.title2)
+                    .bold()
+                    .foregroundColor(.red)
+                    .background(Color.yellow)
+                    .padding()
+            }
+            
+            // TEST BUTTON: Force Jack to show for debugging
+            Button("TEST: Force Show Jack") {
+                if let jackCard = game.dealerDeterminationCards.first(where: { !$0.isJoker && $0.value == .jack }) {
+                    game.jackDrawnForDealer = jackCard
+                    game.showJackProminently = true
+                    game.dealerDeterminedMessage = "TEST: Dealer is Player 1!"
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .background(Color.purple)
+            .foregroundColor(.white)
+            .padding()
+            
+            // Show the Jack that determined the dealer prominently (if drawn) - show during both phases
+            if let jackCard = game.jackDrawnForDealer, game.showJackProminently {
                 VStack(spacing: 12) {
                     Text("🎴 JACK DRAWN! 🎴")
                         .font(.title)
@@ -586,6 +581,49 @@ struct GameBoardView: View {
                 )
                 .scaleEffect(1.02)
                 .animation(.easeInOut(duration: 0.3), value: jackCard.id)
+            }
+            
+            // TEST: Show Jack prominently if we're in dealing phase and have cards
+            if game.currentPhase == .dealing && !game.dealerDeterminationCards.isEmpty && !game.showJackProminently {
+                // Find the Jack in the dealer determination cards
+                if let jackCard = game.dealerDeterminationCards.first(where: { !$0.isJoker && $0.value == .jack }) {
+                    VStack(spacing: 12) {
+                        Text("🎴 JACK DRAWN! 🎴")
+                            .font(.title)
+                            .bold()
+                            .foregroundColor(.orange)
+                        
+                        Text(game.dealerDeterminedMessage)
+                            .font(.title2)
+                            .bold()
+                            .foregroundColor(.green)
+                            .multilineTextAlignment(.center)
+                        
+                        Image(jackCard.imageName)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 160, height: 240) // 2x size
+                            .cornerRadius(12)
+                            .shadow(radius: 8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.orange, lineWidth: 4)
+                            )
+                            .scaleEffect(1.05)
+                            .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: jackCard.id)
+                    }
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.orange.opacity(0.15))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.orange, lineWidth: 2)
+                            )
+                    )
+                    .scaleEffect(1.02)
+                    .animation(.easeInOut(duration: 0.3), value: jackCard.id)
+                }
             }
             
             if game.currentPhase == .dealing {
@@ -708,6 +746,59 @@ struct GameBoardView: View {
         .padding()
         .background(Color.gray.opacity(0.1))
         .cornerRadius(12)
+    }
+
+    // Draw pile stack view - moved to bottom section
+    private var drawPileView: some View {
+        Button(action: {
+            if game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human {
+                withAnimation {
+                    game.drawCardForCurrentPlayer()
+                }
+            }
+        }) {
+            VStack(spacing: 0) {
+                // Angled stack of cards
+                ZStack {
+                    // Background cards (stacked behind)
+                    ForEach(0..<min(game.deck.remainingCount - 1, 4), id: \.self) { i in
+                        Image("card_back")
+                            .resizable()
+                            .frame(width: 32, height: 48)
+                            .cornerRadius(4)
+                            .rotationEffect(.degrees(Double(i) * 2 - 3)) // Slight angle variation
+                            .offset(x: Double(i) * 0.5, y: Double(i) * 1.5)
+                            .opacity(Double(1.0 - Double(i) * 0.2))
+                            .zIndex(Double(i))
+                    }
+                    
+                    // Top card (most prominent)
+                    if game.deck.remainingCount > 0 {
+                        Image("card_back")
+                            .resizable()
+                            .frame(width: 36, height: 54)
+                            .cornerRadius(4)
+                            .shadow(radius: 3)
+                            .scaleEffect((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.1 : 1.0)
+                            .zIndex(10)
+                    }
+                }
+                
+                // Draw instruction text
+                if game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human {
+                    Text("Draw a card")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .bold()
+                        .padding(.top, 4)
+                }
+            }
+        }
+        .disabled(!(game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human))
+        .opacity((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.0 : 0.6)
+        .scaleEffect((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.0 : 0.9)
+        .animation(.easeInOut(duration: 0.3), value: game.mustDrawCard)
+        .padding(.vertical, 4)
     }
 
     private func handView(_ player: Player) -> some View {
@@ -920,67 +1011,23 @@ struct BadgeLegendRow: View {
 
 struct TrickView: View {
     let cards: [PlayerCard]
-    let playerNames: [String]
-    let winningIndex: Int?
     @ObservedObject var game: Game
-    
     var body: some View {
-        VStack(spacing: 10) {
-            Text("Current Trick")
-                .font(.headline)
-                .foregroundColor(.secondary)
-            
-            if cards.isEmpty {
-                Text("No cards played yet")
-                    .foregroundColor(.secondary)
-                    .italic()
-            } else {
-                // Show winner message if available
-                if let winningIndex = winningIndex, winningIndex < playerNames.count {
-                    Text("🎉 \(playerNames[winningIndex]) wins! 🎉")
-                        .font(.title3)
-                        .bold()
-                        .foregroundColor(.green)
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 8)
-                        .background(Color.green.opacity(0.2))
-                        .cornerRadius(8)
+        HStack(spacing: 18) {
+            ForEach(Array(cards.enumerated()), id: \ .offset) { index, card in
+                let rotation = Double((index * 17) % 21 - 10)
+                let zOffset = Double(index) * 2
+                CardView(
+                    card: card,
+                    isSelected: false,
+                    isPlayable: false
+                ) {
+                    // No action for played cards
                 }
-                
-                HStack(spacing: 12) {
-                    ForEach(Array(cards.enumerated()), id: \.offset) { index, card in
-                        let rotation = Double((index * 17) % 21 - 10) // -10 to +10 degrees
-                        let zOffset = Double(index) * 2
-                        VStack(spacing: 4) {
-                            CardView(
-                                card: card,
-                                isSelected: false,
-                                isPlayable: false
-                            ) {
-                                // No action for played cards
-                            }
-                            .overlay(
-                                // Highlight winning card with a green border and glow
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(winningIndex == index ? Color.green : Color.clear, lineWidth: 3)
-                            )
-                            .scaleEffect(winningIndex == index ? 1.1 : 1.0)
-                            .shadow(color: winningIndex == index ? .green.opacity(0.8) : .clear, radius: 6)
-                            .rotationEffect(.degrees(rotation))
-                            .zIndex(Double(index))
-                            .offset(y: zOffset)
-                            .animation(.easeInOut(duration: 0.3), value: winningIndex)
-                            
-                            if index < playerNames.count {
-                                Text(playerNames[index])
-                                    .font(.caption)
-                                    .foregroundColor(winningIndex == index ? .green : .secondary)
-                                    .fontWeight(winningIndex == index ? .bold : .regular)
-                                    .offset(y: zOffset)
-                            }
-                        }
-                    }
-                }
+                .frame(width: 120, height: 180) // 1.5x size
+                .rotationEffect(.degrees(rotation))
+                .zIndex(Double(index))
+                .offset(y: zOffset)
             }
         }
         .padding()
