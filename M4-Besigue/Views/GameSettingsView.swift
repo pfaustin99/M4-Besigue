@@ -32,7 +32,7 @@ struct GameSettingsView: View {
             
             // Content
             ScrollView {
-                LazyVStack(spacing: 20) {
+                VStack(spacing: 20) {
                     // Game Rules Section
                     SettingsSection(title: "Game Rules") {
                         VStack(spacing: 12) {
