@@ -30,18 +30,21 @@ struct GameSettingsView: View {
             .background(Color(.systemBackground))
             .shadow(radius: 1)
             
-            // Content - Remove .scrollIndicators and use showsIndicators instead
+            // Content - Test with simplified components and more content
             ScrollView(showsIndicators: true) {
                 VStack(spacing: 20) {
-                    // Game Rules Section
-                    SettingsSection(title: "Game Rules") {
+                    // Game Rules Section - Simplified
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Game Rules")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
                         VStack(spacing: 12) {
-                            SettingsRow(title: "Number of Players", value: "\(gameRules.playerCount)") {
+                            HStack {
+                                Text("Number of Players")
+                                Spacer()
+                                Text("\(gameRules.playerCount)")
                                 Stepper("", value: $gameRules.playerCount, in: 2...4)
-                            }
-                            
-                            SettingsRow(title: "Hand Size", value: "\(gameRules.handSize)") {
-                                Stepper("", value: $gameRules.handSize, in: 6...12)
                             }
                             
                             Picker("Play Direction", selection: $gameRules.playDirection) {
@@ -56,141 +59,130 @@ struct GameSettingsView: View {
                             }
                             .pickerStyle(SegmentedPickerStyle())
                         }
-                        .padding(.horizontal)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
                     }
                     
-                    // Scoring Section
-                    SettingsSection(title: "Scoring") {
+                    // Scoring Section - Simplified
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Scoring")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
                         VStack(spacing: 12) {
-                            SettingsRow(title: "Winning Score", value: "\(gameRules.winningScore)") {
+                            HStack {
+                                Text("Winning Score")
+                                Spacer()
+                                Text("\(gameRules.winningScore)")
                                 Stepper("", value: $gameRules.winningScore, in: 100...2000, step: 10)
                             }
                             
-                            SettingsRow(title: "Final Trick Bonus", value: "\(gameRules.finalTrickBonus)") {
+                            HStack {
+                                Text("Final Trick Bonus")
+                                Spacer()
+                                Text("\(gameRules.finalTrickBonus)")
                                 Stepper("", value: $gameRules.finalTrickBonus, in: 0...100, step: 1)
                             }
                             
-                            SettingsRow(title: "Trick with Seven Trump", value: "\(gameRules.trickWithSevenTrumpPoints)") {
+                            HStack {
+                                Text("Trick with Seven Trump")
+                                Spacer()
+                                Text("\(gameRules.trickWithSevenTrumpPoints)")
                                 Stepper("", value: $gameRules.trickWithSevenTrumpPoints, in: 0...100, step: 1)
                             }
                         }
-                        .padding(.horizontal)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
                     }
                     
-                    // Meld Points Section
-                    SettingsSection(title: "Meld Points") {
+                    // Brisques Section - Simplified
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Brisques")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
                         VStack(spacing: 12) {
-                            SettingsRow(title: "Bésigue", value: "\(gameRules.besiguePoints)") {
-                                Stepper("", value: $gameRules.besiguePoints, in: 10...100, step: 5)
-                            }
-                            
-                            SettingsRow(title: "Royal Marriage", value: "\(gameRules.royalMarriagePoints)") {
-                                Stepper("", value: $gameRules.royalMarriagePoints, in: 10...100, step: 5)
-                            }
-                            
-                            SettingsRow(title: "Common Marriage", value: "\(gameRules.commonMarriagePoints)") {
-                                Stepper("", value: $gameRules.commonMarriagePoints, in: 5...50, step: 5)
-                            }
-                            
-                            SettingsRow(title: "Four Aces", value: "\(gameRules.fourAcesPoints)") {
-                                Stepper("", value: $gameRules.fourAcesPoints, in: 50...200, step: 10)
-                            }
-                            
-                            SettingsRow(title: "Four Kings", value: "\(gameRules.fourKingsPoints)") {
-                                Stepper("", value: $gameRules.fourKingsPoints, in: 40...150, step: 10)
-                            }
-                            
-                            SettingsRow(title: "Four Queens", value: "\(gameRules.fourQueensPoints)") {
-                                Stepper("", value: $gameRules.fourQueensPoints, in: 30...120, step: 10)
-                            }
-                            
-                            SettingsRow(title: "Four Jacks", value: "\(gameRules.fourJacksPoints)") {
-                                Stepper("", value: $gameRules.fourJacksPoints, in: 20...100, step: 10)
-                            }
-                            
-                            SettingsRow(title: "Four Jokers", value: "\(gameRules.fourJokersPoints)") {
-                                Stepper("", value: $gameRules.fourJokersPoints, in: 100...500, step: 25)
-                            }
-                            
-                            SettingsRow(title: "Sequence", value: "\(gameRules.sequencePoints)") {
-                                Stepper("", value: $gameRules.sequencePoints, in: 100...500, step: 25)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // Trump Multipliers Section
-                    SettingsSection(title: "Trump Multipliers") {
-                        VStack(spacing: 12) {
-                            SettingsRow(title: "Four Aces Multiplier", value: "\(gameRules.trumpFourAcesMultiplier)x") {
-                                Stepper("", value: $gameRules.trumpFourAcesMultiplier, in: 1...5)
-                            }
-                            
-                            SettingsRow(title: "Four Kings Multiplier", value: "\(gameRules.trumpFourKingsMultiplier)x") {
-                                Stepper("", value: $gameRules.trumpFourKingsMultiplier, in: 1...5)
-                            }
-                            
-                            SettingsRow(title: "Four Queens Multiplier", value: "\(gameRules.trumpFourQueensMultiplier)x") {
-                                Stepper("", value: $gameRules.trumpFourQueensMultiplier, in: 1...5)
-                            }
-                            
-                            SettingsRow(title: "Four Jacks Multiplier", value: "\(gameRules.trumpFourJacksMultiplier)x") {
-                                Stepper("", value: $gameRules.trumpFourJacksMultiplier, in: 1...5)
-                            }
-                            
-                            SettingsRow(title: "Sequence Multiplier", value: "\(gameRules.trumpSequenceMultiplier)x") {
-                                Stepper("", value: $gameRules.trumpSequenceMultiplier, in: 1...5)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // Brisques Section
-                    SettingsSection(title: "Brisques") {
-                        VStack(spacing: 12) {
-                            SettingsRow(title: "Brisque Value", value: "\(gameRules.brisqueValue)") {
+                            HStack {
+                                Text("Brisque Value")
+                                Spacer()
+                                Text("\(gameRules.brisqueValue)")
                                 Stepper("", value: $gameRules.brisqueValue, in: 1...100)
                             }
                             
-                            SettingsRow(title: "Minimum Brisques", value: "\(gameRules.minBrisques)") {
+                            HStack {
+                                Text("Minimum Brisques")
+                                Spacer()
+                                Text("\(gameRules.minBrisques)")
                                 Stepper("", value: $gameRules.minBrisques, in: 1...20)
                             }
                             
-                            SettingsRow(title: "Brisque Cutoff Score", value: "\(gameRules.brisqueCutoff)") {
+                            HStack {
+                                Text("Brisque Cutoff Score")
+                                Spacer()
+                                Text("\(gameRules.brisqueCutoff)")
                                 Stepper("", value: $gameRules.brisqueCutoff, in: 100...2000, step: 10)
                             }
                             
-                            SettingsRow(title: "Min Score for Brisques", value: "\(gameRules.minScoreForBrisques)") {
+                            HStack {
+                                Text("Min Score for Brisques")
+                                Spacer()
+                                Text("\(gameRules.minScoreForBrisques)")
                                 Stepper("", value: $gameRules.minScoreForBrisques, in: 0...2000, step: 10)
                             }
                         }
-                        .padding(.horizontal)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
                     }
                     
-                    // Penalties Section
-                    SettingsSection(title: "Penalties") {
+                    // Penalties Section - Simplified
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Penalties")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
                         VStack(spacing: 12) {
-                            SettingsRow(title: "General Penalty", value: "\(gameRules.penalty)") {
+                            HStack {
+                                Text("General Penalty")
+                                Spacer()
+                                Text("\(gameRules.penalty)")
                                 Stepper("", value: $gameRules.penalty, in: -100...0, step: 1)
                             }
                             
-                            SettingsRow(title: "Penalty Below 100", value: "\(gameRules.penaltyBelow100)") {
+                            HStack {
+                                Text("Penalty Below 100")
+                                Spacer()
+                                Text("\(gameRules.penaltyBelow100)")
                                 Stepper("", value: $gameRules.penaltyBelow100, in: -100...0, step: 1)
                             }
                             
-                            SettingsRow(title: "Penalty Few Brisques", value: "\(gameRules.penaltyFewBrisques)") {
+                            HStack {
+                                Text("Penalty Few Brisques")
+                                Spacer()
+                                Text("\(gameRules.penaltyFewBrisques)")
                                 Stepper("", value: $gameRules.penaltyFewBrisques, in: -100...0, step: 1)
                             }
                             
-                            SettingsRow(title: "Penalty Out of Turn", value: "\(gameRules.penaltyOutOfTurn)") {
+                            HStack {
+                                Text("Penalty Out of Turn")
+                                Spacer()
+                                Text("\(gameRules.penaltyOutOfTurn)")
                                 Stepper("", value: $gameRules.penaltyOutOfTurn, in: -100...0, step: 1)
                             }
                         }
-                        .padding(.horizontal)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
                     }
                     
-                    // Global Card Size Section
-                    SettingsSection(title: "Global Card Size") {
+                    // Global Card Size Section - Simplified
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Global Card Size")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
                         Picker("Card Size", selection: $gameRules.globalCardSize) {
                             Text("Small (1.5x)").tag(CardSizeMultiplier.small)
                             Text("Medium (2x)").tag(CardSizeMultiplier.medium)
@@ -198,11 +190,17 @@ struct GameSettingsView: View {
                             Text("Extra Large (3x)").tag(CardSizeMultiplier.extraLarge)
                         }
                         .pickerStyle(MenuPickerStyle())
-                        .padding(.horizontal)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
                     }
                     
-                    // Animation Timing Section
-                    SettingsSection(title: "Animation Timing") {
+                    // Animation Timing Section - Simplified
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Animation Timing")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
                         VStack(spacing: 12) {
                             Picker("Card Play Delay", selection: $gameRules.cardPlayDelay) {
                                 Text("Fast (0.3s)").tag(AnimationTiming.fast)
@@ -218,11 +216,16 @@ struct GameSettingsView: View {
                             }
                             .pickerStyle(MenuPickerStyle())
                             
-                            SettingsRow(title: "Dealer Determination Delay", value: String(format: "%.1fs", gameRules.dealerDeterminationDelay)) {
+                            HStack {
+                                Text("Dealer Determination Delay")
+                                Spacer()
+                                Text(String(format: "%.1fs", gameRules.dealerDeterminationDelay))
                                 Stepper("", value: $gameRules.dealerDeterminationDelay, in: 1.0...5.0, step: 0.5)
                             }
                         }
-                        .padding(.horizontal)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
                     }
                     
                     // Start Game Button
@@ -239,7 +242,7 @@ struct GameSettingsView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 20)
             }
-            .clipped() // Add this to ensure proper clipping
+            .clipped()
         }
         .alert("Start New Game", isPresented: $showingStartGame) {
             Button("Start") {

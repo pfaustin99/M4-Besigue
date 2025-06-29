@@ -1132,8 +1132,12 @@ struct CardStackedView: View {
     }
     
     var body: some View {
-        CardView(card: card, isSelected: false, isPlayable: true, showHint: false, onTap: {})
+        Image(card.imageName)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
             .frame(width: 80 * settings.trickAreaCardSize.rawValue, height: 120 * settings.trickAreaCardSize.rawValue)
+            .cornerRadius(8)
+            .shadow(radius: 4)
             .offset(x: CGFloat(displayIndex) * 12, y: CGFloat(displayIndex) * 6 + CGFloat(displayIndex) * 2)
             .rotationEffect(.degrees(randomRotation))
             .zIndex(Double(displayIndex))
