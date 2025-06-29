@@ -283,6 +283,17 @@ struct GameBoardView: View {
                 }
             }
         )
+        .overlay(
+            // AI card draw animation overlay
+            Group {
+                if game.isAIDrawingCard, let aiCard = game.aiDrawnCard {
+                    AICardDrawAnimationView(
+                        card: aiCard,
+                        fromPosition: settings.drawPilePosition
+                    )
+                }
+            }
+        )
     }
     
     // MARK: - Trick Section
@@ -1170,6 +1181,73 @@ struct TapToDrawMessage: View {
             .onAppear {
                 isPulsing = true
             }
+    }
+}
+
+// MARK: - AI Card Draw Animation View
+struct AICardDrawAnimationView: View {
+    let card: PlayerCard
+    let fromPosition: DrawPilePosition
+    @State private var animationProgress: CGFloat = 0
+    @State private var cardRotation: Double = 0
+    @State private var cardScale: CGFloat = 1.0
+    @State private var cardZRotation: Double = 0
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Animated card
+                Image(card.imageName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 80, height: 120)
+                    .cornerRadius(8)
+                    .shadow(radius: 8, x: 4, y: 4)
+                    .scaleEffect(cardScale)
+                    .rotationEffect(.degrees(cardRotation))
+                    .rotation3DEffect(.degrees(cardZRotation), axis: (x: 0, y: 1, z: 0))
+                    .offset(
+                        x: getCardOffsetX(geometry: geometry),
+                        y: getCardOffsetY(geometry: geometry)
+                    )
+                    .opacity(1 - animationProgress)
+            }
+        }
+        .onAppear {
+            startAnimation()
+        }
+    }
+    
+    private func getCardOffsetX(geometry: GeometryProxy) -> CGFloat {
+        let startX: CGFloat = fromPosition == .centerLeft ? -100 : 100
+        let endX: CGFloat = fromPosition == .centerLeft ? -200 : 200 // Fly to AI player area
+        return startX + (endX - startX) * animationProgress
+    }
+    
+    private func getCardOffsetY(geometry: GeometryProxy) -> CGFloat {
+        let startY: CGFloat = 0
+        let endY: CGFloat = -150 // Fly up to AI player area
+        let arcHeight: CGFloat = -200
+        let progress = animationProgress
+        
+        // Create an arc motion
+        if progress <= 0.5 {
+            // First half: go up
+            return startY + (arcHeight - startY) * (progress * 2)
+        } else {
+            // Second half: come down
+            let secondHalfProgress = (progress - 0.5) * 2
+            return arcHeight + (endY - arcHeight) * secondHalfProgress
+        }
+    }
+    
+    private func startAnimation() {
+        withAnimation(.easeInOut(duration: 0.6)) {
+            animationProgress = 1.0
+            cardRotation = 360 // Full flip
+            cardZRotation = 180 // 3D flip
+            cardScale = 1.2 // Slight scale up during animation
+        }
     }
 }
 

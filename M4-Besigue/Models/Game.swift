@@ -53,6 +53,10 @@ class Game: ObservableObject {
     @Published var winningCardIndex: Int? = nil
     @Published var shouldAnimateWinningCard: Bool = false
     
+    // AI card draw animation state
+    @Published var isAIDrawingCard: Bool = false
+    @Published var aiDrawnCard: PlayerCard? = nil
+    
     // Computed property to check if we're in endgame
     var isEndgame: Bool {
         return deck.isEmpty
@@ -253,6 +257,16 @@ class Game: ObservableObject {
         let winnerIndex = determineTrickWinner()
         let winner = players[winnerIndex]
         
+        // Show trick winner message
+        lastTrickWinner = winner.name
+        isShowingTrickResult = true
+        
+        // Hide the message after a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.isShowingTrickResult = false
+            self.lastTrickWinner = nil
+        }
+        
         // Add brisques to winner's count
         for card in currentTrick {
             if card.isBrisque {
@@ -308,14 +322,39 @@ class Game: ObservableObject {
             }
         }
         
-        // AI draws a card (if available)
+        // AI draws a card (if available) with animation
         if !deck.isEmpty {
             if let card = deck.drawCard() {
-                currentPlayer.addCards([card])
-                print("🤖 \(currentPlayer.name) drew a card")
+                let playerCard = PlayerCard(card: card)
+                
+                // Start AI draw animation
+                isAIDrawingCard = true
+                aiDrawnCard = playerCard
+                
+                // Animate the draw
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    self.currentPlayer.addCards([card])
+                    print("🤖 \(self.currentPlayer.name) drew a card")
+                    
+                    // End animation
+                    self.isAIDrawingCard = false
+                    self.aiDrawnCard = nil
+                    
+                    // Continue with game flow
+                    self.continueAfterAIDraw()
+                }
+            } else {
+                // No card to draw, continue immediately
+                continueAfterAIDraw()
             }
+        } else {
+            // No cards in deck, continue immediately
+            continueAfterAIDraw()
         }
-        
+    }
+    
+    // Continue game flow after AI draw
+    private func continueAfterAIDraw() {
         // Reset meld choice state
         canPlayerMeld = false
         awaitingMeldChoice = false
