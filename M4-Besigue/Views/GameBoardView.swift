@@ -973,9 +973,10 @@ struct TrickView: View {
     }
     
     private var dealerDeterminationStack: some View {
-        ForEach(Array(game.dealerDeterminationCards.enumerated()), id: \.offset) { index, card in
-            let rotation = Double((index * 13) % 21 - 10)
-            let zOffset = Double(index) * 3
+        ForEach(Array(game.dealerDeterminationCards.enumerated().reversed()), id: \.offset) { index, card in
+            let originalIndex = game.dealerDeterminationCards.count - 1 - index
+            let rotation = Double((originalIndex * 13) % 21 - 10)
+            let zOffset = Double(originalIndex) * 3
             Image(card.imageName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
@@ -983,8 +984,8 @@ struct TrickView: View {
                 .cornerRadius(8)
                 .shadow(radius: 4)
                 .rotationEffect(.degrees(rotation))
-                .offset(x: CGFloat(index) * 12, y: CGFloat(index) * 6 + CGFloat(zOffset))
-                .zIndex(Double(game.dealerDeterminationCards.count - index))
+                .offset(x: CGFloat(originalIndex) * 12, y: CGFloat(originalIndex) * 6 + CGFloat(zOffset))
+                .zIndex(Double(index))
         }
     }
     
