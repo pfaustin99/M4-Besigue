@@ -69,6 +69,38 @@ struct SettingsView: View {
                         }
                     }
                 }
+                
+                Section(header: Text("UI Configuration")) {
+                    Picker("Card Size", selection: $settings.cardSizeMultiplier) {
+                        ForEach(CardSizeMultiplier.allCases, id: \.self) { size in
+                            Text(size.displayName).tag(size)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    
+                    Picker("Draw Pile Position", selection: $settings.drawPilePosition) {
+                        ForEach(DrawPilePosition.allCases, id: \.self) { position in
+                            Text(position.displayName).tag(position)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                }
+                
+                Section(header: Text("Animation Settings")) {
+                    Picker("Card Play Delay", selection: $settings.cardPlayDelay) {
+                        ForEach(AnimationTiming.allCases, id: \.self) { timing in
+                            Text(timing.displayName).tag(timing)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    
+                    Picker("Animation Duration", selection: $settings.cardPlayDuration) {
+                        ForEach(AnimationTiming.allCases, id: \.self) { timing in
+                            Text(timing.displayName).tag(timing)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                }
             }
             .navigationTitle("Game Settings")
             .navigationBarTitleDisplayMode(.inline)

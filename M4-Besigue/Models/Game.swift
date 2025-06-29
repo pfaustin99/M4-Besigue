@@ -47,6 +47,12 @@ class Game: ObservableObject {
     @Published var isShowingTrickResult: Bool = false
     var lastTrickWinner: String? = nil
     
+    // Card play animation state
+    @Published var isPlayingCard: Bool = false
+    @Published var playedCard: PlayerCard? = nil
+    @Published var winningCardIndex: Int? = nil
+    @Published var shouldAnimateWinningCard: Bool = false
+    
     // Computed property to check if we're in endgame
     var isEndgame: Bool {
         return deck.isEmpty
@@ -219,13 +225,25 @@ class Game: ObservableObject {
     
     // Play a card
     func playCard(_ card: PlayerCard, from player: Player) {
-        canPlayerMeld = false
-        player.removeCard(card)
-        currentTrick.append(card)
-        if currentTrick.count == playerCount {
-            completeTrick()
-        } else {
-            nextPlayer()
+        // Start card play animation
+        isPlayingCard = true
+        playedCard = card
+        
+        // Animate card play
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.isPlayingCard = false
+            self.playedCard = nil
+            
+            // Add card to trick
+            self.canPlayerMeld = false
+            player.removeCard(card)
+            self.currentTrick.append(card)
+            
+            if self.currentTrick.count == self.playerCount {
+                self.completeTrick()
+            } else {
+                self.nextPlayer()
+            }
         }
     }
     
@@ -243,6 +261,9 @@ class Game: ObservableObject {
         
         trickHistory.append(currentTrick)
         currentPlayerIndex = winnerIndex
+        
+        // Animate winning card display
+        animateWinningCard()
         
         // Check if we should transition to endgame
         if deck.isEmpty && currentPhase == .playing {
@@ -785,5 +806,23 @@ class Game: ObservableObject {
     
     func playInvalidMeldAnimation() {
         // Stub: No-op for now, can be used to trigger UI feedback
+    }
+    
+    // Animate winning card display
+    func animateWinningCard() {
+        guard let winningIndex = determineTrickWinnerIndex() else { return }
+        
+        winningCardIndex = winningIndex
+        
+        // Delay before showing winning card (configurable)
+        DispatchQueue.main.asyncAfter(deadline: .now() + settings.cardPlayDelay.rawValue) {
+            self.shouldAnimateWinningCard = true
+            
+            // Reset after animation duration
+            DispatchQueue.main.asyncAfter(deadline: .now() + self.settings.cardPlayDuration.rawValue) {
+                self.shouldAnimateWinningCard = false
+                self.winningCardIndex = nil
+            }
+        }
     }
 } 

@@ -273,18 +273,6 @@ struct GameBoardView: View {
                 game: game,
                 settings: settings
             )
-            
-            // Human draw button - below trick area
-            if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
-                Button("Draw Card") {
-                    withAnimation {
-                        game.drawCardForCurrentPlayer()
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .font(.headline)
-                .padding(.vertical, 8)
-            }
         }
     }
     
@@ -569,38 +557,7 @@ struct GameBoardView: View {
     // Dealer determination view
     private var dealerDeterminationView: some View {
         VStack(spacing: 15) {
-            // Debug info
-            if game.jackDrawnForDealer != nil {
-                Text("DEBUG: Jack detected in UI!")
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .bold()
-            }
-            
-            // Debug: Show when showJackProminently is true
-            if game.showJackProminently {
-                Text("🎴 SHOW JACK PROMINENTLY FLAG IS TRUE! 🎴")
-                    .font(.title2)
-                    .bold()
-                    .foregroundColor(.red)
-                    .background(Color.yellow)
-                    .padding()
-            }
-            
-            // TEST BUTTON: Force Jack to show for debugging
-            Button("TEST: Force Show Jack") {
-                if let jackCard = game.dealerDeterminationCards.first(where: { !$0.isJoker && $0.value == .jack }) {
-                    game.jackDrawnForDealer = jackCard
-                    game.showJackProminently = true
-                    game.dealerDeterminedMessage = "TEST: Dealer is Player 1!"
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .background(Color.purple)
-            .foregroundColor(.white)
-            .padding()
-            
-            // Show the Jack that determined the dealer prominently (if drawn) - show during both phases
+            // Show the Jack that determined the dealer prominently (if drawn)
             if let jackCard = game.jackDrawnForDealer, game.showJackProminently {
                 VStack(spacing: 12) {
                     Text("🎴 JACK DRAWN! 🎴")
@@ -617,7 +574,7 @@ struct GameBoardView: View {
                     Image(jackCard.imageName)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 160, height: 240) // 2x size (was 80x120)
+                        .frame(width: 160, height: 240) // 2x size
                         .cornerRadius(12)
                         .shadow(radius: 8)
                         .overlay(
@@ -638,49 +595,6 @@ struct GameBoardView: View {
                 )
                 .scaleEffect(1.02)
                 .animation(.easeInOut(duration: 0.3), value: jackCard.id)
-            }
-            
-            // TEST: Show Jack prominently if we're in dealing phase and have cards
-            if game.currentPhase == .dealing && !game.dealerDeterminationCards.isEmpty && !game.showJackProminently {
-                // Find the Jack in the dealer determination cards
-                if let jackCard = game.dealerDeterminationCards.first(where: { !$0.isJoker && $0.value == .jack }) {
-                    VStack(spacing: 12) {
-                        Text("🎴 JACK DRAWN! 🎴")
-                            .font(.title)
-                            .bold()
-                            .foregroundColor(.orange)
-                        
-                        Text(game.dealerDeterminedMessage)
-                            .font(.title2)
-                            .bold()
-                            .foregroundColor(.green)
-                            .multilineTextAlignment(.center)
-                        
-                        Image(jackCard.imageName)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 160, height: 240) // 2x size
-                            .cornerRadius(12)
-                            .shadow(radius: 8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.orange, lineWidth: 4)
-                            )
-                            .scaleEffect(1.05)
-                            .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: jackCard.id)
-                    }
-                    .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.orange.opacity(0.15))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Color.orange, lineWidth: 2)
-                            )
-                    )
-                    .scaleEffect(1.02)
-                    .animation(.easeInOut(duration: 0.3), value: jackCard.id)
-                }
             }
             
             if game.currentPhase == .dealing {
@@ -800,6 +714,7 @@ struct GameBoardView: View {
                 }
             }
         }
+        .frame(minHeight: 200) // Same size as trick area
         .padding()
         .background(Color.gray.opacity(0.1))
         .cornerRadius(12)
@@ -1068,6 +983,69 @@ struct BadgeLegendRow: View {
     }
 }
 
+// MARK: - Animated Card View for Card Play Animation
+struct AnimatedCardView: View {
+    let card: PlayerCard
+    let isAnimating: Bool
+    @State private var animationProgress: CGFloat = 0
+    @State private var cardOffset: CGSize = .zero
+    @State private var cardRotation: Double = 0
+    @State private var cardScale: CGFloat = 1.0
+    @State private var cardZRotation: Double = 0
+    
+    var body: some View {
+        Image(card.imageName)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 80, height: 120)
+            .cornerRadius(8)
+            .shadow(radius: 4, x: 2, y: 2)
+            .offset(cardOffset)
+            .rotationEffect(.degrees(cardRotation))
+            .rotation3DEffect(.degrees(cardZRotation), axis: (x: 0, y: 0, z: 1))
+            .scaleEffect(cardScale)
+            .onAppear {
+                if isAnimating {
+                    startAnimation()
+                }
+            }
+            .onChange(of: isAnimating) { newValue in
+                if newValue {
+                    startAnimation()
+                }
+            }
+    }
+    
+    private func startAnimation() {
+        // Reset animation state
+        animationProgress = 0
+        cardOffset = CGSize(width: -200, height: -50) // Start from player's hand area
+        cardRotation = -15 // Tilt backward
+        cardScale = 1.0
+        cardZRotation = 0
+        
+        // Animate card play
+        withAnimation(.easeInOut(duration: 0.6)) {
+            cardOffset = CGSize(width: 0, height: 0) // Move to center
+            cardRotation = 0 // Flatten
+            cardScale = 1.05 // Slight scale up
+        }
+        
+        // Add spin animation
+        withAnimation(.easeInOut(duration: 0.6).delay(0.1)) {
+            cardZRotation = 360 // Full spin
+        }
+        
+        // Bounce effect at the end
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                cardScale = 1.0
+            }
+        }
+    }
+}
+
+// MARK: - Enhanced Trick View with Animation Support
 struct TrickView: View {
     let cards: [PlayerCard]
     @ObservedObject var game: Game
@@ -1089,7 +1067,7 @@ struct TrickView: View {
                 // Cards with proper stacking, offset, and rotation
                 ZStack {
                     ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                        let isWinningCard = game.isShowingTrickResult && index == game.determineTrickWinnerIndex()
+                        let isWinningCard = game.shouldAnimateWinningCard && index == game.winningCardIndex
                         
                         CardView(card: card, isSelected: false, onTap: {})
                             .frame(
@@ -1107,6 +1085,12 @@ struct TrickView: View {
                             .animation(.easeInOut(duration: 0.3), value: isWinningCard)
                     }
                 }
+            }
+            
+            // Animated card being played (if any)
+            if game.isPlayingCard, let playedCard = game.playedCard {
+                AnimatedCardView(card: playedCard, isAnimating: true)
+                    .zIndex(1000) // Always on top during animation
             }
         }
         .frame(minHeight: 200)

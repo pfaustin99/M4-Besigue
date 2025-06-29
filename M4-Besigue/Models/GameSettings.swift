@@ -42,6 +42,21 @@ enum DrawPilePosition: String, CaseIterable, Codable {
     }
 }
 
+/// Enum for animation timing
+enum AnimationTiming: Double, CaseIterable, Codable {
+    case fast = 0.3
+    case normal = 0.5
+    case slow = 0.8
+    
+    var displayName: String {
+        switch self {
+        case .fast: return "Fast"
+        case .normal: return "Normal"
+        case .slow: return "Slow"
+        }
+    }
+}
+
 /// GameSettings holds all configurable values for scoring, penalties, and rules
 class GameSettings: ObservableObject, Codable, Equatable {
     // Scoring
@@ -86,6 +101,10 @@ class GameSettings: ObservableObject, Codable, Equatable {
     // UI Configuration
     @Published var cardSizeMultiplier: CardSizeMultiplier = .medium // 2x default
     @Published var drawPilePosition: DrawPilePosition = .centerLeft
+    
+    // Animation Configuration
+    @Published var cardPlayDelay: AnimationTiming = .normal // Delay before showing winning card
+    @Published var cardPlayDuration: AnimationTiming = .normal // Duration of card play animation
 
     // Badge Icons
     @Published var badgeIcons: MeldBadgeIcons = MeldBadgeIcons()
@@ -130,7 +149,7 @@ class GameSettings: ObservableObject, Codable, Equatable {
 
     // Codable conformance
     enum CodingKeys: String, CodingKey {
-        case besiguePoints, royalMarriagePoints, commonMarriagePoints, fourAcesPoints, fourKingsPoints, fourQueensPoints, fourJacksPoints, fourJokersPoints, sequencePoints, trumpFourAcesMultiplier, trumpFourKingsMultiplier, trumpFourQueensMultiplier, trumpFourJacksMultiplier, trumpSequenceMultiplier, brisqueValue, finalTrickBonus, penalty, brisqueCutoff, minScoreForBrisques, winningScore, trickWithSevenTrumpPoints, finalTrickPoints, penaltyBelow100, penaltyFewBrisques, penaltyOutOfTurn, minBrisques, playerCount, playDirection, gameLevel, handSize, numPlayers, cardSizeMultiplier, drawPilePosition, badgeIcons
+        case besiguePoints, royalMarriagePoints, commonMarriagePoints, fourAcesPoints, fourKingsPoints, fourQueensPoints, fourJacksPoints, fourJokersPoints, sequencePoints, trumpFourAcesMultiplier, trumpFourKingsMultiplier, trumpFourQueensMultiplier, trumpFourJacksMultiplier, trumpSequenceMultiplier, brisqueValue, finalTrickBonus, penalty, brisqueCutoff, minScoreForBrisques, winningScore, trickWithSevenTrumpPoints, finalTrickPoints, penaltyBelow100, penaltyFewBrisques, penaltyOutOfTurn, minBrisques, playerCount, playDirection, gameLevel, handSize, numPlayers, cardSizeMultiplier, drawPilePosition, badgeIcons, cardPlayDelay, cardPlayDuration
     }
 
     required init(from decoder: Decoder) throws {
@@ -169,6 +188,8 @@ class GameSettings: ObservableObject, Codable, Equatable {
         cardSizeMultiplier = try container.decode(CardSizeMultiplier.self, forKey: .cardSizeMultiplier)
         drawPilePosition = try container.decode(DrawPilePosition.self, forKey: .drawPilePosition)
         badgeIcons = try container.decode(MeldBadgeIcons.self, forKey: .badgeIcons)
+        cardPlayDelay = try container.decode(AnimationTiming.self, forKey: .cardPlayDelay)
+        cardPlayDuration = try container.decode(AnimationTiming.self, forKey: .cardPlayDuration)
     }
 
     init(playerCount: Int = 2) {
@@ -213,6 +234,8 @@ class GameSettings: ObservableObject, Codable, Equatable {
         try container.encode(cardSizeMultiplier, forKey: .cardSizeMultiplier)
         try container.encode(drawPilePosition, forKey: .drawPilePosition)
         try container.encode(badgeIcons, forKey: .badgeIcons)
+        try container.encode(cardPlayDelay, forKey: .cardPlayDelay)
+        try container.encode(cardPlayDuration, forKey: .cardPlayDuration)
     }
 }
 
