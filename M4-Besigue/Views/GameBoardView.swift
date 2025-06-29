@@ -975,15 +975,20 @@ struct TrickView: View {
     private var dealerDeterminationStack: some View {
         ForEach(Array(game.dealerDeterminationCards.enumerated().reversed()), id: \.offset) { index, card in
             let originalIndex = game.dealerDeterminationCards.count - 1 - index
-            let rotation = Double((originalIndex * 13) % 21 - 10)
             let zOffset = Double(originalIndex) * 3
+            
+            // Generate a random rotation based on the card's ID for consistency
+            let seed = card.id.uuidString.hashValue
+            let randomRotation = Double(seed % 360) - 180 // Range from -180 to 180 degrees
+            let scaledRotation = randomRotation * 0.4 // Scale down for subtle rotation
+            
             Image(card.imageName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 80 * 2.0, height: 120 * 2.0)
                 .cornerRadius(8)
                 .shadow(radius: 4)
-                .rotationEffect(.degrees(rotation))
+                .rotationEffect(.degrees(scaledRotation))
                 .offset(x: CGFloat(originalIndex) * 12, y: CGFloat(originalIndex) * 6 + CGFloat(zOffset))
                 .zIndex(Double(index))
         }
@@ -1105,11 +1110,19 @@ struct CardDrawAnimationView: View {
 struct CardStackedView: View {
     let card: PlayerCard
     let displayIndex: Int
+    
+    // Generate a random rotation based on the card's ID for consistency
+    private var randomRotation: Double {
+        let seed = card.id.uuidString.hashValue
+        let random = Double(seed % 360) - 180 // Range from -180 to 180 degrees
+        return random * 0.3 // Scale down for subtle rotation
+    }
+    
     var body: some View {
         CardView(card: card, isSelected: false, isPlayable: true, showHint: false, onTap: {})
             .frame(width: 80 * 2, height: 120 * 2)
             .offset(x: CGFloat(displayIndex) * 12, y: CGFloat(displayIndex) * 6 + CGFloat(displayIndex) * 2)
-            .rotationEffect(.degrees(Double(displayIndex) * 4 - 8))
+            .rotationEffect(.degrees(randomRotation))
             .zIndex(Double(displayIndex))
     }
 }

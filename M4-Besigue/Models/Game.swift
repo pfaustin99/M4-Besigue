@@ -249,41 +249,19 @@ class Game: ObservableObject {
     
     // Complete the current trick
     private func completeTrick() {
+        // Determine the winner
         let winnerIndex = determineTrickWinner()
         let winner = players[winnerIndex]
         
-        // Track brisques (Aces and 10s)
+        // Add brisques to winner's count
         for card in currentTrick {
-            if card.value == .ace || card.value == .ten {
+            if card.isBrisque {
                 brisques[winner.id, default: 0] += 1
             }
         }
         
-        trickHistory.append(currentTrick)
+        // Set the winner as current player
         currentPlayerIndex = winnerIndex
-        
-        // Animate winning card display
-        animateWinningCard()
-        
-        // Check if we should transition to endgame
-        if deck.isEmpty && currentPhase == .playing {
-            currentPhase = .endgame
-            print("Endgame phase: No more cards to draw, stricter rules in effect")
-        }
-        
-        // In endgame, no more melds allowed
-        canPlayerMeld = currentPhase != .endgame
-        
-        // Check if all players have empty hands (end of round)
-        if allPlayersHaveEmptyHands() {
-            // Award final trick bonus before scoring
-            winner.addPoints(settings.finalTrickBonus)
-            endRound()
-            return
-        }
-        
-        // Set the winner as current player and give them choice to meld first
-        currentPlayer.isCurrentPlayer = true
         
         // Clear previous player's current status
         for (index, player) in players.enumerated() {
@@ -292,7 +270,17 @@ class Game: ObservableObject {
             }
         }
         
-        // If winner is AI, let AI decide on melds
+        // Set the new current player
+        currentPlayer.isCurrentPlayer = true
+        
+        // Check if this is the final trick
+        if allPlayersHaveEmptyHands() {
+            winner.addPoints(settings.finalTrickBonus)
+            endRound()
+            return
+        }
+        
+        // If winner is AI, let AI decide on melds and draw
         if currentPlayer.type == .ai {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 self.processAITrickWinner()
@@ -333,8 +321,27 @@ class Game: ObservableObject {
         awaitingMeldChoice = false
         mustDrawCard = false
         
+        // Move to next player for the new trick
+        moveToNextPlayer()
+        
         // Start new trick
         startNewTrick()
+    }
+    
+    // Move to next player (for when AI wins and we need to let human draw)
+    private func moveToNextPlayer() {
+        currentPlayerIndex = (currentPlayerIndex + 1) % playerCount
+        
+        // Update current player status
+        for (index, player) in players.enumerated() {
+            player.isCurrentPlayer = (index == currentPlayerIndex)
+        }
+        
+        // If next player is human and needs to draw, give them the opportunity
+        if currentPlayer.type == .human && !deck.isEmpty {
+            mustDrawCard = true
+            print("👤 \(currentPlayer.name) can draw a card")
+        }
     }
     
     // Human player draws a card (called when they choose to draw)
@@ -523,11 +530,18 @@ class Game: ObservableObject {
         if trumpSuit == nil {
             return meld.type == .commonMarriage
         }
-        for card in meld.cards {
-            if !player.hasCard(card) {
+        
+        // Check if player has all the cards for this meld
+        for meldCard in meld.cards {
+            let hasCard = player.hand.contains { playerCard in
+                playerCard.card.id == meldCard.id
+            }
+            if !hasCard {
                 return false
             }
         }
+        
+        // Check if this meld type has already been declared
         return !player.meldsDeclared.contains { $0.type == meld.type }
     }
     
@@ -783,7 +797,7 @@ class Game: ObservableObject {
         // Trump suit is NOT set here - it will be determined by the first royal marriage
         // (King + Queen of the same suit) that is declared during play
         trumpSuit = nil
-        print("🎯 Trump suit will be determined by the first royal marriage declared")
+        print("🃏 Trump suit will be determined by the first royal marriage declared")
         
         // Move to playing phase
         currentPhase = .playing

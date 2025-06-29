@@ -126,6 +126,11 @@ struct Card: Identifiable, Equatable, Hashable {
         return value?.brisqueValue ?? 0
     }
     
+    // Check if this card is a brisque (Ace or Ten)
+    var isBrisque: Bool {
+        return value == .ace || value == .ten
+    }
+    
     // Rank for trick comparison
     var rank: Int {
         return value?.rank ?? 0
@@ -198,18 +203,17 @@ struct PlayerCard: Identifiable, Equatable, Hashable {
     var usedInMeldTypes: Set<MeldType> = []
     
     var id: UUID { card.id }
-    
-    // Proxy properties for convenience
     var suit: Suit? { card.suit }
     var value: CardValue? { card.value }
-    var jokerType: JokerType? { card.jokerType }
     var isJoker: Bool { card.isJoker }
     var imageName: String { card.imageName }
     var displayName: String { card.displayName }
     var brisqueValue: Int { card.brisqueValue }
     var rank: Int { card.rank }
+    var isBrisque: Bool { card.isBrisque }
     
-    func canBeat(_ other: PlayerCard, trumpSuit: Suit?, leadSuit: Suit?) -> Bool {
-        card.canBeat(other.card, trumpSuit: trumpSuit, leadSuit: leadSuit)
+    // Check if this card can beat another card in a trick
+    func canBeat(_ otherCard: PlayerCard, trumpSuit: Suit?, leadSuit: Suit?) -> Bool {
+        return card.canBeat(otherCard.card, trumpSuit: trumpSuit, leadSuit: leadSuit)
     }
 }
