@@ -633,6 +633,18 @@ struct GameBoardView: View {
             }
         )
         .overlay(
+            // Animated "Tap to Draw" message for gameplay
+            Group {
+                if game.currentPhase == .playing && game.currentPlayer.type == .human && game.mustDrawCard {
+                    VStack {
+                        TapToDrawMessage()
+                        Spacer()
+                    }
+                    .offset(y: -cardHeight - 40)
+                }
+            }
+        )
+        .overlay(
             Group {
                 if showDrawAnimation, let card = animatingDrawnCard {
                     DrawCardAnimationView(card: card)
@@ -985,7 +997,7 @@ struct TrickView: View {
             Image(card.imageName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 80 * 2.0, height: 120 * 2.0)
+                .frame(width: 80 * settings.trickAreaCardSize.rawValue, height: 120 * settings.trickAreaCardSize.rawValue)
                 .cornerRadius(8)
                 .shadow(radius: 4)
                 .rotationEffect(.degrees(scaledRotation))
@@ -1000,7 +1012,7 @@ struct TrickView: View {
             (cards.count - 1 - i, cards[i])
         }
         ForEach(displayTuples, id: \.0) { tuple in
-            CardStackedView(card: tuple.1, displayIndex: tuple.0)
+            CardStackedView(card: tuple.1, displayIndex: tuple.0, settings: settings)
         }
     }
 }
@@ -1110,6 +1122,7 @@ struct CardDrawAnimationView: View {
 struct CardStackedView: View {
     let card: PlayerCard
     let displayIndex: Int
+    let settings: GameSettings
     
     // Generate a random rotation based on the card's ID for consistency
     private var randomRotation: Double {
@@ -1120,10 +1133,39 @@ struct CardStackedView: View {
     
     var body: some View {
         CardView(card: card, isSelected: false, isPlayable: true, showHint: false, onTap: {})
-            .frame(width: 80 * 2, height: 120 * 2)
+            .frame(width: 80 * settings.trickAreaCardSize.rawValue, height: 120 * settings.trickAreaCardSize.rawValue)
             .offset(x: CGFloat(displayIndex) * 12, y: CGFloat(displayIndex) * 6 + CGFloat(displayIndex) * 2)
             .rotationEffect(.degrees(randomRotation))
             .zIndex(Double(displayIndex))
+    }
+}
+
+// Add this new view above the existing views:
+struct TapToDrawMessage: View {
+    @State private var isPulsing = false
+    
+    var body: some View {
+        Text("Tap to Draw")
+            .font(.headline)
+            .fontWeight(.bold)
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.blue)
+                    .shadow(radius: 4)
+            )
+            .scaleEffect(isPulsing ? 1.1 : 1.0)
+            .opacity(isPulsing ? 0.8 : 1.0)
+            .animation(
+                Animation.easeInOut(duration: 1.0)
+                    .repeatForever(autoreverses: true),
+                value: isPulsing
+            )
+            .onAppear {
+                isPulsing = true
+            }
     }
 }
 

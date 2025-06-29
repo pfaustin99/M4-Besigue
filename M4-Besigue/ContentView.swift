@@ -2,7 +2,9 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var settings = GameSettings(playerCount: 2)
-    @StateObject private var game: Game
+    @StateObject private var gameRules = GameRules()
+    @State private var game: Game
+    @State private var showingGameSettings = false
     
     init() {
         // Initialize with error handling
@@ -10,7 +12,8 @@ struct ContentView: View {
         let tempGame = Game(playerCount: 2, isOnline: false, aiDifficulty: .medium, settings: tempSettings)
         
         self._settings = StateObject(wrappedValue: tempSettings)
-        self._game = StateObject(wrappedValue: tempGame)
+        self._gameRules = StateObject(wrappedValue: GameRules())
+        self._game = State(initialValue: tempGame)
     }
     
     var body: some View {
@@ -28,7 +31,7 @@ struct ContentView: View {
                             .foregroundColor(.secondary)
                         
                         Button("Start New Game") {
-                            game.startNewGame()
+                            showingGameSettings = true
                         }
                         .buttonStyle(.borderedProminent)
                         .font(.headline)
@@ -44,15 +47,79 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("New Game") {
-                        game.startNewGame()
+                        showingGameSettings = true
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showingGameSettings) {
+            GameSettingsView(gameRules: gameRules)
+                .onDisappear {
+                    // Start new game with the configured rules
+                    startNewGameWithRules()
+                }
         }
         .onAppear {
             // Don't auto-start the game - let user click the button
             print("ContentView appeared")
         }
+    }
+    
+    private func startNewGameWithRules() {
+        // Apply game rules to the settings object
+        settings.playerCount = gameRules.playerCount
+        settings.handSize = gameRules.handSize
+        settings.playDirection = gameRules.playDirection
+        settings.gameLevel = gameRules.gameLevel
+        
+        // Apply scoring rules
+        settings.besiguePoints = gameRules.besiguePoints
+        settings.royalMarriagePoints = gameRules.royalMarriagePoints
+        settings.commonMarriagePoints = gameRules.commonMarriagePoints
+        settings.fourAcesPoints = gameRules.fourAcesPoints
+        settings.fourKingsPoints = gameRules.fourKingsPoints
+        settings.fourQueensPoints = gameRules.fourQueensPoints
+        settings.fourJacksPoints = gameRules.fourJacksPoints
+        settings.fourJokersPoints = gameRules.fourJokersPoints
+        settings.sequencePoints = gameRules.sequencePoints
+        settings.trumpFourAcesMultiplier = gameRules.trumpFourAcesMultiplier
+        settings.trumpFourKingsMultiplier = gameRules.trumpFourKingsMultiplier
+        settings.trumpFourQueensMultiplier = gameRules.trumpFourQueensMultiplier
+        settings.trumpFourJacksMultiplier = gameRules.trumpFourJacksMultiplier
+        settings.trumpSequenceMultiplier = gameRules.trumpSequenceMultiplier
+        settings.brisqueValue = gameRules.brisqueValue
+        settings.finalTrickBonus = gameRules.finalTrickBonus
+        settings.trickWithSevenTrumpPoints = gameRules.trickWithSevenTrumpPoints
+        
+        // Apply penalty rules
+        settings.penalty = gameRules.penalty
+        settings.penaltyBelow100 = gameRules.penaltyBelow100
+        settings.penaltyFewBrisques = gameRules.penaltyFewBrisques
+        settings.penaltyOutOfTurn = gameRules.penaltyOutOfTurn
+        settings.brisqueCutoff = gameRules.brisqueCutoff
+        settings.minScoreForBrisques = gameRules.minScoreForBrisques
+        settings.minBrisques = gameRules.minBrisques
+        
+        // Apply global card size and animation timing to settings
+        settings.trickAreaCardSize = gameRules.globalCardSize
+        settings.playerHandCardSize = gameRules.globalCardSize
+        settings.cardPlayDelay = gameRules.cardPlayDelay
+        settings.cardPlayDuration = gameRules.cardPlayDuration
+        settings.dealerDeterminationDelay = gameRules.dealerDeterminationDelay
+        
+        // Create a new game with the updated settings
+        let newGame = Game(
+            playerCount: gameRules.playerCount,
+            isOnline: false,
+            aiDifficulty: .medium,
+            settings: settings
+        )
+        
+        // Replace the current game
+        self.game = newGame
+        
+        // Start the new game
+        game.startNewGame()
     }
 }
 

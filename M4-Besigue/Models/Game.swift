@@ -364,20 +364,37 @@ class Game: ObservableObject {
         startNewTrick()
     }
     
-    // Determine winner of current trick
+    // Determine the winner of the current trick
     private func determineTrickWinner() -> Int {
-        guard !currentTrick.isEmpty else { return currentTrickLeader }
+        guard !currentTrick.isEmpty else { return 0 }
+        
+        print("🎯 DETERMINING TRICK WINNER:")
+        print("   Current trick has \(currentTrick.count) cards")
+        print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
+        print("   Lead suit: \(currentTrick.first?.suit?.rawValue ?? "None")")
         
         var winningCard = currentTrick[0]
         var winningPlayerIndex = currentTrickLeader
         
+        print("   Initial winning card: \(winningCard.displayName) by \(players[winningPlayerIndex].name)")
+        
         for (index, card) in currentTrick.enumerated() {
             let playerIndex = (currentTrickLeader + index) % playerCount
+            let player = players[playerIndex]
+            
+            print("   Card \(index + 1): \(card.displayName) by \(player.name)")
+            
             if card.canBeat(winningCard, trumpSuit: trumpSuit, leadSuit: currentTrick.first?.suit) {
+                print("   ✅ \(card.displayName) BEATS \(winningCard.displayName)")
                 winningCard = card
                 winningPlayerIndex = playerIndex
+            } else {
+                print("   ❌ \(card.displayName) does NOT beat \(winningCard.displayName)")
             }
         }
+        
+        let winner = players[winningPlayerIndex]
+        print("   🏆 WINNER: \(winner.name) with \(winningCard.displayName)")
         
         return winningPlayerIndex
     }
@@ -521,28 +538,45 @@ class Game: ObservableObject {
     // Check if a meld can be declared
     func canDeclareMeld(_ meld: Meld, by player: Player) -> Bool {
         guard player.id == currentPlayer.id && canPlayerMeld else {
+            print("❌ Meld validation failed: not current player or can't meld")
             return false
         }
         // Only one meld per opportunity
         if player.meldsDeclared.last?.roundNumber == roundNumber {
+            print("❌ Meld validation failed: already declared meld this round")
             return false
         }
         if trumpSuit == nil {
-            return meld.type == .commonMarriage
+            let result = meld.type == .commonMarriage
+            print("❓ No trump suit - only common marriage allowed: \(result)")
+            return result
         }
+        
+        print("🔍 Validating meld: \(meld.type.name) with \(meld.cards.count) cards")
         
         // Check if player has all the cards for this meld
         for meldCard in meld.cards {
             let hasCard = player.hand.contains { playerCard in
-                playerCard.card.id == meldCard.id
+                // Compare the actual card properties instead of IDs
+                playerCard.suit == meldCard.suit && 
+                playerCard.value == meldCard.value &&
+                playerCard.isJoker == meldCard.isJoker
             }
             if !hasCard {
+                print("❌ Missing card for meld: \(meldCard.displayName)")
                 return false
             }
         }
         
         // Check if this meld type has already been declared
-        return !player.meldsDeclared.contains { $0.type == meld.type }
+        let alreadyDeclared = player.meldsDeclared.contains { $0.type == meld.type }
+        if alreadyDeclared {
+            print("❌ Meld type \(meld.type.name) already declared")
+            return false
+        }
+        
+        print("✅ Meld validation successful")
+        return true
     }
     
     // Declare a meld
@@ -743,14 +777,10 @@ class Game: ObservableObject {
                 print("👑 Dealer determined: \(dealer.name)")
                 print("📝 Dealer message: \(dealerDeterminedMessage)")
                 
-                // Move to dealing phase
-                currentPhase = .dealing
-                print("🃏 Moving to dealing phase...")
-                
-                // PAUSE: Keep Jack visible for 3 seconds to ensure UI updates
-                print("⏸️ Pausing for 3 seconds to show Jack prominently...")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                    print("⏰ 3 seconds passed, completing dealer determination")
+                // Keep dealer determination phase active for configurable delay
+                print("⏸️ Keeping dealer determination visible for \(settings.dealerDeterminationDelay) seconds...")
+                DispatchQueue.main.asyncAfter(deadline: .now() + settings.dealerDeterminationDelay) {
+                    print("⏰ \(self.settings.dealerDeterminationDelay) seconds passed, completing dealer determination")
                     self.showJackProminently = false
                     self.completeDealerDetermination()
                 }

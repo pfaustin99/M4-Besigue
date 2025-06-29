@@ -139,35 +139,54 @@ struct Card: Identifiable, Equatable, Hashable {
     // Check if this card can beat another card in a trick
     func canBeat(_ otherCard: Card, trumpSuit: Suit?, leadSuit: Suit?) -> Bool {
         // Jokers can't be played in tricks (used only for melds)
-        if isJoker || otherCard.isJoker { return false }
+        if isJoker || otherCard.isJoker { 
+            print("   🃏 Joker involved - can't beat")
+            return false 
+        }
         
         guard let mySuit = suit, let myValue = value,
               let otherSuit = otherCard.suit, let otherValue = otherCard.value else {
+            print("   ❓ Invalid card data")
             return false
         }
         
+        print("   Comparing: \(mySuit.rawValue)_\(myValue.rawValue) vs \(otherSuit.rawValue)_\(otherValue.rawValue)")
+        print("   My rank: \(myValue.rank), Other rank: \(otherValue.rank)")
+        
         // Trump cards beat non-trump cards
         if let trump = trumpSuit {
+            print("   Trump suit: \(trump.rawValue)")
             if mySuit == trump && otherSuit != trump {
+                print("   ✅ I'm trump, other isn't - I win")
                 return true
             }
             if otherSuit == trump && mySuit != trump {
+                print("   ❌ Other is trump, I'm not - I lose")
                 return false
             }
         }
         
         // If both cards are same suit, higher rank wins
         if mySuit == otherSuit {
-            return myValue.rank > otherValue.rank
+            let result = myValue.rank > otherValue.rank
+            print("   Same suit (\(mySuit.rawValue)) - \(result ? "I win" : "I lose") (rank \(myValue.rank) vs \(otherValue.rank))")
+            return result
         }
         
         // If different suits and no trump advantage, only same suit as lead can win
         if let lead = leadSuit {
+            print("   Lead suit: \(lead.rawValue)")
             if mySuit == lead && otherSuit != lead {
+                print("   ✅ I follow lead suit, other doesn't - I win")
                 return true
+            }
+            if otherSuit == lead && mySuit != lead {
+                print("   ❌ Other follows lead suit, I don't - I lose")
+                return false
             }
         }
         
+        print("   ❌ No clear winner - default to false")
         return false
     }
 }
