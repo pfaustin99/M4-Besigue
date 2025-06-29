@@ -327,12 +327,15 @@ class Game: ObservableObject {
             if let card = deck.drawCard() {
                 let playerCard = PlayerCard(card: card)
                 
+                print("🎬 Starting AI draw animation for \(currentPlayer.name)")
+                
                 // Start AI draw animation
                 isAIDrawingCard = true
                 aiDrawnCard = playerCard
                 
                 // Animate the draw
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    print("🎬 AI draw animation completed, adding card to hand")
                     self.currentPlayer.addCards([card])
                     print("🤖 \(self.currentPlayer.name) drew a card")
                     
@@ -360,27 +363,8 @@ class Game: ObservableObject {
         awaitingMeldChoice = false
         mustDrawCard = false
         
-        // Move to next player for the new trick
-        moveToNextPlayer()
-        
-        // Start new trick
+        // Start new trick with the same player (trick winner)
         startNewTrick()
-    }
-    
-    // Move to next player (for when AI wins and we need to let human draw)
-    private func moveToNextPlayer() {
-        currentPlayerIndex = (currentPlayerIndex + 1) % playerCount
-        
-        // Update current player status
-        for (index, player) in players.enumerated() {
-            player.isCurrentPlayer = (index == currentPlayerIndex)
-        }
-        
-        // If next player is human and needs to draw, give them the opportunity
-        if currentPlayer.type == .human && !deck.isEmpty {
-            mustDrawCard = true
-            print("👤 \(currentPlayer.name) can draw a card")
-        }
     }
     
     // Human player draws a card (called when they choose to draw)

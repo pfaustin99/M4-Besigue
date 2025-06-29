@@ -291,6 +291,9 @@ struct GameBoardView: View {
                         card: aiCard,
                         fromPosition: settings.drawPilePosition
                     )
+                    .onAppear {
+                        print("🎬 AICardDrawAnimationView appeared")
+                    }
                 }
             }
         )
@@ -991,8 +994,19 @@ struct TrickView: View {
                     .zIndex(1000) // Always on top during animation
             }
         }
-        .frame(minHeight: 200)
+        .frame(minHeight: getTrickAreaHeight())
         .padding(.horizontal)
+    }
+    
+    private func getTrickAreaHeight() -> CGFloat {
+        switch settings.trickAreaSize {
+        case .small:
+            return 120
+        case .medium:
+            return 200
+        case .large:
+            return 280
+        }
     }
     
     private var dealerDeterminationStack: some View {
