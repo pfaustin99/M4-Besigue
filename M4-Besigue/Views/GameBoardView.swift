@@ -585,7 +585,7 @@ struct GameBoardView: View {
                     showDrawAnimation = false
                 }
             }
-            else if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
+            else if game.currentPlayer.type == .human && game.mustDrawCard {
                 showDrawAnimation = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                     game.drawCardForCurrentPlayer()
@@ -609,7 +609,7 @@ struct GameBoardView: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .disabled(!canDrawCard)
+        .disabled(!(game.currentPhase == .dealerDetermination && game.currentPlayer.type == .human) && !(game.currentPlayer.type == .human && game.mustDrawCard))
         .scaleEffect(canDrawCard ? 1.05 : 1.0)
         .animation(.easeInOut(duration: 0.2), value: canDrawCard)
         .overlay(
@@ -952,48 +952,12 @@ struct TrickView: View {
                 ZStack {
                     // Show dealer determination cards during that phase
                     if game.currentPhase == .dealerDetermination && !game.dealerDeterminationCards.isEmpty {
-                        ForEach(Array(game.dealerDeterminationCards.enumerated()), id: \.offset) { index, card in
-                            let rotation = Double((index * 13) % 21 - 10) // -10 to +10 degrees
-                            let zOffset = Double(index) * 3
-                            
-                            Image(card.imageName)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(
-                                    width: 80 * 2.0, // 2x size for dealer determination
-                                    height: 120 * 2.0
-                                )
-                                .cornerRadius(8)
-                                .shadow(radius: 4)
-                                .rotationEffect(.degrees(rotation))
-                                .offset(
-                                    x: CGFloat(index) * 12, // Horizontal offset
-                                    y: CGFloat(index) * 6 + CGFloat(zOffset)  // Vertical offset with z-depth
-                                )
-                                .zIndex(Double(game.dealerDeterminationCards.count - index))
-                        }
+                        dealerDeterminationStack
                     }
                     
                     // Show regular trick cards during gameplay
                     if !cards.isEmpty {
-                        ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                            let isWinningCard = game.shouldAnimateWinningCard && index == game.winningCardIndex
-                            
-                            CardView(card: card, isSelected: false, onTap: {})
-                                .frame(
-                                    width: 80 * settings.cardSizeMultiplier.rawValue,
-                                    height: 120 * settings.cardSizeMultiplier.rawValue
-                                )
-                                .rotationEffect(.degrees(Double(index) * 2 - 3)) // Slight rotation variation
-                                .offset(
-                                    x: CGFloat(index) * 8, // Horizontal offset
-                                    y: CGFloat(index) * 4  // Vertical offset
-                                )
-                                .zIndex(isWinningCard ? 100 : Double(cards.count - index)) // Winning card on top
-                                .shadow(radius: isWinningCard ? 8 : 2)
-                                .scaleEffect(isWinningCard ? 1.1 : 1.0) // Winning card slightly larger
-                                .animation(.easeInOut(duration: 0.3), value: isWinningCard)
-                        }
+                        gameplayStackView()
                     }
                 }
             }
@@ -1006,6 +970,32 @@ struct TrickView: View {
         }
         .frame(minHeight: 200)
         .padding(.horizontal)
+    }
+    
+    private var dealerDeterminationStack: some View {
+        ForEach(Array(game.dealerDeterminationCards.enumerated()), id: \.offset) { index, card in
+            let rotation = Double((index * 13) % 21 - 10)
+            let zOffset = Double(index) * 3
+            Image(card.imageName)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 80 * 2.0, height: 120 * 2.0)
+                .cornerRadius(8)
+                .shadow(radius: 4)
+                .rotationEffect(.degrees(rotation))
+                .offset(x: CGFloat(index) * 12, y: CGFloat(index) * 6 + CGFloat(zOffset))
+                .zIndex(Double(game.dealerDeterminationCards.count - index))
+        }
+    }
+    
+    @ViewBuilder
+    private func gameplayStackView() -> some View {
+        let displayTuples: [(Int, PlayerCard)] = (0..<cards.count).map { i in
+            (cards.count - 1 - i, cards[i])
+        }
+        ForEach(displayTuples, id: \.0) { tuple in
+            CardStackedView(card: tuple.1, displayIndex: tuple.0)
+        }
     }
 }
 
@@ -1107,6 +1097,19 @@ struct CardDrawAnimationView: View {
             cardZRotation = 180 // 3D flip
             cardScale = 1.2 // Slight scale up during animation
         }
+    }
+}
+
+// Add this subview above gameplayStackView:
+struct CardStackedView: View {
+    let card: PlayerCard
+    let displayIndex: Int
+    var body: some View {
+        CardView(card: card, isSelected: false, isPlayable: true, showHint: false, onTap: {})
+            .frame(width: 80 * 2, height: 120 * 2)
+            .offset(x: CGFloat(displayIndex) * 12, y: CGFloat(displayIndex) * 6 + CGFloat(displayIndex) * 2)
+            .rotationEffect(.degrees(Double(displayIndex) * 4 - 8))
+            .zIndex(Double(displayIndex))
     }
 }
 
