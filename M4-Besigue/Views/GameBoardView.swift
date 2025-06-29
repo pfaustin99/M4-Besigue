@@ -211,55 +211,50 @@ struct GameBoardView: View {
     // MARK: - Center Section
     private var centerSection: some View {
         VStack(spacing: 15) {
-            // Dealer determination view
-            if game.currentPhase == .dealerDetermination {
-                dealerDeterminationView
-            } else {
-                // Main game area with trick and draw pile
-                HStack(spacing: 20) {
-                    // Draw pile positioned based on settings
-                    if settings.drawPilePosition == .centerLeft {
-                        drawPileSection
-                        Spacer()
-                        trickSection
-                    } else {
-                        trickSection
-                        Spacer()
-                        drawPileSection
-                    }
+            // Main game area with trick and draw pile - same layout for all phases
+            HStack(spacing: 20) {
+                // Draw pile positioned based on settings
+                if settings.drawPilePosition == .centerLeft {
+                    drawPileSection
+                    Spacer()
+                    trickSection
+                } else {
+                    trickSection
+                    Spacer()
+                    drawPileSection
                 }
-                .padding(.horizontal)
-                
-                // Jack drawn message
-                if let jackCard = game.jackDrawnForDealer, game.showJackProminently {
-                    jackDrawnMessage(PlayerCard(card: jackCard))
-                }
-                
-                // Game controls (only for setup and dealer determination)
-                if game.currentPhase == .setup || game.currentPhase == .dealerDetermination {
-                    gameControls
-                }
-                
-                // Error messages
-                if showInvalidMeld {
-                    Text("Invalid meld!")
-                        .foregroundColor(.red)
-                        .transition(.opacity)
-                        .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showInvalidMeld = false } }
-                }
-                
-                // Show trick winner message using game state
-                if game.isShowingTrickResult, let winner = game.lastTrickWinner {
-                    Text("\(winner) won the trick!")
-                        .font(.title2)
-                        .bold()
-                        .foregroundColor(.purple)
-                        .padding(8)
-                        .background(Color.white.opacity(0.9))
-                        .cornerRadius(10)
-                        .shadow(radius: 4)
-                        .transition(.scale)
-                }
+            }
+            .padding(.horizontal)
+            
+            // Jack drawn message (only during dealer determination)
+            if game.currentPhase == .dealerDetermination, let jackCard = game.jackDrawnForDealer, game.showJackProminently {
+                jackDrawnMessage(PlayerCard(card: jackCard))
+            }
+            
+            // Game controls (only for setup and dealer determination)
+            if game.currentPhase == .setup || game.currentPhase == .dealerDetermination {
+                gameControls
+            }
+            
+            // Error messages
+            if showInvalidMeld {
+                Text("Invalid meld!")
+                    .foregroundColor(.red)
+                    .transition(.opacity)
+                    .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showInvalidMeld = false } }
+            }
+            
+            // Show trick winner message using game state
+            if game.isShowingTrickResult, let winner = game.lastTrickWinner {
+                Text("\(winner) won the trick!")
+                    .font(.title2)
+                    .bold()
+                    .foregroundColor(.purple)
+                    .padding(8)
+                    .background(Color.white.opacity(0.9))
+                    .cornerRadius(10)
+                    .shadow(radius: 4)
+                    .transition(.scale)
             }
         }
     }
@@ -554,172 +549,6 @@ struct GameBoardView: View {
         }
     }
     
-    // Dealer determination view
-    private var dealerDeterminationView: some View {
-        VStack(spacing: 15) {
-            // Show the Jack that determined the dealer prominently (if drawn)
-            if let jackCard = game.jackDrawnForDealer, game.showJackProminently {
-                VStack(spacing: 12) {
-                    Text("🎴 JACK DRAWN! 🎴")
-                        .font(.title)
-                        .bold()
-                        .foregroundColor(.orange)
-                    
-                    Text(game.dealerDeterminedMessage)
-                        .font(.title2)
-                        .bold()
-                        .foregroundColor(.green)
-                        .multilineTextAlignment(.center)
-                    
-                    Image(jackCard.imageName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 160, height: 240) // 2x size
-                        .cornerRadius(12)
-                        .shadow(radius: 8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.orange, lineWidth: 4)
-                        )
-                        .scaleEffect(1.05)
-                        .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: jackCard.id)
-                }
-                .padding(20)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.orange.opacity(0.15))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.orange, lineWidth: 2)
-                        )
-                )
-                .scaleEffect(1.02)
-                .animation(.easeInOut(duration: 0.3), value: jackCard.id)
-            }
-            
-            if game.currentPhase == .dealing {
-                // Show dealer determined message and drawn cards
-                VStack(spacing: 10) {
-                    Text("🎉 Dealer Determined! 🎉")
-                        .font(.title2)
-                        .bold()
-                        .foregroundColor(.green)
-                    
-                    Text(game.dealerDeterminedMessage)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                        .multilineTextAlignment(.center)
-                    
-                    // Show all drawn cards
-                    if !game.dealerDeterminationCards.isEmpty {
-                        VStack(spacing: 8) {
-                            Text("All Cards Drawn:")
-                                .font(.headline)
-                            
-                            // Single stack of cards with rotation and Z offset
-                            ZStack {
-                                ForEach(Array(game.dealerDeterminationCards.enumerated()), id: \.offset) { index, card in
-                                    let rotation = Double((index * 13) % 21 - 10) // -10 to +10 degrees
-                                    let zOffset = Double(index) * 2
-                                    VStack(spacing: 4) {
-                                        Image(card.imageName)
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fit)
-                                            .frame(width: 60, height: 90)
-                                            .cornerRadius(6)
-                                            .shadow(radius: 2)
-                                            .rotationEffect(.degrees(rotation))
-                                            .zIndex(Double(index))
-                                            .offset(y: zOffset)
-                                        if index < game.dealerDeterminationCards.count - 1 {
-                                            Text("\(game.players[index % game.playerCount].name)")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                                .offset(y: zOffset)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    Text("Dealing cards...")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .italic()
-                }
-            } else {
-                Text("Determining Dealer")
-                    .font(.title2)
-                    .bold()
-                    .foregroundColor(.primary)
-                
-                Text("Players draw cards until someone draws a Jack")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                
-                // Show drawn cards in a single stack
-                if !game.dealerDeterminationCards.isEmpty {
-                    VStack(spacing: 8) {
-                        Text("Cards Drawn:")
-                            .font(.headline)
-                        
-                        // Single stack of cards with rotation and Z offset
-                        ZStack {
-                            ForEach(Array(game.dealerDeterminationCards.enumerated()), id: \.offset) { index, card in
-                                let rotation = Double((index * 13) % 21 - 10) // -10 to +10 degrees
-                                let zOffset = Double(index) * 2
-                                VStack(spacing: 4) {
-                                    Image(card.imageName)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(width: 60, height: 90)
-                                        .cornerRadius(6)
-                                        .shadow(radius: 2)
-                                        .rotationEffect(.degrees(rotation))
-                                        .zIndex(Double(index))
-                                        .offset(y: zOffset)
-                                    if index < game.dealerDeterminationCards.count - 1 {
-                                        Text("\(game.players[index % game.playerCount].name)")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                            .offset(y: zOffset)
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Show current player
-                        if game.currentPlayer.type == .human {
-                            Text("Your turn to draw")
-                                .font(.subheadline)
-                                .foregroundColor(.blue)
-                                .bold()
-                        } else {
-                            Text("\(game.currentPlayer.name) is drawing...")
-                                .font(.subheadline)
-                                .foregroundColor(.blue)
-                        }
-                    }
-                }
-                
-                // Draw button for human player
-                if game.currentPlayer.type == .human {
-                    Button("Draw Card") {
-                        game.drawCardForDealerDetermination()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .font(.headline)
-                }
-            }
-        }
-        .frame(minHeight: 200) // Same size as trick area
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(12)
-    }
-
     // MARK: - Draw Pile View
     private var drawPileView: some View {
         let cardWidth: CGFloat = 80 * 1.5 // 1.5x size
@@ -728,7 +557,12 @@ struct GameBoardView: View {
         let maxVisibleCards = min(4, game.deck.remainingCount) // Show 2-4 cards based on deck size
         
         return Button(action: {
-            if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
+            // Handle drawing for dealer determination
+            if game.currentPhase == .dealerDetermination && game.currentPlayer.type == .human {
+                game.drawCardForDealerDetermination()
+            }
+            // Handle drawing during gameplay
+            else if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     game.drawCardForCurrentPlayer()
                 }
@@ -750,16 +584,16 @@ struct GameBoardView: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .disabled(!(game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice))
-        .scaleEffect(game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice ? 1.05 : 1.0)
-        .animation(.easeInOut(duration: 0.2), value: game.mustDrawCard)
+        .disabled(!canDrawCard)
+        .scaleEffect(canDrawCard ? 1.05 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: canDrawCard)
         .overlay(
             // Draw instruction for human players
             Group {
-                if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
+                if canDrawCard {
                     VStack {
                         Spacer()
-                        Text("Tap to draw")
+                        Text(drawInstructionText)
                             .font(.caption)
                             .bold()
                             .foregroundColor(.blue)
@@ -773,6 +607,24 @@ struct GameBoardView: View {
                 }
             }
         )
+    }
+    
+    // Computed property to determine if player can draw
+    private var canDrawCard: Bool {
+        if game.currentPhase == .dealerDetermination {
+            return game.currentPlayer.type == .human
+        } else {
+            return game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice
+        }
+    }
+    
+    // Computed property for draw instruction text
+    private var drawInstructionText: String {
+        if game.currentPhase == .dealerDetermination {
+            return "Tap to draw for dealer"
+        } else {
+            return "Tap to draw"
+        }
     }
 
     private func handView(_ player: Player) -> some View {
@@ -1058,7 +910,7 @@ struct TrickView: View {
                 .fill(Color.gray.opacity(0.1))
                 .stroke(Color.gray.opacity(0.3), lineWidth: 1)
             
-            if cards.isEmpty {
+            if cards.isEmpty && game.dealerDeterminationCards.isEmpty {
                 // Empty trick area
                 Text("No cards played yet")
                     .font(.caption)
@@ -1066,23 +918,50 @@ struct TrickView: View {
             } else {
                 // Cards with proper stacking, offset, and rotation
                 ZStack {
-                    ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                        let isWinningCard = game.shouldAnimateWinningCard && index == game.winningCardIndex
-                        
-                        CardView(card: card, isSelected: false, onTap: {})
-                            .frame(
-                                width: 80 * settings.cardSizeMultiplier.rawValue,
-                                height: 120 * settings.cardSizeMultiplier.rawValue
-                            )
-                            .rotationEffect(.degrees(Double(index) * 2 - 3)) // Slight rotation variation
-                            .offset(
-                                x: CGFloat(index) * 8, // Horizontal offset
-                                y: CGFloat(index) * 4  // Vertical offset
-                            )
-                            .zIndex(isWinningCard ? 100 : Double(cards.count - index)) // Winning card on top
-                            .shadow(radius: isWinningCard ? 8 : 2)
-                            .scaleEffect(isWinningCard ? 1.1 : 1.0) // Winning card slightly larger
-                            .animation(.easeInOut(duration: 0.3), value: isWinningCard)
+                    // Show dealer determination cards during that phase
+                    if game.currentPhase == .dealerDetermination && !game.dealerDeterminationCards.isEmpty {
+                        ForEach(Array(game.dealerDeterminationCards.enumerated()), id: \.offset) { index, card in
+                            let rotation = Double((index * 13) % 21 - 10) // -10 to +10 degrees
+                            let zOffset = Double(index) * 3
+                            
+                            Image(card.imageName)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(
+                                    width: 80 * 2.0, // 2x size for dealer determination
+                                    height: 120 * 2.0
+                                )
+                                .cornerRadius(8)
+                                .shadow(radius: 4)
+                                .rotationEffect(.degrees(rotation))
+                                .offset(
+                                    x: CGFloat(index) * 12, // Horizontal offset
+                                    y: CGFloat(index) * 6 + CGFloat(zOffset)  // Vertical offset with z-depth
+                                )
+                                .zIndex(Double(game.dealerDeterminationCards.count - index))
+                        }
+                    }
+                    
+                    // Show regular trick cards during gameplay
+                    if !cards.isEmpty {
+                        ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                            let isWinningCard = game.shouldAnimateWinningCard && index == game.winningCardIndex
+                            
+                            CardView(card: card, isSelected: false, onTap: {})
+                                .frame(
+                                    width: 80 * settings.cardSizeMultiplier.rawValue,
+                                    height: 120 * settings.cardSizeMultiplier.rawValue
+                                )
+                                .rotationEffect(.degrees(Double(index) * 2 - 3)) // Slight rotation variation
+                                .offset(
+                                    x: CGFloat(index) * 8, // Horizontal offset
+                                    y: CGFloat(index) * 4  // Vertical offset
+                                )
+                                .zIndex(isWinningCard ? 100 : Double(cards.count - index)) // Winning card on top
+                                .shadow(radius: isWinningCard ? 8 : 2)
+                                .scaleEffect(isWinningCard ? 1.1 : 1.0) // Winning card slightly larger
+                                .animation(.easeInOut(duration: 0.3), value: isWinningCard)
+                        }
                     }
                 }
             }
