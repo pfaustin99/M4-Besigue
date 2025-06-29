@@ -7,9 +7,32 @@ struct GameSettingsView: View {
     let onSave: () -> Void
     
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            // Custom Navigation Bar
+            HStack {
+                Button("Cancel") {
+                    dismiss()
+                }
+                
+                Spacer()
+                
+                Text("Game Settings")
+                    .font(.headline)
+                
+                Spacer()
+                
+                Button("Save") {
+                    onSave()
+                    dismiss()
+                }
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .shadow(radius: 1)
+            
+            // Content
             ScrollView {
-                VStack(spacing: 20) {
+                LazyVStack(spacing: 20) {
                     // Game Rules Section
                     SettingsSection(title: "Game Rules") {
                         VStack(spacing: 12) {
@@ -217,22 +240,9 @@ struct GameSettingsView: View {
                 .padding(.bottom, 20)
             }
             .scrollIndicators(.visible)
-            .navigationTitle("Game Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(
-                leading: Button("Cancel") {
-                    dismiss()
-                },
-                trailing: Button("Save") {
-                    // Save the settings and dismiss
-                    onSave()
-                    dismiss()
-                }
-            )
         }
         .alert("Start New Game", isPresented: $showingStartGame) {
             Button("Start") {
-                // Save settings and start new game
                 onSave()
                 dismiss()
             }
