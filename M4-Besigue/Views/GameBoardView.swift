@@ -809,31 +809,55 @@ struct GameBoardView: View {
     private var drawPileView: some View {
         let cardWidth: CGFloat = 80 * 1.5 // 1.5x size
         let cardHeight: CGFloat = 120 * 1.5
-        let stackOffset: CGFloat = 3 // Offset for stacking effect
+        let stackOffset: CGFloat = 2 // Smaller offset for better stacking
         let maxVisibleCards = min(4, game.deck.remainingCount) // Show 2-4 cards based on deck size
         
-        return ZStack {
-            // Stack of cards with offset and shadow
-            ForEach(0..<maxVisibleCards, id: \.self) { index in
-                Image("card_back")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: cardWidth, height: cardHeight)
-                    .cornerRadius(8)
-                    .offset(x: CGFloat(index) * stackOffset, y: CGFloat(index) * stackOffset)
-                    .shadow(radius: 4, x: 2, y: 2)
-                    .opacity(1.0 - Double(index) * 0.2) // Fade effect for depth
-            }
-        }
-        .onTapGesture {
+        return Button(action: {
             if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     game.drawCardForCurrentPlayer()
                 }
             }
+        }) {
+            ZStack {
+                // Stack of cards with offset and shadow
+                ForEach(0..<maxVisibleCards, id: \.self) { index in
+                    Image("card_back")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: cardWidth, height: cardHeight)
+                        .cornerRadius(8)
+                        .offset(x: CGFloat(index) * stackOffset, y: CGFloat(index) * stackOffset)
+                        .shadow(radius: 4, x: 2, y: 2)
+                        .opacity(1.0 - Double(index) * 0.15) // Less fade for better visibility
+                        .zIndex(Double(maxVisibleCards - index)) // Top card has highest z-index
+                }
+            }
         }
-        .scaleEffect(game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice ? 1.1 : 1.0)
+        .buttonStyle(PlainButtonStyle())
+        .disabled(!(game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice))
+        .scaleEffect(game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice ? 1.05 : 1.0)
         .animation(.easeInOut(duration: 0.2), value: game.mustDrawCard)
+        .overlay(
+            // Draw instruction for human players
+            Group {
+                if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
+                    VStack {
+                        Spacer()
+                        Text("Tap to draw")
+                            .font(.caption)
+                            .bold()
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(0.9))
+                            .cornerRadius(8)
+                            .shadow(radius: 2)
+                    }
+                    .offset(y: cardHeight + 20)
+                }
+            }
+        )
     }
 
     private func handView(_ player: Player) -> some View {
@@ -1062,17 +1086,25 @@ struct TrickView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             } else {
-                // Cards with natural rotation and z-depth
-                HStack(spacing: 8) {
+                // Cards with proper stacking, offset, and rotation
+                ZStack {
                     ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                        let isWinningCard = game.isShowingTrickResult && index == game.determineTrickWinnerIndex()
+                        
                         CardView(card: card, isSelected: false, onTap: {})
                             .frame(
                                 width: 80 * settings.cardSizeMultiplier.rawValue,
                                 height: 120 * settings.cardSizeMultiplier.rawValue
                             )
-                            .rotationEffect(.degrees(Double.random(in: -5...5)))
-                            .zIndex(Double(cards.count - index))
-                            .shadow(radius: 2)
+                            .rotationEffect(.degrees(Double(index) * 2 - 3)) // Slight rotation variation
+                            .offset(
+                                x: CGFloat(index) * 8, // Horizontal offset
+                                y: CGFloat(index) * 4  // Vertical offset
+                            )
+                            .zIndex(isWinningCard ? 100 : Double(cards.count - index)) // Winning card on top
+                            .shadow(radius: isWinningCard ? 8 : 2)
+                            .scaleEffect(isWinningCard ? 1.1 : 1.0) // Winning card slightly larger
+                            .animation(.easeInOut(duration: 0.3), value: isWinningCard)
                     }
                 }
             }
