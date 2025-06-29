@@ -10,6 +10,8 @@ struct GameBoardView: View {
     @State private var showInvalidMeld: Bool = false
     @State private var shakeMeldButton: Bool = false
     @Namespace private var drawPileNamespace
+    @State private var animatingDrawnCard: PlayerCard? = nil
+    @State private var showDrawAnimation: Bool = false
     
     var body: some View {
         GeometryReader { geometry in
@@ -227,8 +229,22 @@ struct GameBoardView: View {
             .padding(.horizontal)
             
             // Jack drawn message (only during dealer determination)
-            if game.currentPhase == .dealerDetermination, let jackCard = game.jackDrawnForDealer, game.showJackProminently {
-                jackDrawnMessage(PlayerCard(card: jackCard))
+            if game.currentPhase == .dealerDetermination && game.showJackProminently {
+                VStack(spacing: 8) {
+                    Text("🎴 JACK DRAWN! 🎴")
+                        .font(.title2)
+                        .bold()
+                        .foregroundColor(.orange)
+                    
+                    Text(game.dealerDeterminedMessage)
+                        .font(.headline)
+                        .bold()
+                        .foregroundColor(.green)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+                .background(Color.yellow.opacity(0.2))
+                .cornerRadius(12)
             }
             
             // Game controls (only for setup and dealer determination)
@@ -257,6 +273,16 @@ struct GameBoardView: View {
                     .transition(.scale)
             }
         }
+        .overlay(
+            // Card drawing animation overlay
+            Group {
+                if showDrawAnimation {
+                    CardDrawAnimationView(
+                        fromPosition: settings.drawPilePosition
+                    )
+                }
+            }
+        )
     }
     
     // MARK: - Trick Section
@@ -463,13 +489,6 @@ struct GameBoardView: View {
                 }
                 .buttonStyle(.borderedProminent)
             }
-            
-            if game.currentPhase == .dealerDetermination && game.currentPlayer.type == .human {
-                Button("Draw Card for Dealer") {
-                    game.drawCardForDealerDetermination()
-                }
-                .buttonStyle(.borderedProminent)
-            }
         }
         .padding(.horizontal)
     }
@@ -521,6 +540,7 @@ struct GameBoardView: View {
                 selectedCards.append(card)
             }
         }
+        if game.mustDrawCard { return }
     }
     
     // Handle double-tap to play card
@@ -532,6 +552,7 @@ struct GameBoardView: View {
                 selectedCards.removeAll()
             }
         }
+        if game.mustDrawCard { return }
     }
     
     // Helper function for badge icon
@@ -557,14 +578,18 @@ struct GameBoardView: View {
         let maxVisibleCards = min(4, game.deck.remainingCount) // Show 2-4 cards based on deck size
         
         return Button(action: {
-            // Handle drawing for dealer determination
             if game.currentPhase == .dealerDetermination && game.currentPlayer.type == .human {
-                game.drawCardForDealerDetermination()
+                showDrawAnimation = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    game.drawCardForDealerDetermination()
+                    showDrawAnimation = false
+                }
             }
-            // Handle drawing during gameplay
             else if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
-                withAnimation(.easeInOut(duration: 0.3)) {
+                showDrawAnimation = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                     game.drawCardForCurrentPlayer()
+                    showDrawAnimation = false
                 }
             }
         }) {
@@ -604,6 +629,13 @@ struct GameBoardView: View {
                             .shadow(radius: 2)
                     }
                     .offset(y: cardHeight + 20)
+                }
+            }
+        )
+        .overlay(
+            Group {
+                if showDrawAnimation, let card = animatingDrawnCard {
+                    DrawCardAnimationView(card: card)
                 }
             }
         )
@@ -983,6 +1015,98 @@ struct Shake: GeometryEffect {
     func effectValue(size: CGSize) -> ProjectionTransform {
         let translation = 10 * sin(animatableData * .pi * 4)
         return ProjectionTransform(CGAffineTransform(translationX: translation, y: 0))
+    }
+}
+
+// Add DrawCardAnimationView below TrickView:
+struct DrawCardAnimationView: View {
+    let card: PlayerCard
+    @State private var progress: CGFloat = 0
+    @State private var flipped: Bool = false
+    var body: some View {
+        GeometryReader { geo in
+            let start = CGPoint(x: geo.size.width * 0.15, y: geo.size.height * 0.8)
+            let end = CGPoint(x: geo.size.width * 0.5, y: geo.size.height * 0.3)
+            Image(card.imageName)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 80 * 2, height: 120 * 2)
+                .rotation3DEffect(.degrees(flipped ? 0 : 90), axis: (x: 0, y: 1, z: 0))
+                .position(x: start.x + (end.x - start.x) * progress, y: start.y + (end.y - start.y) * progress)
+                .shadow(radius: 8)
+                .onAppear {
+                    withAnimation(.easeInOut(duration: 0.3)) { progress = 1 }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        withAnimation(.easeInOut(duration: 0.2)) { flipped = true }
+                    }
+                }
+        }
+    }
+}
+
+// MARK: - Card Draw Animation View
+struct CardDrawAnimationView: View {
+    let fromPosition: DrawPilePosition
+    @State private var animationProgress: CGFloat = 0
+    @State private var cardRotation: Double = 0
+    @State private var cardScale: CGFloat = 1.0
+    @State private var cardZRotation: Double = 0
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Animated card
+                Image("card_back")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 80, height: 120)
+                    .cornerRadius(8)
+                    .shadow(radius: 8, x: 4, y: 4)
+                    .scaleEffect(cardScale)
+                    .rotationEffect(.degrees(cardRotation))
+                    .rotation3DEffect(.degrees(cardZRotation), axis: (x: 0, y: 1, z: 0))
+                    .offset(
+                        x: getCardOffsetX(geometry: geometry),
+                        y: getCardOffsetY(geometry: geometry)
+                    )
+                    .opacity(1 - animationProgress)
+            }
+        }
+        .onAppear {
+            startAnimation()
+        }
+    }
+    
+    private func getCardOffsetX(geometry: GeometryProxy) -> CGFloat {
+        let startX: CGFloat = fromPosition == .centerLeft ? -100 : 100
+        let endX: CGFloat = 0
+        return startX + (endX - startX) * animationProgress
+    }
+    
+    private func getCardOffsetY(geometry: GeometryProxy) -> CGFloat {
+        let startY: CGFloat = 0
+        let endY: CGFloat = -50
+        let arcHeight: CGFloat = -100
+        let progress = animationProgress
+        
+        // Create an arc motion
+        if progress <= 0.5 {
+            // First half: go up
+            return startY + (arcHeight - startY) * (progress * 2)
+        } else {
+            // Second half: come down
+            let secondHalfProgress = (progress - 0.5) * 2
+            return arcHeight + (endY - arcHeight) * secondHalfProgress
+        }
+    }
+    
+    private func startAnimation() {
+        withAnimation(.easeInOut(duration: 0.6)) {
+            animationProgress = 1.0
+            cardRotation = 360 // Full flip
+            cardZRotation = 180 // 3D flip
+            cardScale = 1.2 // Slight scale up during animation
+        }
     }
 }
 
