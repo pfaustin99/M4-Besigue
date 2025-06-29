@@ -42,6 +42,7 @@ struct SettingsView: View {
                 }
                 .padding(.bottom, 20)
             }
+            .scrollIndicators(.visible)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Done") {

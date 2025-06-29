@@ -215,6 +215,7 @@ struct GameSettingsView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 20)
             }
+            .scrollIndicators(.visible)
             .navigationTitle("Game Settings")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Cancel") {
