@@ -215,22 +215,24 @@ struct GameBoardView: View {
             if game.currentPhase == .dealerDetermination {
                 dealerDeterminationView
             } else {
-                // Clean trick area - only cards, no text
-                TrickView(
-                    cards: game.currentTrick,
-                    game: game
-                )
-                
-                // Human draw button - below trick area
-                if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
-                    Button("Draw Card") {
-                        withAnimation {
-                            game.drawCardForCurrentPlayer()
-                        }
+                // Main game area with trick and draw pile
+                HStack(spacing: 20) {
+                    // Draw pile positioned based on settings
+                    if settings.drawPilePosition == .centerLeft {
+                        drawPileSection
+                        Spacer()
+                        trickSection
+                    } else {
+                        trickSection
+                        Spacer()
+                        drawPileSection
                     }
-                    .buttonStyle(.borderedProminent)
-                    .font(.headline)
-                    .padding(.vertical, 8)
+                }
+                .padding(.horizontal)
+                
+                // Jack drawn message
+                if let jackCard = game.jackDrawnForDealer, game.showJackProminently {
+                    jackDrawnMessage(PlayerCard(card: jackCard))
                 }
                 
                 // Game controls (only for setup and dealer determination)
@@ -262,6 +264,74 @@ struct GameBoardView: View {
         }
     }
     
+    // MARK: - Trick Section
+    private var trickSection: some View {
+        VStack {
+            // Clean trick area - only cards, no text
+            TrickView(
+                cards: game.currentTrick,
+                game: game,
+                settings: settings
+            )
+            
+            // Human draw button - below trick area
+            if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
+                Button("Draw Card") {
+                    withAnimation {
+                        game.drawCardForCurrentPlayer()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .font(.headline)
+                .padding(.vertical, 8)
+            }
+        }
+    }
+    
+    // MARK: - Draw Pile Section
+    private var drawPileSection: some View {
+        VStack(spacing: 8) {
+            // Draw pile with stacking effect
+            drawPileView
+            
+            // Deck info
+            Text("Cards: \(game.deck.remainingCount)")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    // MARK: - Jack Drawn Message
+    private func jackDrawnMessage(_ jackCard: PlayerCard) -> some View {
+        VStack(spacing: 12) {
+            Text("Jack of \(jackCard.suit?.rawValue.capitalized ?? "") drawn - \(game.dealerDeterminedMessage)")
+                .font(.title3)
+                .bold()
+                .foregroundColor(.orange)
+                .multilineTextAlignment(.center)
+            
+            Image(jackCard.imageName)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 120, height: 180)
+                .cornerRadius(12)
+                .shadow(radius: 8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.orange, lineWidth: 4)
+                )
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.orange.opacity(0.15))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.orange, lineWidth: 2)
+                )
+        )
+    }
+    
     // MARK: - Bottom Section
     private var bottomSection: some View {
         VStack(spacing: 10) {
@@ -274,22 +344,9 @@ struct GameBoardView: View {
                     meldsAreaView(humanPlayer)
                 }
                 actionButtonsView(humanPlayer)
-                
-                // Deck info and draw pile - moved to bottom section
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("Cards in deck: \(game.deck.remainingCount)")
-                            .font(.caption)
-                        drawPileView
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal)
-                
                 handView(humanPlayer)
             }
         }
-        .background(Color.blue.opacity(0.1))
     }
     
     private func playerInfoView(_ player: Player) -> some View {
@@ -748,57 +805,35 @@ struct GameBoardView: View {
         .cornerRadius(12)
     }
 
-    // Draw pile stack view - moved to bottom section
+    // MARK: - Draw Pile View
     private var drawPileView: some View {
-        Button(action: {
-            if game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human {
-                withAnimation {
+        let cardWidth: CGFloat = 80 * 1.5 // 1.5x size
+        let cardHeight: CGFloat = 120 * 1.5
+        let stackOffset: CGFloat = 3 // Offset for stacking effect
+        let maxVisibleCards = min(4, game.deck.remainingCount) // Show 2-4 cards based on deck size
+        
+        return ZStack {
+            // Stack of cards with offset and shadow
+            ForEach(0..<maxVisibleCards, id: \.self) { index in
+                Image("card_back")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: cardWidth, height: cardHeight)
+                    .cornerRadius(8)
+                    .offset(x: CGFloat(index) * stackOffset, y: CGFloat(index) * stackOffset)
+                    .shadow(radius: 4, x: 2, y: 2)
+                    .opacity(1.0 - Double(index) * 0.2) // Fade effect for depth
+            }
+        }
+        .onTapGesture {
+            if game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice {
+                withAnimation(.easeInOut(duration: 0.3)) {
                     game.drawCardForCurrentPlayer()
                 }
             }
-        }) {
-            VStack(spacing: 0) {
-                // Angled stack of cards
-                ZStack {
-                    // Background cards (stacked behind)
-                    ForEach(0..<min(game.deck.remainingCount - 1, 4), id: \.self) { i in
-                        Image("card_back")
-                            .resizable()
-                            .frame(width: 32, height: 48)
-                            .cornerRadius(4)
-                            .rotationEffect(.degrees(Double(i) * 2 - 3)) // Slight angle variation
-                            .offset(x: Double(i) * 0.5, y: Double(i) * 1.5)
-                            .opacity(Double(1.0 - Double(i) * 0.2))
-                            .zIndex(Double(i))
-                    }
-                    
-                    // Top card (most prominent)
-                    if game.deck.remainingCount > 0 {
-                        Image("card_back")
-                            .resizable()
-                            .frame(width: 36, height: 54)
-                            .cornerRadius(4)
-                            .shadow(radius: 3)
-                            .scaleEffect((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.1 : 1.0)
-                            .zIndex(10)
-                    }
-                }
-                
-                // Draw instruction text
-                if game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human {
-                    Text("Draw a card")
-                        .font(.caption)
-                        .foregroundColor(.blue)
-                        .bold()
-                        .padding(.top, 4)
-                }
-            }
         }
-        .disabled(!(game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human))
-        .opacity((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.0 : 0.6)
-        .scaleEffect((game.mustDrawCard && !game.awaitingMeldChoice && game.currentPlayer.type == .human) ? 1.0 : 0.9)
-        .animation(.easeInOut(duration: 0.3), value: game.mustDrawCard)
-        .padding(.vertical, 4)
+        .scaleEffect(game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice ? 1.1 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: game.mustDrawCard)
     }
 
     private func handView(_ player: Player) -> some View {
@@ -1012,27 +1047,38 @@ struct BadgeLegendRow: View {
 struct TrickView: View {
     let cards: [PlayerCard]
     @ObservedObject var game: Game
+    let settings: GameSettings
+    
     var body: some View {
-        HStack(spacing: 18) {
-            ForEach(Array(cards.enumerated()), id: \ .offset) { index, card in
-                let rotation = Double((index * 17) % 21 - 10)
-                let zOffset = Double(index) * 2
-                CardView(
-                    card: card,
-                    isSelected: false,
-                    isPlayable: false
-                ) {
-                    // No action for played cards
+        ZStack {
+            // Subtle background
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.gray.opacity(0.1))
+                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+            
+            if cards.isEmpty {
+                // Empty trick area
+                Text("No cards played yet")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                // Cards with natural rotation and z-depth
+                HStack(spacing: 8) {
+                    ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                        CardView(card: card, isSelected: false, onTap: {})
+                            .frame(
+                                width: 80 * settings.cardSizeMultiplier.rawValue,
+                                height: 120 * settings.cardSizeMultiplier.rawValue
+                            )
+                            .rotationEffect(.degrees(Double.random(in: -5...5)))
+                            .zIndex(Double(cards.count - index))
+                            .shadow(radius: 2)
+                    }
                 }
-                .frame(width: 120, height: 180) // 1.5x size
-                .rotationEffect(.degrees(rotation))
-                .zIndex(Double(index))
-                .offset(y: zOffset)
             }
         }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(12)
+        .frame(minHeight: 200)
+        .padding(.horizontal)
     }
 }
 

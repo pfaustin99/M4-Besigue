@@ -12,6 +12,36 @@ enum GameLevel: String, CaseIterable, Codable {
     case pro
 }
 
+/// Enum for card size multiplier
+enum CardSizeMultiplier: Double, CaseIterable, Codable {
+    case small = 1.5
+    case medium = 2.0
+    case large = 2.5
+    case extraLarge = 3.0
+    
+    var displayName: String {
+        switch self {
+        case .small: return "1.5x"
+        case .medium: return "2x"
+        case .large: return "2.5x"
+        case .extraLarge: return "3x"
+        }
+    }
+}
+
+/// Enum for draw pile position
+enum DrawPilePosition: String, CaseIterable, Codable {
+    case centerLeft = "centerLeft"
+    case centerRight = "centerRight"
+    
+    var displayName: String {
+        switch self {
+        case .centerLeft: return "Center Left"
+        case .centerRight: return "Center Right"
+        }
+    }
+}
+
 /// GameSettings holds all configurable values for scoring, penalties, and rules
 class GameSettings: ObservableObject, Codable, Equatable {
     // Scoring
@@ -53,6 +83,10 @@ class GameSettings: ObservableObject, Codable, Equatable {
     var useHints: Bool { gameLevel == .novice }
     var aiFerocity: Int { gameLevel == .pro ? 2 : 1 } // 1 = easy, 2 = hard
 
+    // UI Configuration
+    @Published var cardSizeMultiplier: CardSizeMultiplier = .medium // 2x default
+    @Published var drawPilePosition: DrawPilePosition = .centerLeft
+
     // Badge Icons
     @Published var badgeIcons: MeldBadgeIcons = MeldBadgeIcons()
 
@@ -89,12 +123,14 @@ class GameSettings: ObservableObject, Codable, Equatable {
             lhs.handSize == rhs.handSize &&
             lhs.numPlayers == rhs.numPlayers &&
             lhs.playerCount == rhs.playerCount &&
+            lhs.cardSizeMultiplier == rhs.cardSizeMultiplier &&
+            lhs.drawPilePosition == rhs.drawPilePosition &&
             lhs.badgeIcons == rhs.badgeIcons
     }
 
     // Codable conformance
     enum CodingKeys: String, CodingKey {
-        case besiguePoints, royalMarriagePoints, commonMarriagePoints, fourAcesPoints, fourKingsPoints, fourQueensPoints, fourJacksPoints, fourJokersPoints, sequencePoints, trumpFourAcesMultiplier, trumpFourKingsMultiplier, trumpFourQueensMultiplier, trumpFourJacksMultiplier, trumpSequenceMultiplier, brisqueValue, finalTrickBonus, penalty, brisqueCutoff, minScoreForBrisques, winningScore, trickWithSevenTrumpPoints, finalTrickPoints, penaltyBelow100, penaltyFewBrisques, penaltyOutOfTurn, minBrisques, playerCount, playDirection, gameLevel, handSize, numPlayers, badgeIcons
+        case besiguePoints, royalMarriagePoints, commonMarriagePoints, fourAcesPoints, fourKingsPoints, fourQueensPoints, fourJacksPoints, fourJokersPoints, sequencePoints, trumpFourAcesMultiplier, trumpFourKingsMultiplier, trumpFourQueensMultiplier, trumpFourJacksMultiplier, trumpSequenceMultiplier, brisqueValue, finalTrickBonus, penalty, brisqueCutoff, minScoreForBrisques, winningScore, trickWithSevenTrumpPoints, finalTrickPoints, penaltyBelow100, penaltyFewBrisques, penaltyOutOfTurn, minBrisques, playerCount, playDirection, gameLevel, handSize, numPlayers, cardSizeMultiplier, drawPilePosition, badgeIcons
     }
 
     required init(from decoder: Decoder) throws {
@@ -130,6 +166,8 @@ class GameSettings: ObservableObject, Codable, Equatable {
         gameLevel = try container.decode(GameLevel.self, forKey: .gameLevel)
         handSize = try container.decode(Int.self, forKey: .handSize)
         numPlayers = try container.decode(Int.self, forKey: .numPlayers)
+        cardSizeMultiplier = try container.decode(CardSizeMultiplier.self, forKey: .cardSizeMultiplier)
+        drawPilePosition = try container.decode(DrawPilePosition.self, forKey: .drawPilePosition)
         badgeIcons = try container.decode(MeldBadgeIcons.self, forKey: .badgeIcons)
     }
 
@@ -172,6 +210,8 @@ class GameSettings: ObservableObject, Codable, Equatable {
         try container.encode(gameLevel, forKey: .gameLevel)
         try container.encode(handSize, forKey: .handSize)
         try container.encode(numPlayers, forKey: .numPlayers)
+        try container.encode(cardSizeMultiplier, forKey: .cardSizeMultiplier)
+        try container.encode(drawPilePosition, forKey: .drawPilePosition)
         try container.encode(badgeIcons, forKey: .badgeIcons)
     }
 }
