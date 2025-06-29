@@ -4,6 +4,7 @@ struct GameSettingsView: View {
     @ObservedObject var gameRules: GameRules
     @Environment(\.dismiss) private var dismiss
     @State private var showingStartGame = false
+    let onSave: () -> Void
     
     var body: some View {
         NavigationView {
@@ -218,13 +219,21 @@ struct GameSettingsView: View {
             .scrollIndicators(.visible)
             .navigationTitle("Game Settings")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: Button("Cancel") {
-                dismiss()
-            })
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    dismiss()
+                },
+                trailing: Button("Save") {
+                    // Save the settings and dismiss
+                    onSave()
+                    dismiss()
+                }
+            )
         }
         .alert("Start New Game", isPresented: $showingStartGame) {
             Button("Start") {
-                // This will be handled by the parent view
+                // Save settings and start new game
+                onSave()
                 dismiss()
             }
             Button("Cancel", role: .cancel) { }

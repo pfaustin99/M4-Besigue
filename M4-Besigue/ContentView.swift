@@ -53,11 +53,10 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showingGameSettings) {
-            GameSettingsView(gameRules: gameRules)
-                .onDisappear {
-                    // Start new game with the configured rules
-                    startNewGameWithRules()
-                }
+            GameSettingsView(gameRules: gameRules, onSave: {
+                // Apply the settings and start new game
+                startNewGameWithRules()
+            })
         }
         .onAppear {
             // Don't auto-start the game - let user click the button
