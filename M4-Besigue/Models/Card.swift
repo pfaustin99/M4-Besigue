@@ -168,9 +168,18 @@ struct Card: Identifiable, Equatable, Hashable {
         
         // If both cards are same suit, higher rank wins
         if mySuit == otherSuit {
-            let result = myValue.rank > otherValue.rank
-            print("   Same suit (\(mySuit.rawValue)) - \(result ? "I win" : "I lose") (rank \(myValue.rank) vs \(otherValue.rank))")
-            return result
+            if myValue.rank > otherValue.rank {
+                print("   Same suit (\(mySuit.rawValue)) - I win (rank \(myValue.rank) vs \(otherValue.rank))")
+                return true
+            } else if myValue.rank < otherValue.rank {
+                print("   Same suit (\(mySuit.rawValue)) - I lose (rank \(myValue.rank) vs \(otherValue.rank))")
+                return false
+            } else {
+                // Same rank and suit - this is a tie
+                // In card games, the first card played wins ties (trick leader wins)
+                print("   Same suit and rank (\(mySuit.rawValue) \(myValue.rawValue)) - TIE, first card wins")
+                return false // This card is not the first played, so it doesn't beat the first card
+            }
         }
         
         // If different suits and no trump advantage, only same suit as lead can win

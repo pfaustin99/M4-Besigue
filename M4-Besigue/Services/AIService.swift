@@ -84,6 +84,11 @@ class AIService: ObservableObject {
     func chooseCardToPlay(for player: Player, in game: Game) -> PlayerCard? {
         let playableCards = game.getPlayableCards()
         
+        print("🤖 AI choosing card to play:")
+        print("   Lead suit: \(game.currentTrick.first?.suit?.rawValue ?? "None")")
+        print("   Trump suit: \(game.trumpSuit?.rawValue ?? "None")")
+        print("   Playable cards: \(playableCards.map { $0.displayName })")
+        
         guard !playableCards.isEmpty else { return nil }
         
         switch game.currentPhase {

@@ -1,7 +1,38 @@
 import Foundation
 
+/// Enum for trick area size
+enum TrickAreaSize: String, CaseIterable, Codable {
+    case small = "small"
+    case medium = "medium"
+    case large = "large"
+    
+    var displayName: String {
+        switch self {
+        case .small: return "Small"
+        case .medium: return "Medium"
+        case .large: return "Large"
+        }
+    }
+}
+
+/// Enum for dealer determination method
+@objc enum DealerDeterminationMethod: Int, CaseIterable, Codable, Identifiable {
+    case drawJacks
+    case random
+    
+    var id: Int { rawValue }
+    var displayName: String {
+        switch self {
+        case .drawJacks: return "Draw Jacks"
+        case .random: return "Random (default)"
+        }
+    }
+}
+
 /// GameRules holds game settings that affect all future games
 class GameRules: ObservableObject, Codable, Equatable {
+    // TODO: After gameplay is complete, revisit and improve the 'draw jacks' dealer determination logic and UI as discussed with the user.
+    
     // Game rules
     @Published var playerCount: Int = 2
     @Published var winningScore: Int = 1000
@@ -44,6 +75,13 @@ class GameRules: ObservableObject, Codable, Equatable {
     @Published var cardPlayDelay: AnimationTiming = .normal
     @Published var cardPlayDuration: AnimationTiming = .normal
     @Published var dealerDeterminationDelay: Double = 2.0
+    @Published var winningCardAnimationDelay: Double = 1.0
+    
+    // Trick area size
+    @Published var trickAreaSize: TrickAreaSize = .medium
+    
+    // Dealer determination method
+    @Published var dealerDeterminationMethod: DealerDeterminationMethod = .random
     
     // Computed properties
     var useHints: Bool { gameLevel == .novice }
@@ -83,7 +121,10 @@ class GameRules: ObservableObject, Codable, Equatable {
             lhs.globalCardSize == rhs.globalCardSize &&
             lhs.cardPlayDelay == rhs.cardPlayDelay &&
             lhs.cardPlayDuration == rhs.cardPlayDuration &&
-            lhs.dealerDeterminationDelay == rhs.dealerDeterminationDelay
+            lhs.dealerDeterminationDelay == rhs.dealerDeterminationDelay &&
+            lhs.winningCardAnimationDelay == rhs.winningCardAnimationDelay &&
+            lhs.trickAreaSize == rhs.trickAreaSize &&
+            lhs.dealerDeterminationMethod == rhs.dealerDeterminationMethod
     }
     
     // Codable conformance
@@ -95,7 +136,8 @@ class GameRules: ObservableObject, Codable, Equatable {
         case brisqueValue, finalTrickBonus, trickWithSevenTrumpPoints
         case penalty, penaltyBelow100, penaltyFewBrisques, penaltyOutOfTurn
         case brisqueCutoff, minScoreForBrisques, minBrisques
-        case globalCardSize, cardPlayDelay, cardPlayDuration, dealerDeterminationDelay
+        case globalCardSize, cardPlayDelay, cardPlayDuration, dealerDeterminationDelay, winningCardAnimationDelay, trickAreaSize
+        case dealerDeterminationMethod
     }
     
     required init(from decoder: Decoder) throws {
@@ -133,6 +175,9 @@ class GameRules: ObservableObject, Codable, Equatable {
         cardPlayDelay = try container.decode(AnimationTiming.self, forKey: .cardPlayDelay)
         cardPlayDuration = try container.decode(AnimationTiming.self, forKey: .cardPlayDuration)
         dealerDeterminationDelay = try container.decode(Double.self, forKey: .dealerDeterminationDelay)
+        winningCardAnimationDelay = try container.decode(Double.self, forKey: .winningCardAnimationDelay)
+        trickAreaSize = try container.decode(TrickAreaSize.self, forKey: .trickAreaSize)
+        dealerDeterminationMethod = try container.decode(DealerDeterminationMethod.self, forKey: .dealerDeterminationMethod)
     }
     
     init() {
@@ -174,5 +219,8 @@ class GameRules: ObservableObject, Codable, Equatable {
         try container.encode(cardPlayDelay, forKey: .cardPlayDelay)
         try container.encode(cardPlayDuration, forKey: .cardPlayDuration)
         try container.encode(dealerDeterminationDelay, forKey: .dealerDeterminationDelay)
+        try container.encode(winningCardAnimationDelay, forKey: .winningCardAnimationDelay)
+        try container.encode(trickAreaSize, forKey: .trickAreaSize)
+        try container.encode(dealerDeterminationMethod, forKey: .dealerDeterminationMethod)
     }
 } 

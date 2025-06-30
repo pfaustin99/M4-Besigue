@@ -35,6 +35,7 @@ class Game: ObservableObject {
     @Published var showJackProminently: Bool = false
     
     let settings: GameSettings
+    let gameRules: GameRules
     
     // AI Service
     private let aiService: AIService
@@ -57,17 +58,26 @@ class Game: ObservableObject {
     @Published var isAIDrawingCard: Bool = false
     @Published var aiDrawnCard: PlayerCard? = nil
     
+    // Winning card animation state
+    @Published var isAnimatingWinningCard: Bool = false
+    
+    // Draw and play cycle state
+    @Published var currentDrawIndex: Int = 0
+    @Published var currentPlayIndex: Int = 0
+    @Published var hasDrawnForNextTrick: [UUID: Bool] = [:]
+    
     // Computed property to check if we're in endgame
     var isEndgame: Bool {
         return deck.isEmpty
     }
     
-    init(playerCount: Int = 2, isOnline: Bool = false, aiDifficulty: AIService.Difficulty = .medium, settings: GameSettings = GameSettings(playerCount: 2)) {
+    init(playerCount: Int = 2, isOnline: Bool = false, aiDifficulty: AIService.Difficulty = .medium, settings: GameSettings = GameSettings()) {
         self.playerCount = playerCount
         self.isOnline = isOnline
         self.deck = Deck()
         self.aiService = AIService(difficulty: aiDifficulty)
         self.settings = settings
+        self.gameRules = GameRules()
         setupPlayers()
     }
     
@@ -92,20 +102,18 @@ class Game: ObservableObject {
     // Start a new game
     func startNewGame() {
         print("🎮 Starting new game...")
-        
         // Reset all players
         for player in players {
             player.reset()
         }
-        
         // Reset game state and ensure deck is shuffled
         deck.reset()
         deck.shuffle() // Extra shuffle to ensure randomness
         print("🃏 Deck shuffled for dealer determination")
-        
-        currentPhase = .dealerDetermination
-        currentPlayerIndex = 0
-        trumpSuit = nil
+        // Reset brisques
+        for player in players {
+            brisques[player.id] = 0
+        }
         currentTrick.removeAll()
         currentTrickLeader = 0
         trickHistory.removeAll()
@@ -115,31 +123,52 @@ class Game: ObservableObject {
         dealerDeterminedMessage = ""
         jackDrawnForDealer = nil
         showJackProminently = false
-        
-        // Reset brisques
-        for player in players {
-            brisques[player.id] = 0
-        }
-        
-        // Start with the first player for dealer determination
-        currentPlayerIndex = 0
-        
+        trumpSuit = nil
+        isShowingTrickResult = false
+        lastTrickWinner = nil
+        isPlayingCard = false
+        playedCard = nil
+        winningCardIndex = nil
+        shouldAnimateWinningCard = false
+        isAIDrawingCard = false
+        aiDrawnCard = nil
         // Set the first player as current player
+        currentPlayerIndex = 0
         currentPlayer.isCurrentPlayer = true
-        
-        // Clear other players' current status
         for (index, player) in players.enumerated() {
             if index != currentPlayerIndex {
                 player.isCurrentPlayer = false
             }
         }
-        
-        print("🎯 Dealer determination phase started. Current player: \(currentPlayer.name)")
-        
-        // If AI is first, start the dealer determination process
-        if currentPlayer.type == .ai {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.processAIDealerDetermination()
+        // Dealer determination method
+        switch gameRules.dealerDeterminationMethod {
+        case .random:
+            // Pick a random dealer
+            let dealerIndex = Int.random(in: 0..<playerCount)
+            for (i, player) in players.enumerated() {
+                player.isDealer = (i == dealerIndex)
+            }
+            dealerDeterminedMessage = "Dealer is \(players[dealerIndex].name)! (Random)"
+            print("👑 Dealer determined randomly: \(players[dealerIndex].name)")
+            // Deal cards and start playing phase
+            dealCards()
+            currentPhase = .playing
+            // The player to the right of the dealer leads the first trick
+            currentPlayerIndex = (dealerIndex + 1) % playerCount
+            print("🎯 First player: \(currentPlayer.name)")
+            if currentPlayer.type == .ai {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    self.processAITurn()
+                }
+            }
+        case .drawJacks:
+            // Use the existing dealer determination phase
+            currentPhase = .dealerDetermination
+            print("🎯 Dealer determination phase started. Current player: \(currentPlayer.name)")
+            if currentPlayer.type == .ai {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    self.processAIDealerDetermination()
+                }
             }
         }
     }
@@ -215,8 +244,18 @@ class Game: ObservableObject {
     
     // Start a new trick
     func startNewTrick() {
+        print("🔄 STARTING NEW TRICK:")
+        print("   Previous trick leader: \(currentTrickLeader)")
+        print("   Current player index: \(currentPlayerIndex)")
+        print("   Current player name: \(currentPlayer.name)")
+        print("   Current player type: \(currentPlayer.type)")
+        
         currentTrick.removeAll()
         currentTrickLeader = currentPlayerIndex
+        
+        print("   New trick leader set to: \(currentTrickLeader)")
+        print("   New trick leader name: \(players[currentTrickLeader].name)")
+        
         currentPhase = .playing
         
         // If AI is leading, make AI decision
@@ -229,6 +268,19 @@ class Game: ObservableObject {
     
     // Play a card
     func playCard(_ card: PlayerCard, from player: Player) {
+        print("🎴 PLAYING CARD:")
+        print("   Player: \(player.name) (type: \(player.type))")
+        print("   Card: \(card.displayName)")
+        print("   Current trick count: \(currentTrick.count)")
+        print("   Current trick leader: \(players[currentTrickLeader].name)")
+        print("   Current player index: \(currentPlayerIndex)")
+        
+        // Verify that the player playing the card is the current player
+        guard player.id == currentPlayer.id else {
+            print("   ❌ ERROR: Player \(player.name) is not the current player \(currentPlayer.name)")
+            return
+        }
+        
         // Start card play animation
         isPlayingCard = true
         playedCard = card
@@ -243,9 +295,15 @@ class Game: ObservableObject {
             player.removeCard(card)
             self.currentTrick.append(card)
             
+            print("   Card added to trick. New trick count: \(self.currentTrick.count)")
+            print("   Current trick cards: \(self.currentTrick.map { $0.displayName })")
+            print("   Cards in order: \(self.currentTrick.enumerated().map { "\($0): \($1.displayName) by \(self.players[(self.currentTrickLeader + $0) % self.playerCount].name)" })")
+            
             if self.currentTrick.count == self.playerCount {
+                print("   🎯 Trick complete, determining winner...")
                 self.completeTrick()
             } else {
+                print("   ➡️ Moving to next player...")
                 self.nextPlayer()
             }
         }
@@ -257,14 +315,23 @@ class Game: ObservableObject {
         let winnerIndex = determineTrickWinner()
         let winner = players[winnerIndex]
         
+        // Determine which card in the trick is the winning card
+        let winningCardIndex = determineTrickWinnerIndex() ?? 0
+        
         // Show trick winner message
         lastTrickWinner = winner.name
         isShowingTrickResult = true
         
-        // Hide the message after a delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        // Animate winning card moving to top
+        isAnimatingWinningCard = true
+        self.winningCardIndex = winningCardIndex
+        
+        // Hide the message and stop animation after configurable delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + gameRules.winningCardAnimationDelay) {
             self.isShowingTrickResult = false
             self.lastTrickWinner = nil
+            self.isAnimatingWinningCard = false
+            self.winningCardIndex = nil
         }
         
         // Add brisques to winner's count
@@ -274,44 +341,72 @@ class Game: ObservableObject {
             }
         }
         
-        // Set the winner as current player
-        currentPlayerIndex = winnerIndex
+        // Set up the draw/play cycle for the next trick
+        startDrawCycle(trickWinnerIndex: winnerIndex)
         
-        // Clear previous player's current status
-        for (index, player) in players.enumerated() {
-            if index != currentPlayerIndex {
-                player.isCurrentPlayer = false
+        // UI/VM should now prompt the player at currentDrawIndex to draw
+    }
+    
+    // Draw card for the current draw turn player
+    func drawCardForCurrentDrawTurn() {
+        let player = players[currentDrawIndex]
+        guard hasDrawnForNextTrick[player.id] == false, !deck.isEmpty else { return }
+        if let card = deck.drawCard() {
+            player.addCards([card])
+            hasDrawnForNextTrick[player.id] = true
+        }
+        // Advance to next draw turn
+        currentDrawIndex = (currentDrawIndex + 1) % playerCount
+        // If next is AI, trigger AI draw
+        triggerAIDrawIfNeeded()
+        // If all have drawn, begin play cycle (UI/VM should prompt currentPlayIndex to play)
+    }
+    
+    // Play card for the current play turn player
+    func playCardForCurrentPlayTurn(_ card: PlayerCard) {
+        let player = players[currentPlayIndex]
+        guard hasDrawnForNextTrick[player.id] == true else { return }
+        // Usual play logic here (add card to trick, etc.)
+        currentTrick.append(card)
+        player.removeCard(card)
+        // Advance to next play turn
+        currentPlayIndex = (currentPlayIndex + 1) % playerCount
+        // If next is AI, trigger AI play
+        triggerAIPlayIfNeeded()
+        // If all have played, evaluate trick
+        if currentTrick.count == playerCount {
+            completeTrick()
+        }
+    }
+    
+    // Trigger AI draw if it's their turn
+    private func triggerAIDrawIfNeeded() {
+        let player = players[currentDrawIndex]
+        if player.type == .ai && !hasDrawnForNextTrick[player.id, default: false] && !deck.isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.drawCardForCurrentDrawTurn()
             }
         }
-        
-        // Set the new current player
-        currentPlayer.isCurrentPlayer = true
-        
-        // Check if this is the final trick
-        if allPlayersHaveEmptyHands() {
-            winner.addPoints(settings.finalTrickBonus)
-            endRound()
-            return
-        }
-        
-        // If winner is AI, let AI decide on melds and draw
-        if currentPlayer.type == .ai {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.processAITrickWinner()
+    }
+    
+    // Trigger AI play if it's their turn
+    private func triggerAIPlayIfNeeded() {
+        let player = players[currentPlayIndex]
+        if player.type == .ai && hasDrawnForNextTrick[player.id, default: false] {
+            let playable = player.getPlayableCards(leadSuit: currentTrick.first?.suit, trumpSuit: trumpSuit)
+            if let card = playable.first {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.playCardForCurrentPlayTurn(card)
+                }
             }
-        } else {
-            // Human player gets choice to meld first
-            canPlayerMeld = true
-            awaitingMeldChoice = true
-            mustDrawCard = true
         }
-        
-        // Don't automatically draw cards - winner will draw when they choose to
     }
     
     // Process AI trick winner decision
     private func processAITrickWinner() {
         guard currentPlayer.type == .ai else { return }
+        
+        print("🤖 AI trick winner processing for \(currentPlayer.name)")
         
         // AI decides whether to meld first
         let meldsToDeclare = aiService.decideMeldsToDeclare(for: currentPlayer, in: self)
@@ -358,6 +453,8 @@ class Game: ObservableObject {
     
     // Continue game flow after AI draw
     private func continueAfterAIDraw() {
+        print("🔄 Continuing after AI draw")
+        
         // Reset meld choice state
         canPlayerMeld = false
         awaitingMeldChoice = false
@@ -395,6 +492,9 @@ class Game: ObservableObject {
         print("   Current trick has \(currentTrick.count) cards")
         print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
         print("   Lead suit: \(currentTrick.first?.suit?.rawValue ?? "None")")
+        print("   Current trick leader index: \(currentTrickLeader)")
+        print("   Current trick leader name: \(players[currentTrickLeader].name)")
+        print("   Player count: \(playerCount)")
         
         var winningCard = currentTrick[0]
         var winningPlayerIndex = currentTrickLeader
@@ -405,19 +505,23 @@ class Game: ObservableObject {
             let playerIndex = (currentTrickLeader + index) % playerCount
             let player = players[playerIndex]
             
-            print("   Card \(index + 1): \(card.displayName) by \(player.name)")
+            print("   Card \(index + 1): \(card.displayName) by \(player.name) (player index: \(playerIndex))")
+            print("   Card details - Suit: \(card.suit?.rawValue ?? "None"), Value: \(card.value?.rawValue ?? "None"), Rank: \(card.rank)")
+            print("   Current winning card - Suit: \(winningCard.suit?.rawValue ?? "None"), Value: \(winningCard.value?.rawValue ?? "None"), Rank: \(winningCard.rank)")
             
             if card.canBeat(winningCard, trumpSuit: trumpSuit, leadSuit: currentTrick.first?.suit) {
                 print("   ✅ \(card.displayName) BEATS \(winningCard.displayName)")
                 winningCard = card
                 winningPlayerIndex = playerIndex
+                print("   🏆 New winning player: \(players[winningPlayerIndex].name) (index: \(winningPlayerIndex))")
             } else {
                 print("   ❌ \(card.displayName) does NOT beat \(winningCard.displayName)")
             }
         }
         
         let winner = players[winningPlayerIndex]
-        print("   🏆 WINNER: \(winner.name) with \(winningCard.displayName)")
+        print("   🏆 FINAL WINNER: \(winner.name) with \(winningCard.displayName)")
+        print("   Winner player type: \(winner.type)")
         
         return winningPlayerIndex
     }
@@ -502,6 +606,12 @@ class Game: ObservableObject {
         let leadSuit = currentTrick.first?.suit
         let playableCards = currentPlayer.getPlayableCards(leadSuit: leadSuit, trumpSuit: trumpSuit)
         
+        print("🎯 Getting playable cards for \(currentPlayer.name):")
+        print("   Lead suit: \(leadSuit?.rawValue ?? "None")")
+        print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
+        print("   All cards in hand: \(currentPlayer.hand.map { $0.displayName })")
+        print("   Playable cards: \(playableCards.map { $0.displayName })")
+        
         // In endgame, enforce stricter rules
         if isEndgame {
             return getEndgamePlayableCards(leadSuit: leadSuit, trumpSuit: trumpSuit, allCards: playableCards)
@@ -564,18 +674,15 @@ class Game: ObservableObject {
             print("❌ Meld validation failed: not current player or can't meld")
             return false
         }
+        
         // Only one meld per opportunity
         if player.meldsDeclared.last?.roundNumber == roundNumber {
             print("❌ Meld validation failed: already declared meld this round")
             return false
         }
-        if trumpSuit == nil {
-            let result = meld.type == .commonMarriage
-            print("❓ No trump suit - only common marriage allowed: \(result)")
-            return result
-        }
         
         print("🔍 Validating meld: \(meld.type.name) with \(meld.cards.count) cards")
+        print("🔍 Trump suit: \(trumpSuit?.rawValue ?? "None")")
         
         // Check if player has all the cards for this meld
         for meldCard in meld.cards {
@@ -596,6 +703,32 @@ class Game: ObservableObject {
         if alreadyDeclared {
             print("❌ Meld type \(meld.type.name) already declared")
             return false
+        }
+        
+        // Bésigue rules: Before trump suit is established, only common marriages are allowed
+        if trumpSuit == nil {
+            if meld.type == .commonMarriage {
+                print("✅ Common marriage allowed before trump suit establishment")
+                return true
+            } else {
+                print("❌ Only common marriages allowed before trump suit is established")
+                return false
+            }
+        }
+        
+        // After trump suit is established, all melds are allowed
+        print("✅ Trump suit established - all melds allowed")
+        
+        // Special validation for sequence (requires royal marriage in trump suit)
+        if meld.type == .sequence {
+            // Check if royal marriage exists for the trump suit
+            let hasRoyalMarriage = player.meldsDeclared.contains { meld in
+                meld.type == .royalMarriage && meld.cards.first?.suit == trumpSuit
+            }
+            if !hasRoyalMarriage {
+                print("❌ Sequence requires royal marriage in trump suit")
+                return false
+            }
         }
         
         print("✅ Meld validation successful")
@@ -890,6 +1023,15 @@ class Game: ObservableObject {
                 self.shouldAnimateWinningCard = false
                 self.winningCardIndex = nil
             }
+        }
+    }
+    
+    // After a trick ends, reset draw/play cycle state
+    private func startDrawCycle(trickWinnerIndex: Int) {
+        currentDrawIndex = trickWinnerIndex
+        currentPlayIndex = trickWinnerIndex
+        for player in players {
+            hasDrawnForNextTrick[player.id] = false
         }
     }
 } 

@@ -58,6 +58,21 @@ struct GameSettingsView: View {
                                 Text("Pro (No Hints)").tag(GameLevel.pro)
                             }
                             .pickerStyle(SegmentedPickerStyle())
+                            
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Dealer Determination")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+                                Picker("Dealer Determination Method", selection: $gameRules.dealerDeterminationMethod) {
+                                    ForEach(DealerDeterminationMethod.allCases) { method in
+                                        Text(method.displayName).tag(method)
+                                    }
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                            }
                         }
                         .padding()
                         .background(Color(.systemGray6))
@@ -195,6 +210,23 @@ struct GameSettingsView: View {
                         .cornerRadius(12)
                     }
                     
+                    // Trick Area Size Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Trick Area Size")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
+                        Picker("Trick Area Size", selection: $gameRules.trickAreaSize) {
+                            Text("Small").tag(TrickAreaSize.small)
+                            Text("Medium").tag(TrickAreaSize.medium)
+                            Text("Large").tag(TrickAreaSize.large)
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                    }
+                    
                     // Animation Timing Section - Simplified
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Animation Timing")
@@ -221,6 +253,13 @@ struct GameSettingsView: View {
                                 Spacer()
                                 Text(String(format: "%.1fs", gameRules.dealerDeterminationDelay))
                                 Stepper("", value: $gameRules.dealerDeterminationDelay, in: 1.0...5.0, step: 0.5)
+                            }
+                            
+                            HStack {
+                                Text("Winning Card Animation Delay")
+                                Spacer()
+                                Text(String(format: "%.1fs", gameRules.winningCardAnimationDelay))
+                                Stepper("", value: $gameRules.winningCardAnimationDelay, in: 0.5...3.0, step: 0.1)
                             }
                         }
                         .padding()

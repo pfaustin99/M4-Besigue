@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var settings = GameSettings(playerCount: 2)
+    @StateObject private var settings = GameSettings()
     @StateObject private var gameRules = GameRules()
     @State private var game: Game
     @State private var showingGameSettings = false
     
     init() {
         // Initialize with error handling
-        let tempSettings = GameSettings(playerCount: 2)
+        let tempSettings = GameSettings()
         let tempGame = Game(playerCount: 2, isOnline: false, aiDifficulty: .medium, settings: tempSettings)
         
         self._settings = StateObject(wrappedValue: tempSettings)
@@ -105,6 +105,10 @@ struct ContentView: View {
         settings.cardPlayDelay = gameRules.cardPlayDelay
         settings.cardPlayDuration = gameRules.cardPlayDuration
         settings.dealerDeterminationDelay = gameRules.dealerDeterminationDelay
+        
+        // Apply trick area size to settings (for backward compatibility)
+        // Note: This will be removed once Game model uses GameRules directly
+        settings.trickAreaSize = gameRules.trickAreaSize
         
         // Create a new game with the updated settings
         let newGame = Game(

@@ -572,14 +572,14 @@ struct GameBoardView: View {
     // Helper function for badge icon
     private func badgeIcon(for meldType: MeldType, card: PlayerCard) -> String {
         switch meldType {
-        case .fourKings: return settings.badgeIcons.fourKings
-        case .fourQueens: return settings.badgeIcons.fourQueens
-        case .fourJacks: return settings.badgeIcons.fourJacks
-        case .fourAces: return settings.badgeIcons.fourKings // You can add a unique icon for four aces if desired
-        case .fourJokers: return settings.badgeIcons.fourJokers
-        case .royalMarriage: return settings.badgeIcons.royalMarriage
-        case .commonMarriage: return settings.badgeIcons.commonMarriage
-        case .besigue: return settings.badgeIcons.besigue
+        case .fourKings: return settings.badgeIcons.fourKingsIcon
+        case .fourQueens: return settings.badgeIcons.fourQueensIcon
+        case .fourJacks: return settings.badgeIcons.fourJacksIcon
+        case .fourAces: return settings.badgeIcons.fourAcesIcon
+        case .fourJokers: return settings.badgeIcons.fourJokersIcon
+        case .royalMarriage: return settings.badgeIcons.royalMarriageIcon
+        case .commonMarriage: return settings.badgeIcons.commonMarriageIcon
+        case .besigue: return settings.badgeIcons.besigueIcon
         case .sequence: return "🛡️" // Superman badge placeholder
         }
     }
@@ -590,25 +590,17 @@ struct GameBoardView: View {
         let cardHeight: CGFloat = 120 * 1.5
         let stackOffset: CGFloat = 2 // Smaller offset for better stacking
         let maxVisibleCards = min(4, game.deck.remainingCount) // Show 2-4 cards based on deck size
-        
+        let isDrawTurn = game.players[game.currentDrawIndex].id == game.players.first?.id // Only human can draw in UI
         return Button(action: {
-            if game.currentPhase == .dealerDetermination && game.currentPlayer.type == .human {
+            if isDrawTurn && !game.hasDrawnForNextTrick[game.players.first!.id, default: false] && !game.deck.isEmpty {
                 showDrawAnimation = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    game.drawCardForDealerDetermination()
-                    showDrawAnimation = false
-                }
-            }
-            else if game.currentPlayer.type == .human && game.mustDrawCard {
-                showDrawAnimation = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    game.drawCardForCurrentPlayer()
+                    game.drawCardForCurrentDrawTurn()
                     showDrawAnimation = false
                 }
             }
         }) {
             ZStack {
-                // Stack of cards with offset and shadow
                 ForEach(0..<maxVisibleCards, id: \.self) { index in
                     Image("card_back")
                         .resizable()
@@ -617,22 +609,21 @@ struct GameBoardView: View {
                         .cornerRadius(8)
                         .offset(x: CGFloat(index) * stackOffset, y: CGFloat(index) * stackOffset)
                         .shadow(radius: 4, x: 2, y: 2)
-                        .opacity(1.0 - Double(index) * 0.15) // Less fade for better visibility
-                        .zIndex(Double(maxVisibleCards - index)) // Top card has highest z-index
+                        .opacity(1.0 - Double(index) * 0.15)
+                        .zIndex(Double(maxVisibleCards - index))
                 }
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .disabled(!(game.currentPhase == .dealerDetermination && game.currentPlayer.type == .human) && !(game.currentPlayer.type == .human && game.mustDrawCard))
-        .scaleEffect(canDrawCard ? 1.05 : 1.0)
-        .animation(.easeInOut(duration: 0.2), value: canDrawCard)
+        .disabled(!isDrawTurn || game.hasDrawnForNextTrick[game.players.first!.id, default: false] || game.deck.isEmpty)
+        .scaleEffect(isDrawTurn ? 1.05 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isDrawTurn)
         .overlay(
-            // Draw instruction for human players
             Group {
-                if canDrawCard {
+                if isDrawTurn && !game.hasDrawnForNextTrick[game.players.first!.id, default: false] && !game.deck.isEmpty {
                     VStack {
                         Spacer()
-                        Text(drawInstructionText)
+                        Text("Tap to draw (your turn)")
                             .font(.caption)
                             .bold()
                             .foregroundColor(.blue)
@@ -643,18 +634,6 @@ struct GameBoardView: View {
                             .shadow(radius: 2)
                     }
                     .offset(y: cardHeight + 20)
-                }
-            }
-        )
-        .overlay(
-            // Animated "Tap to Draw" message for gameplay
-            Group {
-                if game.currentPhase == .playing && game.currentPlayer.type == .human && game.mustDrawCard {
-                    VStack {
-                        TapToDrawMessage()
-                        Spacer()
-                    }
-                    .offset(y: -cardHeight - 40)
                 }
             }
         )
@@ -696,6 +675,7 @@ struct GameBoardView: View {
                 return []
             }
         }()
+        let canPlay = game.players[game.currentPlayIndex].id == player.id && game.hasDrawnForNextTrick[player.id, default: false]
         let playableCards: [PlayerCard]
         if game.awaitingMeldChoice {
             playableCards = handCards
@@ -704,13 +684,17 @@ struct GameBoardView: View {
         }
         return HandView(
             cards: handCards,
-            playableCards: playableCards,
+            playableCards: canPlay ? playableCards : [],
             selectedCards: selectedCards,
             showHintFor: possibleMeldCards
         ) { card in
-            handleCardTap(card)
+            if canPlay {
+                handleCardTap(card)
+            }
         } onDoubleTap: { card in
-            handleCardDoubleTap(card)
+            if canPlay {
+                handleCardDoubleTap(card)
+            }
         }
     }
 }
@@ -846,16 +830,16 @@ struct BadgeLegendView: View {
                     .padding(.bottom, 8)
                 
                 VStack(alignment: .leading, spacing: 12) {
-                    BadgeLegendRow(icon: settings.badgeIcons.fourKings, description: "Four Kings")
-                    BadgeLegendRow(icon: settings.badgeIcons.fourQueens, description: "Four Queens")
-                    BadgeLegendRow(icon: settings.badgeIcons.fourJacks, description: "Four Jacks")
-                    BadgeLegendRow(icon: settings.badgeIcons.fourKings, description: "Four Aces") // You can add a unique icon for four aces if desired
-                    BadgeLegendRow(icon: settings.badgeIcons.fourJokers, description: "Four Jokers")
-                    BadgeLegendRow(icon: settings.badgeIcons.royalMarriage, description: "Royal Marriage")
-                    BadgeLegendRow(icon: settings.badgeIcons.commonMarriage, description: "Common Marriage")
-                    BadgeLegendRow(icon: settings.badgeIcons.besigue, description: "Bésigue")
+                    BadgeLegendRow(icon: settings.badgeIcons.fourKingsIcon, description: "Four Kings")
+                    BadgeLegendRow(icon: settings.badgeIcons.fourQueensIcon, description: "Four Queens")
+                    BadgeLegendRow(icon: settings.badgeIcons.fourJacksIcon, description: "Four Jacks")
+                    BadgeLegendRow(icon: settings.badgeIcons.fourAcesIcon, description: "Four Aces")
+                    BadgeLegendRow(icon: settings.badgeIcons.fourJokersIcon, description: "Four Jokers")
+                    BadgeLegendRow(icon: settings.badgeIcons.royalMarriageIcon, description: "Royal Marriage")
+                    BadgeLegendRow(icon: settings.badgeIcons.commonMarriageIcon, description: "Common Marriage")
+                    BadgeLegendRow(icon: settings.badgeIcons.besigueIcon, description: "Bésigue")
                     BadgeLegendRow(icon: "🛡️", description: "Sequence (Trump Suit)")
-                    BadgeLegendRow(icon: settings.badgeIcons.exhausted, description: "Meld-Exhausted")
+                    BadgeLegendRow(icon: "❌", description: "Meld-Exhausted")
                 }
                 
                 Spacer()
@@ -919,7 +903,7 @@ struct AnimatedCardView: View {
                     startAnimation()
                 }
             }
-            .onChange(of: isAnimating) { newValue in
+            .onChange(of: isAnimating) { _, newValue in
                 if newValue {
                     startAnimation()
                 }
@@ -1265,6 +1249,14 @@ struct AICardDrawAnimationView: View {
     }
 }
 
+#if DEBUG
+struct GameBoardView_Previews: PreviewProvider {
+    static var previews: some View {
+        GameBoardView(game: Game(), settings: GameSettings())
+    }
+}
+#endif
+
 #Preview {
-    GameBoardView(game: Game(), settings: GameSettings(playerCount: 2))
+    GameBoardView(game: Game(), settings: GameSettings())
 } 

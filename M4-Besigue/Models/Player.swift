@@ -62,17 +62,26 @@ class Player: ObservableObject, Identifiable {
     
     // Get playable cards based on lead suit and trump
     func getPlayableCards(leadSuit: Suit?, trumpSuit: Suit?) -> [PlayerCard] {
+        print("   🎴 Player \(name) getPlayableCards:")
+        print("     Lead suit: \(leadSuit?.rawValue ?? "None")")
+        print("     Trump suit: \(trumpSuit?.rawValue ?? "None")")
+        print("     All cards: \(hand.map { $0.displayName })")
+        
         // If no lead suit, all cards are playable
         guard let leadSuit = leadSuit else {
+            print("     No lead suit - all cards playable")
             return hand
         }
         
         // If player can follow suit, they must play a card of that suit
         if canFollowSuit(leadSuit: leadSuit) {
-            return cardsOfSuit(leadSuit)
+            let suitCards = cardsOfSuit(leadSuit)
+            print("     Can follow suit \(leadSuit.rawValue) - must play: \(suitCards.map { $0.displayName })")
+            return suitCards
         }
         
         // If they can't follow suit, they can play any card
+        print("     Cannot follow suit \(leadSuit.rawValue) - can play any card")
         return hand
     }
     

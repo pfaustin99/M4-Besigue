@@ -57,21 +57,6 @@ enum AnimationTiming: Double, CaseIterable, Codable {
     }
 }
 
-/// Enum for trick area size
-enum TrickAreaSize: String, CaseIterable, Codable {
-    case small = "small"
-    case medium = "medium"
-    case large = "large"
-    
-    var displayName: String {
-        switch self {
-        case .small: return "Small"
-        case .medium: return "Medium"
-        case .large: return "Large"
-        }
-    }
-}
-
 /// GameSettings holds all configurable values for scoring, penalties, and rules
 class GameSettings: ObservableObject, Codable, Equatable {
     // Scoring
@@ -125,7 +110,9 @@ class GameSettings: ObservableObject, Codable, Equatable {
     // Card Size Configuration
     @Published var trickAreaCardSize: CardSizeMultiplier = .small // 1.5x for trick area
     @Published var playerHandCardSize: CardSizeMultiplier = .medium // 2x for player hand (default)
-    @Published var trickAreaSize: TrickAreaSize = .medium // Configurable trick area size
+    
+    // Trick area size (for backward compatibility - will be removed)
+    @Published var trickAreaSize: TrickAreaSize = .medium
 
     // Badge Icons
     @Published var badgeIcons: MeldBadgeIcons = MeldBadgeIcons()
@@ -165,8 +152,7 @@ class GameSettings: ObservableObject, Codable, Equatable {
             lhs.playerCount == rhs.playerCount &&
             lhs.cardSizeMultiplier == rhs.cardSizeMultiplier &&
             lhs.drawPilePosition == rhs.drawPilePosition &&
-            lhs.badgeIcons == rhs.badgeIcons &&
-            lhs.trickAreaSize == rhs.trickAreaSize
+            lhs.badgeIcons == rhs.badgeIcons
     }
 
     // Codable conformance
@@ -218,11 +204,9 @@ class GameSettings: ObservableObject, Codable, Equatable {
         trickAreaSize = try container.decode(TrickAreaSize.self, forKey: .trickAreaSize)
     }
 
-    init(playerCount: Int = 2) {
-        self.playerCount = playerCount
+    init() {
+        // Use default values
     }
-
-    init() {}
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -269,15 +253,15 @@ class GameSettings: ObservableObject, Codable, Equatable {
     }
 }
 
+// MARK: - Meld Badge Icons
 struct MeldBadgeIcons: Codable, Equatable {
-    var fourKings: String = "👑"
-    var fourQueens: String = "👸"
-    var fourJacks: String = "🃏"
-    var fourAces: String = "🅰️"
-    var fourJokers: String = "🃏🃏"
-    var royalMarriage: String = "💍"
-    var commonMarriage: String = "💑"
-    var besigue: String = "♠️Q♦️J"
-    var sequence: String = "🔗"
-    var exhausted: String = "⚠️"
+    var besigueIcon: String = "♠️♦️"
+    var royalMarriageIcon: String = "👑"
+    var commonMarriageIcon: String = "💕"
+    var fourAcesIcon: String = "🃏"
+    var fourKingsIcon: String = "👑"
+    var fourQueensIcon: String = "👸"
+    var fourJacksIcon: String = "🤴"
+    var fourJokersIcon: String = "🃏"
+    var sequenceIcon: String = "📈"
 } 

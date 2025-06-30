@@ -20,19 +20,6 @@ struct SettingsView: View {
                             }
                             .pickerStyle(SegmentedPickerStyle())
                         }
-                        .padding(.horizontal)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Trick Area Size")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Picker("Trick Area Size", selection: $settings.trickAreaSize) {
-                                Text("Small").tag(TrickAreaSize.small)
-                                Text("Medium").tag(TrickAreaSize.medium)
-                                Text("Large").tag(TrickAreaSize.large)
-                            }
-                            .pickerStyle(SegmentedPickerStyle())
-                        }
                     }
                 }
                 .padding(.bottom, 20)
