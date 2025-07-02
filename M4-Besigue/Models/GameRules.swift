@@ -29,12 +29,47 @@ enum TrickAreaSize: String, CaseIterable, Codable {
     }
 }
 
+/// Enum for player type
+enum PlayerType: String, CaseIterable, Codable {
+    case human
+    case ai
+}
+
+/// Player configuration for game setup
+struct PlayerConfiguration: Identifiable, Codable {
+    let id = UUID()
+    var name: String
+    var type: PlayerType
+    var position: Int // 0-based position at table
+    
+    init(name: String, type: PlayerType, position: Int) {
+        self.name = name
+        self.type = type
+        self.position = position
+    }
+}
+
 /// GameRules holds game settings that affect all future games
 class GameRules: ObservableObject, Codable, Equatable {
     // TODO: After gameplay is complete, revisit and improve the 'draw jacks' dealer determination logic and UI as discussed with the user.
     
+    // Haitian cities for AI names
+    static let haitianCities = [
+        "Port-au-Prince", "Cap-Haïtien", "Gonaïves", "Les Cayes", "Petion-Ville",
+        "Saint-Marc", "Carrefour", "Delmas", "Cité Soleil", "Kenscoff",
+        "Tabarre", "Thomazeau", "Fort-Liberté", "Limbé", "Plaine-du-Nord",
+        "Milot", "Saint-Michel-de-l'Attalaye", "Marmelade", "Gros-Morne",
+        "Port-Salut", "Camp-Perrin", "Torbeck", "Hinche", "Mirebalais",
+        "Lascahobas", "Jacmel", "Marigot", "Belle-Anse", "Miragoâne",
+        "Anse-à-Veau", "Baradères", "Port-de-Paix", "Môle-Saint-Nicolas",
+        "Jean-Rabel", "Jérémie", "Dame-Marie", "Moron"
+    ]
+    
     // Game rules
     @Published var playerCount: Int = 2
+    @Published var humanPlayerCount: Int = 2
+    @Published var aiPlayerCount: Int = 0
+    @Published var playerConfigurations: [PlayerConfiguration] = []
     @Published var winningScore: Int = 1000
     @Published var handSize: Int = 9
     @Published var playDirection: PlayDirection = .right
@@ -82,6 +117,9 @@ class GameRules: ObservableObject, Codable, Equatable {
     
     // Dealer determination method
     @Published var dealerDeterminationMethod: DealerDeterminationMethod = .random
+    
+    // Player configuration
+    @Published var humanPlayerNames: [String] = ["Player 1", "Player 2"]
     
     // Computed properties
     var useHints: Bool { gameLevel == .novice }
@@ -181,7 +219,8 @@ class GameRules: ObservableObject, Codable, Equatable {
     }
     
     init() {
-        // Use default values
+        // Generate initial player configurations for a default 2-player game
+        generatePlayerConfigurations()
     }
     
     func encode(to encoder: Encoder) throws {
@@ -222,5 +261,130 @@ class GameRules: ObservableObject, Codable, Equatable {
         try container.encode(winningCardAnimationDelay, forKey: .winningCardAnimationDelay)
         try container.encode(trickAreaSize, forKey: .trickAreaSize)
         try container.encode(dealerDeterminationMethod, forKey: .dealerDeterminationMethod)
+    }
+    
+    // MARK: - Player Configuration Methods
+    
+    /// Update player count and recalculate AI count
+    func updatePlayerCount(_ count: Int) {
+        playerCount = count
+        humanPlayerCount = min(humanPlayerCount, count)
+        aiPlayerCount = count - humanPlayerCount
+        generatePlayerConfigurations()
+    }
+    
+    /// Update human player count and recalculate AI count
+    func updateHumanPlayerCount(_ count: Int) {
+        humanPlayerCount = min(count, playerCount)
+        aiPlayerCount = playerCount - humanPlayerCount
+        generatePlayerConfigurations()
+    }
+    
+    /// Generate player configurations with proper seating
+    func generatePlayerConfigurations() {
+        var configs: [PlayerConfiguration] = []
+        var usedCities: Set<String> = []
+        
+        // Create human players first
+        for i in 0..<humanPlayerCount {
+            let name = humanPlayerNames.indices.contains(i) ? humanPlayerNames[i] : "Player \(i + 1)"
+            let config = PlayerConfiguration(name: name, type: .human, position: i)
+            configs.append(config)
+        }
+        
+        // Create AI players
+        for i in 0..<aiPlayerCount {
+            let aiName = generateAIName(excluding: usedCities)
+            usedCities.insert(aiName)
+            let config = PlayerConfiguration(name: aiName, type: .ai, position: humanPlayerCount + i)
+            configs.append(config)
+        }
+        
+        // Optimize seating to avoid consecutive humans where possible
+        configs = optimizeSeating(configs)
+        
+        playerConfigurations = configs
+        print("🎮 Generated \(configs.count) player configurations")
+    }
+    
+    /// Update human player name at specific position
+    func updateHumanPlayerName(at position: Int, name: String) {
+        if let index = playerConfigurations.firstIndex(where: { $0.position == position && $0.type == .human }) {
+            playerConfigurations[index].name = name.isEmpty ? "Player \(position + 1)" : name
+        }
+    }
+    
+    /// Generate AI name from Haitian cities
+    private func generateAIName(excluding usedCities: Set<String>) -> String {
+        let availableCities = GameRules.haitianCities.filter { !usedCities.contains($0) }
+        let city = availableCities.randomElement() ?? "Port-au-Prince"
+        return "\(city) (AI)"
+    }
+    
+    /// Optimize seating to avoid consecutive humans where possible
+    private func optimizeSeating(_ configs: [PlayerConfiguration]) -> [PlayerConfiguration] {
+        var optimized = configs
+        
+        // For 2 players: Human, AI
+        if configs.count == 2 {
+            let humans = configs.filter { $0.type == .human }
+            let ais = configs.filter { $0.type == .ai }
+            if humans.count == 1 && ais.count == 1 {
+                optimized[0].position = 0 // Human
+                optimized[1].position = 1 // AI
+            }
+        }
+        // For 3 players: Human, AI, Human (if 2 humans) or Human, AI, AI (if 1 human)
+        else if configs.count == 3 {
+            let humans = configs.filter { $0.type == .human }
+            let ais = configs.filter { $0.type == .ai }
+            
+            if humans.count == 2 && ais.count == 1 {
+                // Human, AI, Human
+                optimized[0].position = 0 // Human
+                optimized[1].position = 1 // AI
+                optimized[2].position = 2 // Human
+            } else if humans.count == 1 && ais.count == 2 {
+                // Human, AI, AI
+                optimized[0].position = 0 // Human
+                optimized[1].position = 1 // AI
+                optimized[2].position = 2 // AI
+            }
+        }
+        // For 4 players: Human, AI, Human, AI (if 2 humans) or Human, AI, AI, AI (if 1 human) or Human, AI, Human, Human (if 3 humans)
+        else if configs.count == 4 {
+            let humans = configs.filter { $0.type == .human }
+            let ais = configs.filter { $0.type == .ai }
+            
+            if humans.count == 2 && ais.count == 2 {
+                // Human, AI, Human, AI
+                optimized[0].position = 0 // Human
+                optimized[1].position = 1 // AI
+                optimized[2].position = 2 // Human
+                optimized[3].position = 3 // AI
+            } else if humans.count == 1 && ais.count == 3 {
+                // Human, AI, AI, AI
+                optimized[0].position = 0 // Human
+                optimized[1].position = 1 // AI
+                optimized[2].position = 2 // AI
+                optimized[3].position = 3 // AI
+            } else if humans.count == 3 && ais.count == 1 {
+                // Human, AI, Human, Human
+                optimized[0].position = 0 // Human
+                optimized[1].position = 1 // AI
+                optimized[2].position = 2 // Human
+                optimized[3].position = 3 // Human
+            }
+        }
+        
+        return optimized
+    }
+    
+    /// Validate player configuration
+    func validateConfiguration() -> Bool {
+        return playerConfigurations.count == playerCount &&
+               playerConfigurations.filter { $0.type == .human }.count == humanPlayerCount &&
+               playerConfigurations.filter { $0.type == .ai }.count == aiPlayerCount &&
+               playerConfigurations.allSatisfy { $0.position >= 0 && $0.position < playerCount }
     }
 } 

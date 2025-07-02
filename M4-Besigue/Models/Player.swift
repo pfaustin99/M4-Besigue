@@ -1,11 +1,5 @@
 import Foundation
 
-// MARK: - Player Type
-enum PlayerType {
-    case human
-    case ai
-}
-
 // MARK: - Player Model
 class Player: ObservableObject, Identifiable {
     let id = UUID()
@@ -137,6 +131,14 @@ struct Meld: Identifiable, Equatable {
         self.type = type
         self.pointValue = pointValue
         self.roundNumber = roundNumber
+    }
+    
+    // Convenience initializer for tests
+    init(type: MeldType, cards: [PlayerCard], points: Int) {
+        self.cards = cards
+        self.type = type
+        self.pointValue = points
+        self.roundNumber = 1 // Default round number for tests
     }
 }
 

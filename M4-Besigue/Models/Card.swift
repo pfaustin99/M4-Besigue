@@ -198,6 +198,11 @@ struct Card: Identifiable, Equatable, Hashable {
         print("   ❌ No clear winner - default to false")
         return false
     }
+    
+    // Simplified canBeat method for tests (without leadSuit)
+    func canBeat(_ otherCard: Card, trumpSuit: Suit?) -> Bool {
+        return canBeat(otherCard, trumpSuit: trumpSuit, leadSuit: nil)
+    }
 }
 
 // MARK: - Card Extensions
@@ -243,5 +248,10 @@ struct PlayerCard: Identifiable, Equatable, Hashable {
     // Check if this card can beat another card in a trick
     func canBeat(_ otherCard: PlayerCard, trumpSuit: Suit?, leadSuit: Suit?) -> Bool {
         return card.canBeat(otherCard.card, trumpSuit: trumpSuit, leadSuit: leadSuit)
+    }
+    
+    // Simplified canBeat method for tests (without leadSuit)
+    func canBeat(_ otherCard: PlayerCard, trumpSuit: Suit?) -> Bool {
+        return card.canBeat(otherCard.card, trumpSuit: trumpSuit)
     }
 }

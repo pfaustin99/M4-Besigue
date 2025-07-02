@@ -1252,11 +1252,11 @@ struct AICardDrawAnimationView: View {
 #if DEBUG
 struct GameBoardView_Previews: PreviewProvider {
     static var previews: some View {
-        GameBoardView(game: Game(), settings: GameSettings())
+        GameBoardView(game: Game(gameRules: GameRules()), settings: GameSettings())
     }
 }
 #endif
 
 #Preview {
-    GameBoardView(game: Game(), settings: GameSettings())
+    GameBoardView(game: Game(gameRules: GameRules()), settings: GameSettings())
 } 

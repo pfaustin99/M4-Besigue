@@ -37,7 +37,7 @@ class Deck: ObservableObject {
         cards.shuffle()
     }
     
-    // Draw a card from the top of the deck
+    // Draw a card from the deck
     func drawCard() -> Card? {
         guard !cards.isEmpty else { return nil }
         return cards.removeFirst()
@@ -113,66 +113,56 @@ class Deck: ObservableObject {
     
     // Debug method to print deck contents
     func printDeckContents() {
-        print("=== DECK CONTENTS ===")
-        print("Total cards: \(cards.count)")
-        
-        var cardCounts: [String: Int] = [:]
-        for card in cards {
-            let key = card.imageName
-            cardCounts[key, default: 0] += 1
+        print("🃏 Deck contents:")
+        for (index, card) in cards.enumerated() {
+            print("   \(index + 1): \(card.displayName)")
         }
-        
-        for (cardName, count) in cardCounts.sorted(by: { $0.key < $1.key }) {
-            print("\(cardName): \(count)")
-        }
-        print("====================")
     }
-}
-
-// MARK: - Deck Extensions
-extension Deck {
-    // Verify deck composition is correct
+    
+    // Verify deck composition for tests
     func verifyDeckComposition() -> Bool {
-        let expectedTotalCards = 132
-        guard cards.count + discardPile.count == expectedTotalCards else {
-            print("❌ Deck verification failed: Total cards = \(cards.count + discardPile.count), expected \(expectedTotalCards)")
+        // Check total count
+        guard cards.count == 132 else {
+            print("❌ Deck has \(cards.count) cards, expected 132")
             return false
         }
         
-        // Count regular cards (should be 4 of each)
-        var regularCardCounts: [String: Int] = [:]
+        // Count cards by suit and value
+        var cardCounts: [String: Int] = [:]
         var jokerCount = 0
         
-        let allCards = cards + discardPile
-        
-        for card in allCards {
+        for card in cards {
             if card.isJoker {
                 jokerCount += 1
-            } else {
-                let key = "\(card.suit?.rawValue ?? "")_\(card.value?.rawValue ?? "")"
-                regularCardCounts[key, default: 0] += 1
+            } else if let suit = card.suit, let value = card.value {
+                let key = "\(suit.rawValue)_\(value.rawValue)"
+                cardCounts[key, default: 0] += 1
             }
         }
         
-        // Check joker count
+        // Verify joker count
         guard jokerCount == 4 else {
-            print("❌ Deck verification failed: Joker count = \(jokerCount), expected 4")
+            print("❌ Deck has \(jokerCount) jokers, expected 4")
             return false
         }
         
-        // Check regular card counts (should be exactly 4 of each)
+        // Verify each suit has 4 of each value (A, 10, K, Q, J, 9, 8, 7)
+        let expectedValues: [CardValue] = [.ace, .ten, .king, .queen, .jack, .nine, .eight, .seven]
         for suit in Suit.allCases {
-            for value in CardValue.allCases {
+            for value in expectedValues {
                 let key = "\(suit.rawValue)_\(value.rawValue)"
-                let count = regularCardCounts[key, default: 0]
+                let count = cardCounts[key, default: 0]
                 guard count == 4 else {
-                    print("❌ Deck verification failed: \(key) count = \(count), expected 4")
+                    print("❌ \(suit.rawValue) \(value.rawValue) has \(count) cards, expected 4")
                     return false
                 }
             }
         }
         
-        print("✅ Deck composition verified successfully")
+        print("✅ Deck composition verified: 132 cards (4x32 + 4 jokers)")
         return true
     }
 }
+
+// MARK: - Deck Extensions
+// (Removed duplicate verifyDeckComposition method to avoid redeclaration error)

@@ -9,10 +9,11 @@ struct ContentView: View {
     init() {
         // Initialize with error handling
         let tempSettings = GameSettings()
-        let tempGame = Game(playerCount: 2, isOnline: false, aiDifficulty: .medium, settings: tempSettings)
+        let tempGameRules = GameRules()
+        let tempGame = Game(gameRules: tempGameRules)
         
         self._settings = StateObject(wrappedValue: tempSettings)
-        self._gameRules = StateObject(wrappedValue: GameRules())
+        self._gameRules = StateObject(wrappedValue: tempGameRules)
         self._game = State(initialValue: tempGame)
     }
     
@@ -110,13 +111,8 @@ struct ContentView: View {
         // Note: This will be removed once Game model uses GameRules directly
         settings.trickAreaSize = gameRules.trickAreaSize
         
-        // Create a new game with the updated settings
-        let newGame = Game(
-            playerCount: gameRules.playerCount,
-            isOnline: false,
-            aiDifficulty: .medium,
-            settings: settings
-        )
+        // Create a new game with the updated game rules
+        let newGame = Game(gameRules: gameRules)
         
         // Replace the current game
         self.game = newGame

@@ -46,6 +46,9 @@ struct GameSettingsView: View {
                                 Text("\(gameRules.playerCount)")
                                 Stepper("", value: $gameRules.playerCount, in: 2...4)
                             }
+                            .onChange(of: gameRules.playerCount) { _ in
+                                gameRules.updatePlayerCount(gameRules.playerCount)
+                            }
                             
                             Picker("Play Direction", selection: $gameRules.playDirection) {
                                 Text("Right (Counterclockwise)").tag(PlayDirection.right)
@@ -73,6 +76,76 @@ struct GameSettingsView: View {
                                 .background(Color(.systemGray6))
                                 .cornerRadius(12)
                             }
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                    }
+                    
+                    // Player Configuration Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Player Configuration")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
+                        VStack(spacing: 12) {
+                            HStack {
+                                Text("Human Players")
+                                Spacer()
+                                Text("\(gameRules.humanPlayerCount)")
+                                Stepper("", value: $gameRules.humanPlayerCount, in: 1...gameRules.playerCount)
+                            }
+                            .onChange(of: gameRules.humanPlayerCount) { _ in
+                                gameRules.updateHumanPlayerCount(gameRules.humanPlayerCount)
+                            }
+                            
+                            HStack {
+                                Text("AI Players")
+                                Spacer()
+                                Text("\(gameRules.aiPlayerCount)")
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            // Player Names and Seating
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Player Seating")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                
+                                ForEach(gameRules.playerConfigurations.sorted(by: { $0.position < $1.position })) { config in
+                                    HStack {
+                                        Text("Position \(config.position + 1):")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        
+                                        if config.type == .human {
+                                            TextField("Player name", text: Binding(
+                                                get: { config.name },
+                                                set: { newName in
+                                                    gameRules.updateHumanPlayerName(at: config.position, name: newName)
+                                                }
+                                            ))
+                                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                                            .frame(maxWidth: 150)
+                                        } else {
+                                            Text(config.name)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Text(config.type == .human ? "Human" : "AI")
+                                            .font(.caption)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 2)
+                                            .background(config.type == .human ? Color.blue.opacity(0.2) : Color.green.opacity(0.2))
+                                            .cornerRadius(4)
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemGray5))
+                            .cornerRadius(8)
                         }
                         .padding()
                         .background(Color(.systemGray6))

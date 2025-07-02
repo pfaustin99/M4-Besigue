@@ -34,6 +34,12 @@ class Game: ObservableObject {
     @Published var jackDrawnForDealer: Card? = nil
     @Published var showJackProminently: Bool = false
     
+    // Tiebreaker state
+    @Published var isInTiebreaker: Bool = false
+    @Published var tiebreakerPlayers: [Player] = []
+    @Published var tiebreakerCards: [Card] = []
+    @Published var tiebreakerMessage: String = ""
+    
     let settings: GameSettings
     let gameRules: GameRules
     
@@ -61,59 +67,69 @@ class Game: ObservableObject {
     // Winning card animation state
     @Published var isAnimatingWinningCard: Bool = false
     
-    // Draw and play cycle state
+    // Draw/Play cycle state
     @Published var currentDrawIndex: Int = 0
     @Published var currentPlayIndex: Int = 0
     @Published var hasDrawnForNextTrick: [UUID: Bool] = [:]
+    @Published var isDrawCycle: Bool = true
     
-    // Computed property to check if we're in endgame
-    var isEndgame: Bool {
-        return deck.isEmpty
-    }
+    // Endgame state
+    @Published var isEndgame: Bool = false
     
-    init(playerCount: Int = 2, isOnline: Bool = false, aiDifficulty: AIService.Difficulty = .medium, settings: GameSettings = GameSettings()) {
-        self.playerCount = playerCount
+    init(gameRules: GameRules, isOnline: Bool = false) {
+        self.gameRules = gameRules
+        self.settings = GameSettings()
+        self.playerCount = gameRules.playerCount
         self.isOnline = isOnline
         self.deck = Deck()
-        self.aiService = AIService(difficulty: aiDifficulty)
-        self.settings = settings
-        self.gameRules = GameRules()
-        setupPlayers()
+        self.aiService = AIService(difficulty: .medium)
+        
+        // Create players based on configuration
+        createPlayersFromConfiguration()
     }
     
-    // Setup players for the game
-    private func setupPlayers() {
+    // MARK: - Player Creation
+    
+    private func createPlayersFromConfiguration() {
         players.removeAll()
         
-        // Create human player
-        players.append(Player(name: "Player 1", type: .human))
+        print("🎮 Creating players from configuration...")
+        print("   Total configurations: \(gameRules.playerConfigurations.count)")
         
-        // Create AI players
-        for i in 1..<playerCount {
-            players.append(Player(name: "AI-\(i)", type: .ai))
+        for config in gameRules.playerConfigurations.sorted(by: { $0.position < $1.position }) {
+            let playerType: PlayerType = config.type == .human ? .human : .ai
+            let player = Player(name: config.name, type: playerType)
+            players.append(player)
+            print("   Created player: \(player.name) (\(player.type)) at position \(config.position)")
         }
         
-        // Initialize brisques for each player
-        for player in players {
-            brisques[player.id] = 0
+        // Safety check - ensure we have at least one player
+        if players.isEmpty {
+            print("⚠️  No players created! Creating default players...")
+            // Create default players as fallback
+            players.append(Player(name: "You", type: .human))
+            players.append(Player(name: "Port-au-Prince (AI)", type: .ai))
+        }
+        
+        print("🎮 Created \(players.count) players:")
+        for (index, player) in players.enumerated() {
+            print("   \(index): \(player.name) (\(player.type))")
         }
     }
     
     // Start a new game
     func startNewGame() {
         print("🎮 Starting new game...")
+        
+        // Update players from current configuration
+        updatePlayersFromConfiguration()
+        
         // Reset all players
         for player in players {
             player.reset()
         }
-        // Reset game state and ensure deck is shuffled
-        deck.reset()
-        deck.shuffle() // Extra shuffle to ensure randomness
-        print("🃏 Deck shuffled for dealer determination")
-        // Reset brisques
-        for player in players {
-            brisques[player.id] = 0
-        }
+        
+        // Reset all game state
         currentTrick.removeAll()
         currentTrickLeader = 0
         trickHistory.removeAll()
@@ -132,45 +148,91 @@ class Game: ObservableObject {
         shouldAnimateWinningCard = false
         isAIDrawingCard = false
         aiDrawnCard = nil
-        // Set the first player as current player
+        isInTiebreaker = false
+        tiebreakerPlayers.removeAll()
+        tiebreakerCards.removeAll()
+        tiebreakerMessage = ""
+        isEndgame = false
+        isDrawCycle = true
+        currentDrawIndex = 0
+        currentPlayIndex = 0
         currentPlayerIndex = 0
-        currentPlayer.isCurrentPlayer = true
-        for (index, player) in players.enumerated() {
-            if index != currentPlayerIndex {
-                player.isCurrentPlayer = false
-            }
+        currentPhase = .dealerDetermination
+        
+        // Reset deck
+        deck = Deck()
+        deck.shuffle()
+        
+        // Determine dealer
+        determineDealer()
+        
+        // Set draw and play indices to the trick leader
+        currentDrawIndex = currentTrickLeader
+        currentPlayIndex = currentTrickLeader
+        
+        // Deal cards
+        dealInitialCards()
+        
+        // Check endgame state
+        checkEndgame()
+        
+        print("🎮 New game started with \(players.count) players")
+    }
+    
+    // Update players when game rules change
+    func updatePlayersFromConfiguration() {
+        let configurations = gameRules.playerConfigurations
+        players = configurations.map { config in
+            let player = Player(
+                name: config.name,
+                type: config.type
+            )
+            return player
         }
-        // Dealer determination method
+        print("👥 Created \(players.count) players from configuration")
+    }
+    
+    // Determine dealer based on game rules
+    func determineDealer() {
         switch gameRules.dealerDeterminationMethod {
         case .random:
             // Pick a random dealer
-            let dealerIndex = Int.random(in: 0..<playerCount)
+            let dealerIndex = Int.random(in: 0..<players.count)
             for (i, player) in players.enumerated() {
                 player.isDealer = (i == dealerIndex)
             }
             dealerDeterminedMessage = "Dealer is \(players[dealerIndex].name)! (Random)"
             print("👑 Dealer determined randomly: \(players[dealerIndex].name)")
-            // Deal cards and start playing phase
-            dealCards()
-            currentPhase = .playing
+            
             // The player to the right of the dealer leads the first trick
-            currentPlayerIndex = (dealerIndex + 1) % playerCount
+            currentPlayerIndex = (dealerIndex + 1) % players.count
+            currentTrickLeader = currentPlayerIndex
             print("🎯 First player: \(currentPlayer.name)")
-            if currentPlayer.type == .ai {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    self.processAITurn()
-                }
-            }
+            
+            // FIX: Set phase to playing after random dealer determination
+            currentPhase = .playing
+            
         case .drawJacks:
             // Use the existing dealer determination phase
             currentPhase = .dealerDetermination
             print("🎯 Dealer determination phase started. Current player: \(currentPlayer.name)")
-            if currentPlayer.type == .ai {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    self.processAIDealerDetermination()
+        }
+    }
+    
+    // Deal initial cards to all players
+    func dealInitialCards() {
+        // Deal 9 cards to each player
+        for _ in 0..<9 {
+            for player in players {
+                if let card = deck.drawCard() {
+                    let playerCard = PlayerCard(card: card)
+                    player.hand.append(playerCard)
                 }
             }
         }
+        
+        print("🎴 Dealt 9 cards to each of \(players.count) players")
+        print("🃏 Deck has \(deck.cards.count) cards remaining")
     }
     
     // Process AI dealer determination
@@ -264,6 +326,20 @@ class Game: ObservableObject {
                 self.processAITurn()
             }
         }
+    }
+    
+    // Play a card (synchronous version for testing)
+    func playCardSync(_ card: PlayerCard, from player: Player) {
+        print("🎴 PLAYING CARD (SYNC):")
+        print("   Player: \(player.name) (type: \(player.type))")
+        print("   Card: \(card.displayName)")
+        
+        // Add card to trick immediately
+        player.removeCard(card)
+        currentTrick.append(card)
+        
+        print("   Card added to trick. New trick count: \(currentTrick.count)")
+        print("   Current trick cards: \(currentTrick.map { $0.displayName })")
     }
     
     // Play a card
@@ -484,46 +560,35 @@ class Game: ObservableObject {
         startNewTrick()
     }
     
-    // Determine the winner of the current trick
-    private func determineTrickWinner() -> Int {
-        guard !currentTrick.isEmpty else { return 0 }
+    // MARK: - Trick Winner Determination
+    
+    func determineTrickWinner() -> Int {
+        guard !currentTrick.isEmpty else {
+            print("❌ No cards in current trick to determine winner")
+            return currentTrickLeader
+        }
         
-        print("🎯 DETERMINING TRICK WINNER:")
-        print("   Current trick has \(currentTrick.count) cards")
+        print("🎯 Determining trick winner...")
+        print("   Current trick: \(currentTrick.map { "\($0.value) of \($0.suit)" })")
         print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
-        print("   Lead suit: \(currentTrick.first?.suit?.rawValue ?? "None")")
-        print("   Current trick leader index: \(currentTrickLeader)")
-        print("   Current trick leader name: \(players[currentTrickLeader].name)")
-        print("   Player count: \(playerCount)")
         
+        var winningCardIndex = 0
         var winningCard = currentTrick[0]
-        var winningPlayerIndex = currentTrickLeader
-        
-        print("   Initial winning card: \(winningCard.displayName) by \(players[winningPlayerIndex].name)")
         
         for (index, card) in currentTrick.enumerated() {
-            let playerIndex = (currentTrickLeader + index) % playerCount
-            let player = players[playerIndex]
+            print("   Comparing card \(index): \(card.value) of \(card.suit)")
             
-            print("   Card \(index + 1): \(card.displayName) by \(player.name) (player index: \(playerIndex))")
-            print("   Card details - Suit: \(card.suit?.rawValue ?? "None"), Value: \(card.value?.rawValue ?? "None"), Rank: \(card.rank)")
-            print("   Current winning card - Suit: \(winningCard.suit?.rawValue ?? "None"), Value: \(winningCard.value?.rawValue ?? "None"), Rank: \(winningCard.rank)")
-            
-            if card.canBeat(winningCard, trumpSuit: trumpSuit, leadSuit: currentTrick.first?.suit) {
-                print("   ✅ \(card.displayName) BEATS \(winningCard.displayName)")
+            if card.canBeat(winningCard, trumpSuit: trumpSuit) {
+                winningCardIndex = index
                 winningCard = card
-                winningPlayerIndex = playerIndex
-                print("   🏆 New winning player: \(players[winningPlayerIndex].name) (index: \(winningPlayerIndex))")
-            } else {
-                print("   ❌ \(card.displayName) does NOT beat \(winningCard.displayName)")
+                print("   New winner: \(card.value) of \(card.suit)")
             }
         }
         
-        let winner = players[winningPlayerIndex]
-        print("   🏆 FINAL WINNER: \(winner.name) with \(winningCard.displayName)")
-        print("   Winner player type: \(winner.type)")
+        let winnerPlayerIndex = (currentTrickLeader + winningCardIndex) % players.count
+        print("   Final winner: \(players[winnerPlayerIndex].name) with \(winningCard.value) of \(winningCard.suit)")
         
-        return winningPlayerIndex
+        return winnerPlayerIndex
     }
     
     // Determine trick winner index for UI display
@@ -774,127 +839,45 @@ class Game: ObservableObject {
     func getPossibleMelds(for player: Player) -> [Meld] {
         var possibleMelds: [Meld] = []
         
-        // Check for Bésigue
-        if let besigueMeld = checkForBesigue(in: player.hand) {
-            possibleMelds.append(besigueMeld)
+        // Get all cards in player's hand (held + melded)
+        let allCards = player.hand + player.meldsDeclared.flatMap { $0.cards }
+        
+        // Check for Bésigue (Queen of Spades + Jack of Diamonds)
+        let queenOfSpades = allCards.first { $0.value == .queen && $0.suit == .spades }
+        let jackOfDiamonds = allCards.first { $0.value == .jack && $0.suit == .diamonds }
+        
+        if queenOfSpades != nil && jackOfDiamonds != nil {
+            possibleMelds.append(Meld(type: .besigue, cards: [queenOfSpades!, jackOfDiamonds!], points: 40))
         }
         
-        // Check for marriages
-        possibleMelds.append(contentsOf: checkForMarriages(in: player.hand))
+        // Check for marriages (King + Queen of same suit)
+        for suit in Suit.allCases {
+            let king = allCards.first { $0.value == .king && $0.suit == suit }
+            let queen = allCards.first { $0.value == .queen && $0.suit == suit }
+            
+            if king != nil && queen != nil {
+                let isTrump = suit == trumpSuit
+                let meldType: MeldType = isTrump ? .royalMarriage : .commonMarriage
+                let points = isTrump ? 40 : 20
+                possibleMelds.append(Meld(type: meldType, cards: [king!, queen!], points: points))
+            }
+        }
         
         // Check for four of a kind
-        possibleMelds.append(contentsOf: checkForFourOfAKind(in: player.hand))
-        
-        // Check for four jokers
-        if let fourJokersMeld = checkForFourJokers(in: player.hand) {
-            possibleMelds.append(fourJokersMeld)
+        for value in CardValue.allCases {
+            let fourOfKind = allCards.filter { $0.value == value }
+            if fourOfKind.count >= 4, let meldType = MeldType.forValue(value) {
+                possibleMelds.append(Meld(type: meldType, cards: Array(fourOfKind.prefix(4)), points: 100))
+            }
         }
         
-        // Check for sequence
-        if let sequenceMeld = checkForSequence(in: player.hand) {
-            possibleMelds.append(sequenceMeld)
+        // Check for four jokers (four-of-a-kind)
+        let jokers = allCards.filter { $0.isJoker }
+        if jokers.count >= 4 {
+            possibleMelds.append(Meld(type: .fourJokers, cards: Array(jokers.prefix(4)), points: 200))
         }
         
         return possibleMelds
-    }
-    
-    // Check for Bésigue meld
-    private func checkForBesigue(in hand: [PlayerCard]) -> Meld? {
-        let queenOfSpades = hand.first { $0.suit == .spades && $0.value == .queen && !$0.usedInMeldTypes.contains(.besigue) }
-        let jackOfDiamonds = hand.first { $0.suit == .diamonds && $0.value == .jack && !$0.usedInMeldTypes.contains(.besigue) }
-        
-        if let queen = queenOfSpades, let jack = jackOfDiamonds {
-            return Meld(cards: [queen, jack], type: .besigue, pointValue: settings.besiguePoints, roundNumber: self.roundNumber)
-        }
-        
-        return nil
-    }
-    
-    // Check for marriage melds
-    private func checkForMarriages(in hand: [PlayerCard]) -> [Meld] {
-        var marriages: [Meld] = []
-        
-        for suit in Suit.allCases {
-            let king = hand.first { $0.suit == suit && $0.value == .king && !$0.usedInMeldTypes.contains(.commonMarriage) && !$0.usedInMeldTypes.contains(.royalMarriage) }
-            let queen = hand.first { $0.suit == suit && $0.value == .queen && !$0.usedInMeldTypes.contains(.commonMarriage) && !$0.usedInMeldTypes.contains(.royalMarriage) }
-            
-            if let king = king, let queen = queen {
-                let meldType: MeldType = .commonMarriage
-                let points = (trumpSuit != nil && suit == trumpSuit) ? settings.royalMarriagePoints : settings.commonMarriagePoints
-                marriages.append(Meld(cards: [king, queen], type: meldType, pointValue: points, roundNumber: self.roundNumber))
-            }
-        }
-        
-        return marriages
-    }
-    
-    // Check for four of a kind melds
-    private func checkForFourOfAKind(in hand: [PlayerCard]) -> [Meld] {
-        var fourOfAKinds: [Meld] = []
-        
-        let groupedByValue = Dictionary(grouping: hand.filter { !$0.isJoker }) { $0.value }
-        
-        for (value, cards) in groupedByValue {
-            let unusedCards = cards.filter { card in
-                switch value {
-                case .jack: return !card.usedInMeldTypes.contains(.fourJacks)
-                case .queen: return !card.usedInMeldTypes.contains(.fourQueens)
-                case .king: return !card.usedInMeldTypes.contains(.fourKings)
-                case .ace: return !card.usedInMeldTypes.contains(.fourAces)
-                default: return false
-                }
-            }
-            if unusedCards.count >= 4 {
-                let meldType: MeldType
-                let points: Int
-                switch value {
-                case .jack: meldType = .fourJacks; points = settings.fourJacksPoints
-                case .queen: meldType = .fourQueens; points = settings.fourQueensPoints
-                case .king: meldType = .fourKings; points = settings.fourKingsPoints
-                case .ace: meldType = .fourAces; points = settings.fourAcesPoints
-                default: continue
-                }
-                fourOfAKinds.append(Meld(cards: Array(unusedCards.prefix(4)), type: meldType, pointValue: points, roundNumber: self.roundNumber))
-            }
-        }
-        
-        return fourOfAKinds
-    }
-    
-    // Check for four jokers
-    private func checkForFourJokers(in hand: [PlayerCard]) -> Meld? {
-        let jokers = hand.filter { $0.isJoker && !$0.usedInMeldTypes.contains(.fourJokers) }
-        if jokers.count == 4 {
-            return Meld(cards: Array(jokers.prefix(4)), type: .fourJokers, pointValue: settings.fourJokersPoints, roundNumber: self.roundNumber)
-        }
-        return nil
-    }
-    
-    // Check for sequence in trump suit
-    private func checkForSequence(in hand: [PlayerCard]) -> Meld? {
-        guard let trumpSuit = trumpSuit else { return nil }
-        
-        let requiredValues: [CardValue] = [.ace, .ten, .king, .queen, .jack]
-        var sequenceCards: [PlayerCard] = []
-        
-        for value in requiredValues {
-            if let card = hand.first(where: { $0.suit == trumpSuit && $0.value == value && !$0.usedInMeldTypes.contains(.sequence) }) {
-                sequenceCards.append(card)
-            } else {
-                return nil // Missing a card for the sequence
-            }
-        }
-        
-        if sequenceCards.count == requiredValues.count {
-            // Ensure royal marriage is present and intact
-            let hasRoyalMarriage = hand.contains(where: { $0.suit == trumpSuit && $0.value == .king && $0.usedInMeldTypes.contains(.royalMarriage) }) &&
-                                   hand.contains(where: { $0.suit == trumpSuit && $0.value == .queen && $0.usedInMeldTypes.contains(.royalMarriage) })
-            if hasRoyalMarriage {
-                return Meld(cards: sequenceCards, type: .sequence, pointValue: settings.sequencePoints, roundNumber: self.roundNumber)
-            }
-        }
-        
-        return nil
     }
     
     var dealerDetermined: Bool {
@@ -902,8 +885,7 @@ class Game: ObservableObject {
     }
     
     func canPlayCard() -> Bool {
-        // Player can play if not awaiting meld choice, not in dealer determination, and not required to draw
-        return !awaitingMeldChoice && !mustDrawCard && currentPhase == .playing
+        return currentPhase == .playing
     }
     
     // Draw card for dealer determination phase
@@ -1034,4 +1016,116 @@ class Game: ObservableObject {
             hasDrawnForNextTrick[player.id] = false
         }
     }
-} 
+    
+    // MARK: - Tiebreaker Logic
+    
+    /// Resolve ties in final scoring by drawing cards for Jacks
+    func resolveTies() {
+        let sortedPlayers = players.sorted { $0.score > $1.score }
+        var tiedGroups: [[Player]] = []
+        var currentGroup: [Player] = []
+        var currentScore = sortedPlayers.first?.score ?? 0
+        
+        // Group players by score
+        for player in sortedPlayers {
+            if player.score == currentScore {
+                currentGroup.append(player)
+            } else {
+                if currentGroup.count > 1 {
+                    tiedGroups.append(currentGroup)
+                }
+                currentGroup = [player]
+                currentScore = player.score
+            }
+        }
+        
+        // Handle last group
+        if currentGroup.count > 1 {
+            tiedGroups.append(currentGroup)
+        }
+        
+        // Resolve each tie group
+        for tiedGroup in tiedGroups {
+            resolveTieGroup(tiedGroup)
+        }
+    }
+    
+    /// Resolve a specific group of tied players
+    private func resolveTieGroup(_ tiedPlayers: [Player]) {
+        guard tiedPlayers.count > 1 else { return }
+        
+        isInTiebreaker = true
+        tiebreakerPlayers = tiedPlayers
+        tiebreakerCards.removeAll()
+        
+        // Create a temporary deck for tiebreaker
+        let tiebreakerDeck = Deck()
+        tiebreakerDeck.shuffle()
+        
+        print("🎯 Resolving tie between: \(tiedPlayers.map { $0.name }.joined(separator: ", "))")
+        
+        // Each tied player draws one card at a time
+        for (index, player) in tiedPlayers.enumerated() {
+            if let card = tiebreakerDeck.drawCard() {
+                tiebreakerCards.append(card)
+                print("🎴 \(player.name) draws \(card.imageName)")
+                
+                // If Jack is drawn, this player loses the tie
+                if !card.isJoker && card.value == .jack {
+                    tiebreakerMessage = "\(player.name) draws a Jack and drops in ranking!"
+                    print("🎯 \(player.name) draws Jack - loses tie")
+                    
+                    // Move this player to the end of the tied group
+                    if let playerIndex = players.firstIndex(where: { $0.id == player.id }) {
+                        let playerToMove = players.remove(at: playerIndex)
+                        players.append(playerToMove)
+                    }
+                    
+                    // Continue with remaining players
+                    let remainingPlayers = Array(tiedPlayers.dropFirst(index + 1))
+                    if remainingPlayers.count > 1 {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            self.resolveTieGroup(remainingPlayers)
+                        }
+                    } else {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            self.completeTiebreaker()
+                        }
+                    }
+                    return
+                }
+            }
+        }
+        
+        // If no Jack was drawn, all players keep their current ranking
+        tiebreakerMessage = "No Jack drawn - all players keep current ranking"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.completeTiebreaker()
+        }
+    }
+    
+    /// Complete the tiebreaker process
+    private func completeTiebreaker() {
+        isInTiebreaker = false
+        tiebreakerPlayers.removeAll()
+        tiebreakerCards.removeAll()
+        tiebreakerMessage = ""
+        
+        print("✅ Tiebreaker completed")
+        
+        // Check if game is over
+        if hasWinner() {
+            currentPhase = .gameOver
+        }
+    }
+    
+    // MARK: - Endgame Detection
+    /// Check if we're in endgame (no more cards to draw)
+    func checkEndgame() {
+        let shouldBeEndgame = deck.isEmpty
+        if shouldBeEndgame && !isEndgame {
+            isEndgame = true
+            print("🏁 ENDGAME: No more cards to draw - stricter rules apply")
+        }
+    }
+}
