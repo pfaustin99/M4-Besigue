@@ -287,7 +287,7 @@ class Game: ObservableObject {
     }
     
     // Process AI turn
-    private func processAITurn() {
+    func processAITurn() {
         guard currentPlayer.type == .ai else { return }
         
         // If AI can meld (it just won a trick), it decides on melds first.

@@ -255,3 +255,7 @@ struct PlayerCard: Identifiable, Equatable, Hashable {
         return card.canBeat(otherCard.card, trumpSuit: trumpSuit)
     }
 }
+
+extension PlayerCard {
+    static let example = PlayerCard(card: Card(suit: .spades, value: .queen))
+}
