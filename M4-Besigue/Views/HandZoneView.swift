@@ -1,3 +1,4 @@
+// DEPRECATED: Use HandView for all player hands in the main UI.
 import SwiftUI
 
 struct HandZoneView: View {
@@ -7,35 +8,24 @@ struct HandZoneView: View {
     var onCardSelected: ((PlayerCard) -> Void)? = nil
     var onCardPlayed: ((PlayerCard) -> Void)? = nil
     var body: some View {
-        HStack(spacing: -24) {
+        HStack(spacing: 8) {
             ForEach(cards) { card in
-                Rectangle()
-                    .fill(isActive ? Color.accentColor : Color.gray.opacity(0.3))
-                    .frame(width: 48, height: 72)
-                    .cornerRadius(8)
-                    .shadow(radius: isActive ? 6 : 2)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(selectedCard?.id == card.id ? Color.yellow : Color.clear, lineWidth: 4)
-                    )
-                    .contentShape(Rectangle())
-                    .accessibilityIdentifier("handCard_\(card.id)")
-                    .gesture(
-                        TapGesture(count: 2)
-                            .onEnded {
-                                if isActive {
-                                    onCardPlayed?(card)
-                                }
-                            }
-                            .exclusively(before:
-                                TapGesture(count: 1)
-                                    .onEnded {
-                                        if isActive {
-                                            onCardSelected?(card)
-                                        }
-                                    }
-                            )
-                    )
+                CardView(
+                    card: card,
+                    isSelected: selectedCard?.id == card.id,
+                    isPlayable: isActive,
+                    showHint: false,
+                    onTap: {
+                        if isActive {
+                            onCardSelected?(card)
+                        }
+                    }
+                )
+                .onTapGesture(count: 2) {
+                    if isActive {
+                        onCardPlayed?(card)
+                    }
+                }
             }
         }
         .padding(.horizontal, 8)

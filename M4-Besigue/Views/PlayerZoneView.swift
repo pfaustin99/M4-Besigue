@@ -1,3 +1,4 @@
+// DEPRECATED: Use GameBoardView and HandView for all player hands in the main UI.
 import SwiftUI
 
 struct PlayerZoneView: View {

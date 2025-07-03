@@ -36,12 +36,6 @@ struct CardView: View {
         }
         .disabled(!isPlayable)
         .opacity(isPlayable ? 1.0 : 0.5)
-        .simultaneousGesture(
-            TapGesture(count: 2)
-                .onEnded {
-                    if isPlayable { onTap() }
-                }
-        )
     }
 }
 

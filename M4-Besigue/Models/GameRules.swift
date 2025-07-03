@@ -73,7 +73,7 @@ class GameRules: ObservableObject, Codable, Equatable {
     @Published var winningScore: Int = 1000
     @Published var handSize: Int = 9
     @Published var playDirection: PlayDirection = .right
-    @Published var gameLevel: GameLevel = .novice
+    @Published var gameLevel: GameLevel = .pro
     
     // Scoring
     @Published var besiguePoints: Int = 40

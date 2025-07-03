@@ -91,7 +91,7 @@ class GameSettings: ObservableObject, Codable, Equatable {
 
     // Game rules
     @Published var playDirection: PlayDirection = .right
-    @Published var gameLevel: GameLevel = .novice
+    @Published var gameLevel: GameLevel = .pro
     @Published var handSize: Int = 9
     @Published var numPlayers: Int = 2 // Can be 2, 3, or 4
     @Published var playerCount: Int = 2

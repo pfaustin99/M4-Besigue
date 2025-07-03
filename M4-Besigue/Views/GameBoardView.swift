@@ -212,65 +212,41 @@ struct GameBoardView: View {
     
     // MARK: - Center Section
     private var centerSection: some View {
-        VStack(spacing: 15) {
-            // Main game area with trick and draw pile - same layout for all phases
-            HStack(spacing: 20) {
-                // Draw pile positioned based on settings
-                if settings.drawPilePosition == .centerLeft {
-                    drawPileSection
-                    Spacer()
-                    trickSection
-                } else {
-                    trickSection
-                    Spacer()
-                    drawPileSection
+        VStack(spacing: 0) {
+            if game.players.count == 2 {
+                twoPlayerCenterSection()
+            } else {
+                // 3/4 player layout: current player at bottom, others at top/left/right
+                let currentPlayer = game.players[game.currentPlayerIndex]
+                VStack(spacing: 0) {
+                    // Top: all other players' hands (card backs)
+                    HStack(spacing: 16) {
+                        ForEach(game.players.indices.filter { $0 != game.currentPlayerIndex }, id: \.self) { idx in
+                            VStack {
+                                Text(game.players[idx].name)
+                                    .font(.caption)
+                                HStack {
+                                    ForEach(game.players[idx].hand) { _ in
+                                        CardBackView { }
+                                            .frame(width: 32, height: 48)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
+                    // Bottom: current player's hand (face up, interactive)
+                    playerInfoView(currentPlayer)
+                    if game.canPlayerMeld && currentPlayer.type == .human {
+                        meldInstructionsView(currentPlayer)
+                    }
+                    if !currentPlayer.meldsDeclared.isEmpty {
+                        meldsAreaView(currentPlayer)
+                    }
+                    actionButtonsView(currentPlayer)
+                    handView(currentPlayer)
                 }
-            }
-            .padding(.horizontal)
-            
-            // Jack drawn message (only during dealer determination)
-            if game.currentPhase == .dealerDetermination && game.showJackProminently {
-                VStack(spacing: 8) {
-                    Text("🎴 JACK DRAWN! 🎴")
-                        .font(.title2)
-                        .bold()
-                        .foregroundColor(.orange)
-                    
-                    Text(game.dealerDeterminedMessage)
-                        .font(.headline)
-                        .bold()
-                        .foregroundColor(.green)
-                        .multilineTextAlignment(.center)
-                }
-                .padding()
-                .background(Color.yellow.opacity(0.2))
-                .cornerRadius(12)
-            }
-            
-            // Game controls (only for setup and dealer determination)
-            if game.currentPhase == .setup || game.currentPhase == .dealerDetermination {
-                gameControls
-            }
-            
-            // Error messages
-            if showInvalidMeld {
-                Text("Invalid meld!")
-                    .foregroundColor(.red)
-                    .transition(.opacity)
-                    .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showInvalidMeld = false } }
-            }
-            
-            // Show trick winner message using game state
-            if game.isShowingTrickResult, let winner = game.lastTrickWinner {
-                Text("\(winner) won the trick!")
-                    .font(.title2)
-                    .bold()
-                    .foregroundColor(.purple)
-                    .padding(8)
-                    .background(Color.white.opacity(0.9))
-                    .cornerRadius(10)
-                    .shadow(radius: 4)
-                    .transition(.scale)
             }
         }
         .overlay(
@@ -299,6 +275,63 @@ struct GameBoardView: View {
         )
     }
     
+    // MARK: - 2-Player Center Section
+    private func twoPlayerCenterSection() -> some View {
+        let currentPlayer = game.players[game.currentPlayerIndex]
+        let otherPlayer = game.players[(game.currentPlayerIndex + 1) % 2]
+        return HStack(alignment: .center, spacing: 0) {
+            if settings.drawPilePosition == .centerLeft {
+                drawPileSection
+                Spacer(minLength: 16)
+            }
+            VStack(spacing: 0) {
+                // Top: other player's hand (card backs)
+                HStack {
+                    ForEach(otherPlayer.hand) { _ in
+                        CardBackView { }
+                            .frame(width: 36, height: 54)
+                    }
+                }
+                .padding(.top, 8)
+                // Center: Trick area (the table)
+                TrickView(
+                    cards: game.currentTrick,
+                    game: game,
+                    settings: settings
+                )
+                .frame(height: 90)
+                // Bottom: current player's hand (face up, interactive)
+                HStack {
+                    ForEach(currentPlayer.hand) { card in
+                        CardView(
+                            card: card,
+                            isSelected: selectedCards.contains(card),
+                            isPlayable: game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }),
+                            showHint: false,
+                            onTap: {
+                                if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
+                                    // Select or play card
+                                    // (You may want to call a play handler here)
+                                }
+                            }
+                        )
+                        .onTapGesture(count: 2) {
+                            if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
+                                // Play card on double tap
+                                // (You may want to call a play handler here)
+                            }
+                        }
+                    }
+                }
+                .padding(.bottom, 8)
+            }
+            if settings.drawPilePosition == .centerRight {
+                Spacer(minLength: 16)
+                drawPileSection
+            }
+        }
+    }
+    
     // MARK: - Trick Section
     private var trickSection: some View {
         VStack {
@@ -313,13 +346,11 @@ struct GameBoardView: View {
     
     // MARK: - Draw Pile Section
     private var drawPileSection: some View {
-        VStack(spacing: 8) {
-            // Draw pile with stacking effect
+        VStack(spacing: 4) {
             drawPileView
-            
-            // Deck info
+                .frame(width: 36, height: 54)
             Text("Cards: \(game.deck.remainingCount)")
-                .font(.caption)
+                .font(.caption2)
                 .foregroundColor(.secondary)
         }
     }
@@ -358,16 +389,64 @@ struct GameBoardView: View {
     // MARK: - Bottom Section
     private var bottomSection: some View {
         VStack(spacing: 10) {
-            if let humanPlayer = game.players.first {
-                playerInfoView(humanPlayer)
-                if game.canPlayerMeld && game.currentPlayer.type == .human {
-                    meldInstructionsView(humanPlayer)
+            if game.players.count == 2 {
+                // 2-player layout: current player at bottom, other at top
+                let currentPlayer = game.players[game.currentPlayerIndex]
+                let otherPlayer = game.players[(game.currentPlayerIndex + 1) % 2]
+                VStack(spacing: 0) {
+                    // Top: other player's hand (card backs)
+                    HStack {
+                        ForEach(otherPlayer.hand) { _ in
+                            CardBackView { }
+                                .frame(width: 48, height: 72)
+                        }
+                    }
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
+                    // Center: trick, melds, etc. (already handled in centerSection)
+                    // Bottom: current player's hand (face up, interactive)
+                    playerInfoView(currentPlayer)
+                    if game.canPlayerMeld && currentPlayer.type == .human {
+                        meldInstructionsView(currentPlayer)
+                    }
+                    if !currentPlayer.meldsDeclared.isEmpty {
+                        meldsAreaView(currentPlayer)
+                    }
+                    actionButtonsView(currentPlayer)
+                    handView(currentPlayer)
                 }
-                if !humanPlayer.meldsDeclared.isEmpty {
-                    meldsAreaView(humanPlayer)
+            } else {
+                // 3/4 player layout: current player at bottom, others at top/left/right
+                let currentPlayer = game.players[game.currentPlayerIndex]
+                VStack(spacing: 0) {
+                    // Top: all other players' hands (card backs)
+                    HStack(spacing: 16) {
+                        ForEach(game.players.indices.filter { $0 != game.currentPlayerIndex }, id: \.self) { idx in
+                            VStack {
+                                Text(game.players[idx].name)
+                                    .font(.caption)
+                                HStack {
+                                    ForEach(game.players[idx].hand) { _ in
+                                        CardBackView { }
+                                            .frame(width: 32, height: 48)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
+                    // Bottom: current player's hand (face up, interactive)
+                    playerInfoView(currentPlayer)
+                    if game.canPlayerMeld && currentPlayer.type == .human {
+                        meldInstructionsView(currentPlayer)
+                    }
+                    if !currentPlayer.meldsDeclared.isEmpty {
+                        meldsAreaView(currentPlayer)
+                    }
+                    actionButtonsView(currentPlayer)
+                    handView(currentPlayer)
                 }
-                actionButtonsView(humanPlayer)
-                handView(humanPlayer)
             }
         }
     }
@@ -590,9 +669,9 @@ struct GameBoardView: View {
         let cardHeight: CGFloat = 120 * 1.5
         let stackOffset: CGFloat = 2 // Smaller offset for better stacking
         let maxVisibleCards = min(4, game.deck.remainingCount) // Show 2-4 cards based on deck size
-        let isDrawTurn = game.players[game.currentDrawIndex].id == game.players.first?.id // Only human can draw in UI
+        let canDraw = game.currentPhase == .playing && game.isDrawCycle && game.currentPlayer.type == .human && !game.hasDrawnForNextTrick[game.currentPlayer.id, default: false] && !game.deck.isEmpty
         return Button(action: {
-            if isDrawTurn && !game.hasDrawnForNextTrick[game.players.first!.id, default: false] && !game.deck.isEmpty {
+            if canDraw {
                 showDrawAnimation = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                     game.drawCardForCurrentDrawTurn()
@@ -615,12 +694,12 @@ struct GameBoardView: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .disabled(!isDrawTurn || game.hasDrawnForNextTrick[game.players.first!.id, default: false] || game.deck.isEmpty)
-        .scaleEffect(isDrawTurn ? 1.05 : 1.0)
-        .animation(.easeInOut(duration: 0.2), value: isDrawTurn)
+        .disabled(!canDraw)
+        .scaleEffect(canDraw ? 1.05 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: canDraw)
         .overlay(
             Group {
-                if isDrawTurn && !game.hasDrawnForNextTrick[game.players.first!.id, default: false] && !game.deck.isEmpty {
+                if canDraw && !game.hasDrawnForNextTrick[game.currentPlayer.id, default: false] && !game.deck.isEmpty {
                     VStack {
                         Spacer()
                         Text("Tap to draw (your turn)")
