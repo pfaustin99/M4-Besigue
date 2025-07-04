@@ -60,8 +60,9 @@ struct ContentView: View {
             })
         }
         .onAppear {
-            // Don't auto-start the game - let user click the button
-            print("ContentView appeared")
+            // Auto-start the game for testing
+            print("ContentView appeared - auto-starting game")
+            startNewGameWithRules()
         }
     }
     
