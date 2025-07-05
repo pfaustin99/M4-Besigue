@@ -39,13 +39,13 @@ struct GameBoardView: View {
                     .frame(height: 80)
                     .padding(.horizontal)
                 
-                // Trick Area (reduced height)
+                // Trick Area (increased height)
                 TrickView(
                     cards: game.currentTrick,
                     game: game,
                     settings: settings
                 )
-                .frame(height: geometry.size.height * 0.25) // Further reduced
+                .frame(height: geometry.size.height * 0.35) // Increased from 0.25 to 0.35
                 .padding(.bottom, 8)
                 
                 // Player-Specific Messages Area
@@ -207,8 +207,29 @@ struct GameBoardView: View {
     // MARK: - Global Messages Area (Dynamic Single Message)
     private var globalMessagesView: some View {
         Group {
-            if game.currentPhase == .playing {
-                // Priority 1: Current player turn message (Blue theme)
+            if game.isShowingTrickResult, let winnerName = game.lastTrickWinner {
+                // Priority 1: Trick winner message (Green theme)
+                HStack(spacing: 6) {
+                    Image(systemName: "trophy.fill")
+                        .foregroundColor(.green)
+                        .font(.title3)
+                    Text("\(winnerName) wins the trick!")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.green)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.green.opacity(0.3), lineWidth: 2)
+                        )
+                )
+            } else if game.currentPhase == .playing {
+                // Priority 2: Current player turn message (Blue theme)
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.right.circle.fill")
                         .foregroundColor(.blue)
@@ -229,7 +250,7 @@ struct GameBoardView: View {
                         )
                 )
             } else {
-                // Priority 2: Dealer message (Gold theme)
+                // Priority 3: Dealer message (Gold theme)
                 if let dealer = game.players.first(where: { $0.isDealer }) {
                     HStack(spacing: 6) {
                         Image(systemName: "crown.fill")
@@ -256,6 +277,8 @@ struct GameBoardView: View {
         .frame(maxWidth: .infinity)
         .animation(.easeInOut(duration: 0.3), value: game.currentPhase)
         .animation(.easeInOut(duration: 0.3), value: game.currentPlayerIndex)
+        .animation(.easeInOut(duration: 0.3), value: game.isShowingTrickResult)
+        .animation(.easeInOut(duration: 0.3), value: game.lastTrickWinner)
     }
     
     // MARK: - Player-Specific Messages Area
@@ -264,8 +287,8 @@ struct GameBoardView: View {
             if game.currentPhase == .playing {
                 let currentPlayer = game.currentPlayer
                 
-                // Draw card message
-                if game.mustDrawCard && !game.hasDrawnForNextTrick[currentPlayer.id, default: false] {
+                // Draw card message - show when it's the player's turn to draw
+                if game.mustDrawCard && currentPlayer.id == game.currentPlayer.id && !game.hasDrawnForNextTrick[currentPlayer.id, default: false] && !game.deck.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.down.circle.fill")
                             .foregroundColor(.green)
@@ -281,8 +304,8 @@ struct GameBoardView: View {
                     .cornerRadius(4)
                 }
                 
-                // Play card message
-                if game.hasDrawnForNextTrick[currentPlayer.id, default: false] && game.canPlayCard() {
+                // Play card message - show when player has drawn and can play
+                if game.hasDrawnForNextTrick[currentPlayer.id, default: false] && game.canPlayCard() && currentPlayer.id == game.currentPlayer.id {
                     HStack(spacing: 4) {
                         Image(systemName: "play.circle.fill")
                             .foregroundColor(.orange)
@@ -374,6 +397,11 @@ struct GameBoardView: View {
             }
             .padding(.top, 8)
             .padding(.bottom, 16)
+        }
+        .onChange(of: game.currentPlayerIndex) { newIndex in
+            // In single player mode, automatically switch to the current player's hand
+            // This ensures the trick winner's hand becomes active
+            print("🎮 Single Player Mode: Switched to \(game.players[newIndex].name)'s hand")
         }
     }
     
@@ -1076,10 +1104,23 @@ struct GameBoardView: View {
     
     // Handle double-tap to play card
     private func handleCardDoubleTap(_ card: PlayerCard) {
+        print("🎯 DOUBLE-TAP ATTEMPT:")
+        print("   Card: \(card.displayName)")
+        print("   Current player: \(game.currentPlayer.name)")
+        print("   Can play card: \(game.canPlayCard())")
+        print("   Current player type: \(game.currentPlayer.type)")
+        print("   Is draw cycle: \(game.isDrawCycle)")
+        print("   Has drawn: \(game.hasDrawnForNextTrick[game.currentPlayer.id, default: false])")
+        print("   Current trick count: \(game.currentTrick.count)")
+        print("   Player count: \(game.playerCount)")
+        
         if game.canPlayCard() && game.currentPlayer.type == .human {
-            // Double-tap plays the card immediately
-            game.playCard(card, from: game.currentPlayer)
+            print("✅ DOUBLE-TAP SUCCESS - Playing card")
+            // Double-tap plays the card immediately using the current play cycle
+            game.playCardForCurrentPlayTurn(card)
             selectedCards.removeAll()
+        } else {
+            print("❌ DOUBLE-TAP FAILED - Conditions not met")
         }
         if game.mustDrawCard { return }
     }
@@ -1190,7 +1231,7 @@ struct GameBoardView: View {
                 return []
             }
         }()
-        let canPlay = game.players[game.currentPlayIndex].id == player.id && game.hasDrawnForNextTrick[player.id, default: false]
+        let canPlay = player.id == game.currentPlayer.id && game.hasDrawnForNextTrick[player.id, default: false] && !game.isDrawCycle
         let playableCards: [PlayerCard]
         if game.awaitingMeldChoice {
             playableCards = handCards
@@ -1530,7 +1571,7 @@ struct TrickView: View {
                             showTapToDraw: shouldShowTapToDraw,
                             onTap: {
                                 if shouldShowTapToDraw {
-                                    game.drawCardForCurrentPlayer()
+                                    game.drawCardForCurrentDrawTurn()
                                 }
                             },
                             numberOfPlayers: game.players.count,
@@ -1567,7 +1608,7 @@ struct TrickView: View {
                             showTapToDraw: shouldShowTapToDraw,
                             onTap: {
                                 if shouldShowTapToDraw {
-                                    game.drawCardForCurrentPlayer()
+                                    game.drawCardForCurrentDrawTurn()
                                 }
                             },
                             numberOfPlayers: game.players.count,
@@ -1602,7 +1643,7 @@ struct TrickView: View {
     }
     // Helper: Should show 'Tap to draw' message?
     private var shouldShowTapToDraw: Bool {
-        game.mustDrawCard && game.currentPlayer.isCurrentPlayer && !game.deck.isEmpty
+        game.mustDrawCard && game.currentPlayer.isCurrentPlayer && !game.hasDrawnForNextTrick[game.currentPlayer.id, default: false] && !game.deck.isEmpty
     }
 
     private func getTrickAreaHeight() -> CGFloat {

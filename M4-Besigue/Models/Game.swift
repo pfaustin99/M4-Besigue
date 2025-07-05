@@ -76,6 +76,9 @@ class Game: ObservableObject {
     // Endgame state
     @Published var isEndgame: Bool = false
     
+    // MARK: - Game State
+    @Published var isFirstTrick: Bool = true  // Track if we're still in the first trick
+    
     init(gameRules: GameRules, isOnline: Bool = false) {
         self.gameRules = gameRules
         self.settings = GameSettings()
@@ -157,21 +160,25 @@ class Game: ObservableObject {
         currentDrawIndex = 0
         currentPlayIndex = 0
         currentPlayerIndex = 0
-        currentPhase = .dealerDetermination
+        currentPhase = .playing
         
         // Reset deck
         deck = Deck()
         deck.shuffle()
         
-        // Determine dealer
-        determineDealer()
-        
-        // Set draw and play indices to the trick leader
-        currentDrawIndex = currentTrickLeader
-        currentPlayIndex = currentTrickLeader
-        
         // Deal cards
         dealInitialCards()
+        
+        // After dealing cards, set up for first trick
+        currentTrick.removeAll()
+        currentTrickLeader = 0
+        currentPlayerIndex = 0
+        currentDrawIndex = 0
+        currentPlayIndex = 0
+        mustDrawCard = false // <-- Fix: Do NOT require draw after deal
+        for player in players {
+            hasDrawnForNextTrick[player.id] = false
+        }
         
         // Check endgame state
         checkEndgame()
@@ -322,6 +329,19 @@ class Game: ObservableObject {
         
         currentPhase = .playing
         
+        // Set up draw cycle for the new trick
+        currentDrawIndex = currentTrickLeader
+        currentPlayIndex = currentTrickLeader
+        isDrawCycle = true
+        mustDrawCard = true
+        
+        // Reset draw status for all players
+        for player in players {
+            hasDrawnForNextTrick[player.id] = false
+        }
+        
+        print("🔄 Draw cycle initialized - \(currentPlayer.name) can draw a card")
+        
         // If AI is leading, make AI decision
         if currentPlayer.type == .ai {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -419,8 +439,25 @@ class Game: ObservableObject {
             }
         }
         
-        // Set up the draw/play cycle for the next trick
-        startDrawCycle(trickWinnerIndex: winnerIndex)
+        // Clear the current trick
+        currentTrick.removeAll()
+        
+        // Set the current player to the trick winner
+        currentPlayerIndex = winnerIndex
+        currentPlayer.isCurrentPlayer = true
+        
+        // Clear previous player's current status
+        for (index, player) in players.enumerated() {
+            if index != currentPlayerIndex {
+                player.isCurrentPlayer = false
+            }
+        }
+        
+        // After first trick is complete, set flag to false
+        isFirstTrick = false
+        
+        // Start new trick (which will set up the draw cycle)
+        startNewTrick()
         
         // UI/VM should now prompt the player at currentDrawIndex to draw
     }
@@ -428,32 +465,103 @@ class Game: ObservableObject {
     // Draw card for the current draw turn player
     func drawCardForCurrentDrawTurn() {
         let player = players[currentDrawIndex]
-        guard hasDrawnForNextTrick[player.id] == false, !deck.isEmpty else { return }
+        print("🎴 DRAW ATTEMPT:")
+        print("   Player: \(player.name)")
+        print("   Has drawn: \(hasDrawnForNextTrick[player.id, default: false])")
+        print("   Deck empty: \(deck.isEmpty)")
+        print("   Must draw card: \(mustDrawCard)")
+        
+        guard hasDrawnForNextTrick[player.id] == false, !deck.isEmpty else { 
+            print("❌ DRAW FAILED - Conditions not met")
+            return 
+        }
+        
         if let card = deck.drawCard() {
             player.addCards([card])
             hasDrawnForNextTrick[player.id] = true
+            print("✅ DRAW SUCCESS - \(player.name) drew \(card.displayName)")
         }
+        
         // Advance to next draw turn
         currentDrawIndex = (currentDrawIndex + 1) % playerCount
-        // If next is AI, trigger AI draw
-        triggerAIDrawIfNeeded()
-        // If all have drawn, begin play cycle (UI/VM should prompt currentPlayIndex to play)
+        
+        // Check if all players have drawn
+        let allHaveDrawn = players.allSatisfy { hasDrawnForNextTrick[$0.id, default: false] }
+        
+        if allHaveDrawn {
+            // All players have drawn, switch to play cycle
+            print("🔄 All players have drawn - switching to play cycle")
+            mustDrawCard = false
+            currentPlayIndex = currentTrickLeader
+            currentPlayerIndex = currentTrickLeader
+            currentPlayer.isCurrentPlayer = true
+            
+            // Clear previous player's current status
+            for (index, player) in players.enumerated() {
+                if index != currentPlayerIndex {
+                    player.isCurrentPlayer = false
+                }
+            }
+        } else {
+            // Set current player to the next player who needs to draw
+            currentPlayerIndex = currentDrawIndex
+            currentPlayer.isCurrentPlayer = true
+            
+            // Clear previous player's current status
+            for (index, player) in players.enumerated() {
+                if index != currentPlayerIndex {
+                    player.isCurrentPlayer = false
+                }
+            }
+        }
     }
     
     // Play card for the current play turn player
     func playCardForCurrentPlayTurn(_ card: PlayerCard) {
         let player = players[currentPlayIndex]
-        guard hasDrawnForNextTrick[player.id] == true else { return }
-        // Usual play logic here (add card to trick, etc.)
+        print("🎯 PLAY ATTEMPT:")
+        print("   Player: \(player.name)")
+        print("   Has drawn: \(hasDrawnForNextTrick[player.id, default: false])")
+        print("   Card: \(card.displayName)")
+        print("   Current trick count: \(currentTrick.count)")
+        print("   Player count: \(playerCount)")
+        
+        // Check for exceptions to the "must draw" rule
+        let drawPileEmpty = deck.isEmpty
+        
+        print("   Is first trick: \(isFirstTrick)")
+        print("   Draw pile empty: \(drawPileEmpty)")
+        
+        // Allow play if: has drawn OR it's the first trick OR draw pile is empty
+        guard hasDrawnForNextTrick[player.id] == true || isFirstTrick || drawPileEmpty else { 
+            print("❌ PLAY FAILED - Player hasn't drawn")
+            return 
+        }
+        
+        print("✅ PLAY SUCCESS - \(player.name) plays \(card.displayName)")
+        
+        // Add card to trick
         currentTrick.append(card)
         player.removeCard(card)
+        
         // Advance to next play turn
         currentPlayIndex = (currentPlayIndex + 1) % playerCount
-        // If next is AI, trigger AI play
-        triggerAIPlayIfNeeded()
-        // If all have played, evaluate trick
+        
+        // Check if all players have played
         if currentTrick.count == playerCount {
+            print("🎯 All players have played - completing trick")
             completeTrick()
+        } else {
+            // Set current player to the next player
+            currentPlayerIndex = currentPlayIndex
+            currentPlayer.isCurrentPlayer = true
+            
+            // Clear previous player's current status
+            for (index, p) in players.enumerated() {
+                if index != currentPlayerIndex {
+                    p.isCurrentPlayer = false
+                }
+            }
         }
     }
     
@@ -886,8 +994,24 @@ class Game: ObservableObject {
         return currentPhase != .dealerDetermination
     }
     
+    // Check if current player can play a card
     func canPlayCard() -> Bool {
-        return currentPhase == .playing
+        let hasDrawn = hasDrawnForNextTrick[currentPlayer.id, default: false]
+        let trickNotFull = currentTrick.count < playerCount
+        let drawPileEmpty = deck.isEmpty
+        
+        print("🔍 CAN PLAY CARD CHECK:")
+        print("   Player: \(currentPlayer.name)")
+        print("   Has drawn: \(hasDrawn)")
+        print("   Trick count: \(currentTrick.count)")
+        print("   Player count: \(playerCount)")
+        print("   Trick not full: \(trickNotFull)")
+        print("   Is first trick: \(isFirstTrick)")
+        print("   Draw pile empty: \(drawPileEmpty)")
+        print("   Result: \((hasDrawn || isFirstTrick || drawPileEmpty) && trickNotFull)")
+        
+        // Can play if: (has drawn OR it's the first trick OR draw pile empty) AND trick is not full
+        return (hasDrawn || isFirstTrick || drawPileEmpty) && trickNotFull
     }
     
     // Draw card for dealer determination phase
@@ -1017,6 +1141,11 @@ class Game: ObservableObject {
         for player in players {
             hasDrawnForNextTrick[player.id] = false
         }
+        
+        // Enable drawing for the trick winner
+        mustDrawCard = true
+        
+        print("🔄 Draw cycle started - \(players[trickWinnerIndex].name) can draw a card")
     }
     
     // MARK: - Tiebreaker Logic
