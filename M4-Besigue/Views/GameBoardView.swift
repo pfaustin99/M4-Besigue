@@ -12,13 +12,36 @@ struct GameBoardView: View {
     @Namespace private var drawPileNamespace
     @State private var animatingDrawnCard: PlayerCard? = nil
     @State private var showDrawAnimation: Bool = false
+    @State private var isSinglePlayerMode: Bool = false
+    @State private var tapCount: Int = 0
+    @State private var lastTapTime: Date = Date()
     
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
-                // Message overlay area
-                messageOverlayView
-                    .frame(height: 80)
+                // Player Scores with triple tap detection
+                scoreboardView
+                    .onTapGesture(count: 1) {
+                        handleScoreTap()
+                    }
+                
+                // Global Messages Area
+                globalMessagesView
+                    .frame(height: 60)
+                    .padding(.horizontal)
+                
+                // Trick Area (reduced height)
+                TrickView(
+                    cards: game.currentTrick,
+                    game: game,
+                    settings: settings
+                )
+                .frame(height: geometry.size.height * 0.3) // Reduced height
+                .padding(.bottom, 8)
+                
+                // Player-Specific Messages Area
+                playerSpecificMessagesView
+                    .frame(height: 40)
                     .padding(.horizontal)
                 
                 // Main game content
@@ -74,55 +97,131 @@ struct GameBoardView: View {
         }
     }
     
-    // MARK: - Message Overlay System
-    private var messageOverlayView: some View {
-        VStack(spacing: 8) {
+    // MARK: - Triple Tap Handler
+    private func handleScoreTap() {
+        let now = Date()
+        if now.timeIntervalSince(lastTapTime) < 1.0 {
+            tapCount += 1
+            if tapCount >= 3 {
+                isSinglePlayerMode.toggle()
+                tapCount = 0
+                print("🎮 Single Player Mode: \(isSinglePlayerMode ? "ON" : "OFF")")
+            }
+        } else {
+            tapCount = 1
+        }
+        lastTapTime = now
+    }
+    
+    // MARK: - Global Messages Area
+    private var globalMessagesView: some View {
+        VStack(spacing: 4) {
+            // Single Player Mode Badge
+            if isSinglePlayerMode {
+                HStack(spacing: 6) {
+                    Image(systemName: "person.fill")
+                        .foregroundColor(.purple)
+                        .font(.caption)
+                    Text("Single Player Mode")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.purple)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .background(Color.purple.opacity(0.2))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.purple, lineWidth: 1)
+                )
+            }
+            
             // Dealer message
             if let dealer = game.players.first(where: { $0.isDealer }) {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Image(systemName: "crown.fill")
                         .foregroundColor(.yellow)
-                        .font(.title2)
+                        .font(.caption)
                     Text("Dealer: \(dealer.name)")
-                        .font(.title3)
-                        .fontWeight(.bold)
+                        .font(.caption)
+                        .fontWeight(.semibold)
                         .foregroundColor(.primary)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 3)
                 .background(Color.yellow.opacity(0.2))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.yellow, lineWidth: 2)
-                )
+                .cornerRadius(6)
             }
             
             // Current player turn message
             if game.currentPhase == .playing {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Image(systemName: "arrow.right.circle.fill")
                         .foregroundColor(.blue)
-                        .font(.title2)
+                        .font(.caption)
                     Text("\(game.currentPlayer.name)'s Turn")
-                        .font(.title3)
-                        .fontWeight(.bold)
+                        .font(.caption)
+                        .fontWeight(.semibold)
                         .foregroundColor(.blue)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 3)
                 .background(Color.blue.opacity(0.2))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.blue, lineWidth: 2)
-                )
+                .cornerRadius(6)
             }
         }
         .frame(maxWidth: .infinity)
-        .background(Color.white.opacity(0.95))
-        .cornerRadius(12)
-        .shadow(radius: 4)
+        .background(Color.white.opacity(0.9))
+        .cornerRadius(8)
+        .shadow(radius: 2)
+    }
+    
+    // MARK: - Player-Specific Messages Area
+    private var playerSpecificMessagesView: some View {
+        VStack(spacing: 2) {
+            if game.currentPhase == .playing {
+                let currentPlayer = game.currentPlayer
+                
+                // Draw card message
+                if game.mustDrawCard && !game.hasDrawnForNextTrick[currentPlayer.id, default: false] {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.caption2)
+                        Text("Draw a card")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.green)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Color.green.opacity(0.2))
+                    .cornerRadius(4)
+                }
+                
+                // Play card message
+                if game.hasDrawnForNextTrick[currentPlayer.id, default: false] && game.canPlayCard() {
+                    HStack(spacing: 4) {
+                        Image(systemName: "play.circle.fill")
+                            .foregroundColor(.orange)
+                            .font(.caption2)
+                        Text("Play a card")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.orange)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Color.orange.opacity(0.2))
+                    .cornerRadius(4)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .background(Color.white.opacity(0.8))
+        .cornerRadius(6)
+        .shadow(radius: 1)
     }
     
     // MARK: - Scoreboard
@@ -149,7 +248,78 @@ struct GameBoardView: View {
     private func twoPlayerMainArea() -> some View {
         let currentPlayer = game.players[game.currentPlayerIndex]
         let otherPlayer = game.players[(game.currentPlayerIndex + 1) % 2]
+        
         return VStack(spacing: 0) {
+            if isSinglePlayerMode {
+                // Single Player Mode: Active player's hand at bottom, rotated to your view
+                singlePlayerLayout(currentPlayer: currentPlayer, otherPlayer: otherPlayer)
+            } else {
+                // Normal Mode: Current player at bottom, other at top
+                normalTwoPlayerLayout(currentPlayer: currentPlayer, otherPlayer: otherPlayer)
+            }
+        }
+        .onAppear {
+            print("🎯 2-Player layout - Current: \(currentPlayer.name), Other: \(otherPlayer.name), Single Player: \(isSinglePlayerMode)")
+        }
+    }
+    
+    // MARK: - Single Player Layout (for testing)
+    private func singlePlayerLayout(currentPlayer: Player, otherPlayer: Player) -> some View {
+        VStack(spacing: 0) {
+            // Other player's hand (card backs) - smaller and at top
+            HStack {
+                Spacer()
+                Text(otherPlayer.name)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+            .padding(.top, 8)
+            
+            HStack {
+                Spacer()
+                ForEach(otherPlayer.hand) { _ in
+                    CardBackView { }
+                        .frame(width: 32, height: 48)
+                }
+                Spacer()
+            }
+            .padding(.bottom, 8)
+
+            // Active player's hand (face up, interactive) - rotated to your view
+            VStack(spacing: 4) {
+                Text("\(currentPlayer.name) (Your Turn)")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.blue)
+                
+                HStack {
+                    Spacer()
+                    ForEach(currentPlayer.hand) { card in
+                        CardView(
+                            card: card,
+                            isSelected: selectedCards.contains(card),
+                            isPlayable: true, // Always playable in single player mode
+                            showHint: false,
+                            onTap: {
+                                handleCardTap(card)
+                            }
+                        )
+                        .onTapGesture(count: 2) {
+                            handleCardDoubleTap(card)
+                        }
+                    }
+                    Spacer()
+                }
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+        }
+    }
+    
+    // MARK: - Normal Two Player Layout
+    private func normalTwoPlayerLayout(currentPlayer: Player, otherPlayer: Player) -> some View {
+        VStack(spacing: 0) {
             // Other player's hand (card backs)
             HStack {
                 Spacer()
@@ -162,35 +332,6 @@ struct GameBoardView: View {
             .padding(.top, 16)
             .padding(.bottom, 12)
 
-            // Trick area with enhanced draw pile inside
-            TrickView(
-                cards: game.currentTrick,
-                game: game,
-                settings: settings
-            )
-            .padding(.bottom, 12)
-
-            // Meld area (if any)
-            if !currentPlayer.meldsDeclared.isEmpty {
-                VStack(spacing: 2) {
-                    Divider().padding(.horizontal, 40)
-                    HStack(spacing: 8) {
-                        ForEach(currentPlayer.meldsDeclared) { meld in
-                            HStack(spacing: 2) {
-                                ForEach(meld.cards) { card in
-                                    Image(card.imageName)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(width: 32, height: 48)
-                                        .cornerRadius(4)
-                                }
-                            }
-                        }
-                    }
-                }
-                .padding(.bottom, 8)
-            }
-
             // Active player's hand (face up, interactive)
             HStack {
                 Spacer()
@@ -202,13 +343,13 @@ struct GameBoardView: View {
                         showHint: false,
                         onTap: {
                             if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
-                                // Select or play card
+                                handleCardTap(card)
                             }
                         }
                     )
                     .onTapGesture(count: 2) {
                         if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
-                            // Play card on double tap
+                            handleCardDoubleTap(card)
                         }
                     }
                 }
@@ -216,9 +357,6 @@ struct GameBoardView: View {
             }
             .padding(.top, 8)
             .padding(.bottom, 16)
-        }
-        .onAppear {
-            print("🎯 2-Player layout - Current: \(currentPlayer.name), Other: \(otherPlayer.name)")
         }
     }
     
