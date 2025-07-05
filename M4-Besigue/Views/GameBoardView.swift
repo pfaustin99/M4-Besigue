@@ -19,15 +19,24 @@ struct GameBoardView: View {
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
+                // Menu area with Single Player Mode badge
+                menuAreaView
+                    .padding(.horizontal)
+                
                 // Player Scores with triple tap detection
                 scoreboardView
                     .onTapGesture(count: 1) {
                         handleScoreTap()
                     }
                 
-                // Global Messages Area
+                // Global Messages Area (Dynamic Single Message)
                 globalMessagesView
-                    .frame(height: 60)
+                    .frame(height: 50)
+                    .padding(.horizontal)
+                
+                // Other Player's Hand (moved here)
+                otherPlayerHandView
+                    .frame(height: 80)
                     .padding(.horizontal)
                 
                 // Trick Area (reduced height)
@@ -36,7 +45,7 @@ struct GameBoardView: View {
                     game: game,
                     settings: settings
                 )
-                .frame(height: geometry.size.height * 0.3) // Reduced height
+                .frame(height: geometry.size.height * 0.25) // Further reduced
                 .padding(.bottom, 8)
                 
                 // Player-Specific Messages Area
@@ -97,6 +106,88 @@ struct GameBoardView: View {
         }
     }
     
+    // MARK: - Menu Area with Single Player Mode Badge
+    private var menuAreaView: some View {
+        HStack(spacing: 12) {
+            Button("New Game") {
+                // New game action
+            }
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.blue.opacity(0.2))
+            .cornerRadius(6)
+            
+            Button("Settings") {
+                showingSettings = true
+            }
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.gray.opacity(0.2))
+            .cornerRadius(6)
+            
+            // Single Player Mode Badge (stationary in menu)
+            if isSinglePlayerMode {
+                HStack(spacing: 4) {
+                    Image(systemName: "person.fill")
+                        .foregroundColor(.purple)
+                        .font(.caption2)
+                    Text("Single Player Mode")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.purple)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.purple.opacity(0.2))
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.purple.opacity(0.5), lineWidth: 1)
+                )
+            }
+            
+            Spacer()
+            
+            Button("Badge Legend") {
+                showingBadgeLegend = true
+            }
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.orange.opacity(0.2))
+            .cornerRadius(6)
+        }
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(8)
+    }
+    
+    // MARK: - Other Player's Hand View
+    private var otherPlayerHandView: some View {
+        let currentPlayer = game.players[game.currentPlayerIndex]
+        let otherPlayer = game.players[(game.currentPlayerIndex + 1) % 2]
+        
+        return VStack(spacing: 4) {
+            Text(otherPlayer.name)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            HStack {
+                Spacer()
+                ForEach(otherPlayer.hand) { _ in
+                    CardBackView { }
+                        .frame(width: 35, height: 52)
+                }
+                Spacer()
+            }
+        }
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(8)
+    }
+    
     // MARK: - Triple Tap Handler
     private func handleScoreTap() {
         let now = Date()
@@ -113,68 +204,58 @@ struct GameBoardView: View {
         lastTapTime = now
     }
     
-    // MARK: - Global Messages Area
+    // MARK: - Global Messages Area (Dynamic Single Message)
     private var globalMessagesView: some View {
-        VStack(spacing: 4) {
-            // Single Player Mode Badge
-            if isSinglePlayerMode {
-                HStack(spacing: 6) {
-                    Image(systemName: "person.fill")
-                        .foregroundColor(.purple)
-                        .font(.caption)
-                    Text("Single Player Mode")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(.purple)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(Color.purple.opacity(0.2))
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.purple, lineWidth: 1)
-                )
-            }
-            
-            // Dealer message
-            if let dealer = game.players.first(where: { $0.isDealer }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "crown.fill")
-                        .foregroundColor(.yellow)
-                        .font(.caption)
-                    Text("Dealer: \(dealer.name)")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 3)
-                .background(Color.yellow.opacity(0.2))
-                .cornerRadius(6)
-            }
-            
-            // Current player turn message
+        Group {
             if game.currentPhase == .playing {
+                // Priority 1: Current player turn message (Blue theme)
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.right.circle.fill")
                         .foregroundColor(.blue)
-                        .font(.caption)
+                        .font(.title3)
                     Text("\(game.currentPlayer.name)'s Turn")
-                        .font(.caption)
-                        .fontWeight(.semibold)
+                        .font(.headline)
+                        .fontWeight(.bold)
                         .foregroundColor(.blue)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 3)
-                .background(Color.blue.opacity(0.2))
-                .cornerRadius(6)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.blue.opacity(0.3), lineWidth: 2)
+                        )
+                )
+            } else {
+                // Priority 2: Dealer message (Gold theme)
+                if let dealer = game.players.first(where: { $0.isDealer }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "crown.fill")
+                            .foregroundColor(.yellow)
+                            .font(.title3)
+                        Text("Dealer: \(dealer.name)")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(.ultraThinMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.yellow.opacity(0.3), lineWidth: 2)
+                            )
+                    )
+                }
             }
         }
         .frame(maxWidth: .infinity)
-        .background(Color.white.opacity(0.9))
-        .cornerRadius(8)
-        .shadow(radius: 2)
+        .animation(.easeInOut(duration: 0.3), value: game.currentPhase)
+        .animation(.easeInOut(duration: 0.3), value: game.currentPlayerIndex)
     }
     
     // MARK: - Player-Specific Messages Area
@@ -247,45 +328,24 @@ struct GameBoardView: View {
     // MARK: - 2-Player Main Area
     private func twoPlayerMainArea() -> some View {
         let currentPlayer = game.players[game.currentPlayerIndex]
-        let otherPlayer = game.players[(game.currentPlayerIndex + 1) % 2]
         
         return VStack(spacing: 0) {
             if isSinglePlayerMode {
                 // Single Player Mode: Active player's hand at bottom, rotated to your view
-                singlePlayerLayout(currentPlayer: currentPlayer, otherPlayer: otherPlayer)
+                singlePlayerLayout(currentPlayer: currentPlayer)
             } else {
-                // Normal Mode: Current player at bottom, other at top
-                normalTwoPlayerLayout(currentPlayer: currentPlayer, otherPlayer: otherPlayer)
+                // Normal Mode: Current player at bottom
+                normalTwoPlayerLayout(currentPlayer: currentPlayer)
             }
         }
         .onAppear {
-            print("🎯 2-Player layout - Current: \(currentPlayer.name), Other: \(otherPlayer.name), Single Player: \(isSinglePlayerMode)")
+            print("🎯 2-Player layout - Current: \(currentPlayer.name), Single Player: \(isSinglePlayerMode)")
         }
     }
     
     // MARK: - Single Player Layout (for testing)
-    private func singlePlayerLayout(currentPlayer: Player, otherPlayer: Player) -> some View {
+    private func singlePlayerLayout(currentPlayer: Player) -> some View {
         VStack(spacing: 0) {
-            // Other player's hand (card backs) - smaller and at top
-            HStack {
-                Spacer()
-                Text(otherPlayer.name)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-            }
-            .padding(.top, 8)
-            
-            HStack {
-                Spacer()
-                ForEach(otherPlayer.hand) { _ in
-                    CardBackView { }
-                        .frame(width: 32, height: 48)
-                }
-                Spacer()
-            }
-            .padding(.bottom, 8)
-
             // Active player's hand (face up, interactive) - rotated to your view
             VStack(spacing: 4) {
                 Text("\(currentPlayer.name) (Your Turn)")
@@ -318,20 +378,8 @@ struct GameBoardView: View {
     }
     
     // MARK: - Normal Two Player Layout
-    private func normalTwoPlayerLayout(currentPlayer: Player, otherPlayer: Player) -> some View {
+    private func normalTwoPlayerLayout(currentPlayer: Player) -> some View {
         VStack(spacing: 0) {
-            // Other player's hand (card backs)
-            HStack {
-                Spacer()
-                ForEach(otherPlayer.hand) { _ in
-                    CardBackView { }
-                        .frame(width: 40 * settings.playerHandCardSize.rawValue, height: 60 * settings.playerHandCardSize.rawValue)
-                }
-                Spacer()
-            }
-            .padding(.top, 16)
-            .padding(.bottom, 12)
-
             // Active player's hand (face up, interactive)
             HStack {
                 Spacer()
