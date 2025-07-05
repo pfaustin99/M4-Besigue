@@ -201,28 +201,65 @@ struct GameBoardView: View {
     }
     
     private var gameInfoView: some View {
-        HStack {
-            Text("Round \(game.roundNumber)")
-                .font(.headline)
-            Spacer()
-            if let trump = game.trumpSuit {
-                Text("Trump: \(trump.displayName)")
+        VStack(spacing: 8) {
+            // Main game info row
+            HStack {
+                Text("Round \(game.roundNumber)")
                     .font(.headline)
-                    .foregroundColor(.red)
-            } else {
-                Text("Trump: None")
+                Spacer()
+                if let trump = game.trumpSuit {
+                    Text("Trump: \(trump.displayName)")
+                        .font(.headline)
+                        .foregroundColor(.red)
+                } else {
+                    Text("Trump: None")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                        .italic()
+                }
+                Spacer()
+                Text("Phase: \(phaseName)")
                     .font(.headline)
-                    .foregroundColor(.secondary)
-                    .italic()
+                    .foregroundColor(game.isEndgame ? .orange : .primary)
             }
-            Spacer()
-            Text("Phase: \(phaseName)")
-                .font(.headline)
-                .foregroundColor(game.isEndgame ? .orange : .primary)
+            .padding(.horizontal)
+            .background(game.isEndgame ? Color.orange.opacity(0.1) : Color.clear)
+            .cornerRadius(8)
+            
+            // Dealer and current player info
+            HStack {
+                // Dealer info
+                if let dealer = game.players.first(where: { $0.isDealer }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "crown.fill")
+                            .foregroundColor(.yellow)
+                        Text("Dealer: \(dealer.name)")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                    }
+                }
+                
+                Spacer()
+                
+                // Current player turn indicator
+                if game.currentPhase == .playing {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .foregroundColor(.blue)
+                            .scaleEffect(1.2)
+                        Text("\(game.currentPlayer.name)'s Turn")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.blue)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(6)
+                }
+            }
+            .padding(.horizontal)
         }
-        .padding(.horizontal)
-        .background(game.isEndgame ? Color.orange.opacity(0.1) : Color.clear)
-        .cornerRadius(8)
     }
     
     private var badgeLegendButton: some View {
@@ -576,16 +613,48 @@ struct GameBoardView: View {
     }
     
     private func playerInfoView(_ player: Player) -> some View {
-        HStack {
-            Text("Your Hand (\(player.hand.count) cards)")
-                .font(.headline)
-            Spacer()
-            Text("Score: \(player.totalPoints)")
-                .font(.headline)
+        VStack(spacing: 4) {
+            // Player name and status row
+            HStack {
+                Text(player.name)
+                    .font(.headline)
+                    .foregroundColor(game.currentPlayer.id == player.id ? .blue : .primary)
+                
+                // Dealer indicator
+                if player.isDealer {
+                    Image(systemName: "crown.fill")
+                        .foregroundColor(.yellow)
+                        .font(.caption)
+                }
+                
+                // Current player indicator
+                if game.currentPlayer.id == player.id && game.currentPhase == .playing {
+                    Image(systemName: "arrow.right.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.caption)
+                }
+                
+                Spacer()
+                
+                Text("Score: \(player.totalPoints)")
+                    .font(.headline)
+            }
+            
+            // Hand count
+            Text("Hand: \(player.hand.count) cards")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
         }
         .padding(.horizontal)
-        .background(game.currentPlayer.id == player.id ? Color.blue.opacity(0.2) : Color.clear)
-        .cornerRadius(8)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(game.currentPlayer.id == player.id ? Color.blue.opacity(0.2) : Color.clear)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(game.currentPlayer.id == player.id ? Color.blue : Color.clear, lineWidth: 2)
+                )
+        )
     }
     
     private func meldInstructionsView(_ player: Player) -> some View {
@@ -663,6 +732,27 @@ struct GameBoardView: View {
     
     private func actionButtonsView(_ player: Player) -> some View {
         HStack(spacing: 15) {
+            // Play Card button: when a card is selected and it's the player's turn to play
+            if game.currentPhase == .playing && 
+               game.currentPlayer.id == player.id && 
+               !game.awaitingMeldChoice && 
+               !selectedCards.isEmpty && 
+               game.canPlayCard() {
+                Button(action: {
+                    if let cardToPlay = selectedCards.first {
+                        game.playCard(cardToPlay, from: player)
+                        selectedCards.removeAll()
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "play.fill")
+                        Text("Play Card")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .font(.headline)
+            }
+            
             // Declare Meld button: only during meld choice
             if game.awaitingMeldChoice && game.currentPlayer.type == .human {
                 Button(action: {
@@ -686,11 +776,28 @@ struct GameBoardView: View {
                         game.playInvalidMeldAnimation()
                     }
                 }) {
-                    Text("Declare Meld")
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                        Text("Declare Meld")
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .modifier(Shake(animatableData: CGFloat(shakeMeldButton ? 1 : 0)))
                 .disabled(selectedCards.count < 2 || selectedCards.count > 4)
+                .font(.headline)
+            }
+            
+            // Draw Card button: when player needs to draw
+            if game.mustDrawCard && game.currentPlayer.id == player.id {
+                Button(action: {
+                    game.drawCardForCurrentPlayer()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down.circle.fill")
+                        Text("Draw Card")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
                 .font(.headline)
             }
         }
