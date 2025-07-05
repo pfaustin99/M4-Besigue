@@ -202,6 +202,23 @@ struct GameBoardView: View {
     
     private var gameInfoView: some View {
         VStack(spacing: 8) {
+            // Dealer message (prominent)
+            if let dealer = game.players.first(where: { $0.isDealer }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "crown.fill")
+                        .foregroundColor(.yellow)
+                        .font(.title2)
+                    Text("Dealer: \(dealer.name)")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.yellow.opacity(0.15))
+                .cornerRadius(8)
+            }
+            
             // Main game info row
             HStack {
                 Text("Round \(game.roundNumber)")
@@ -226,39 +243,22 @@ struct GameBoardView: View {
             .background(game.isEndgame ? Color.orange.opacity(0.1) : Color.clear)
             .cornerRadius(8)
             
-            // Dealer and current player info
-            HStack {
-                // Dealer info
-                if let dealer = game.players.first(where: { $0.isDealer }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "crown.fill")
-                            .foregroundColor(.yellow)
-                        Text("Dealer: \(dealer.name)")
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                    }
+            // Current player turn indicator
+            if game.currentPhase == .playing {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.right.circle.fill")
+                        .foregroundColor(.blue)
+                        .scaleEffect(1.2)
+                    Text("\(game.currentPlayer.name)'s Turn")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.blue)
                 }
-                
-                Spacer()
-                
-                // Current player turn indicator
-                if game.currentPhase == .playing {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.right.circle.fill")
-                            .foregroundColor(.blue)
-                            .scaleEffect(1.2)
-                        Text("\(game.currentPlayer.name)'s Turn")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.blue)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(6)
-                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.blue.opacity(0.15))
+                .cornerRadius(8)
             }
-            .padding(.horizontal)
         }
     }
     
@@ -871,10 +871,8 @@ struct GameBoardView: View {
     private func handleCardDoubleTap(_ card: PlayerCard) {
         if game.canPlayCard() && game.currentPlayer.type == .human {
             // Double-tap plays the card immediately
-            if let humanPlayer = game.players.first {
-                game.playCard(card, from: humanPlayer)
-                selectedCards.removeAll()
-            }
+            game.playCard(card, from: game.currentPlayer)
+            selectedCards.removeAll()
         }
         if game.mustDrawCard { return }
     }

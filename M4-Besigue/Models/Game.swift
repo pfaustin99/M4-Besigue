@@ -200,6 +200,7 @@ class Game: ObservableObject {
             let dealerIndex = Int.random(in: 0..<players.count)
             for (i, player) in players.enumerated() {
                 player.isDealer = (i == dealerIndex)
+                player.isCurrentPlayer = false // Reset all players
             }
             dealerDeterminedMessage = "Dealer is \(players[dealerIndex].name)! (Random)"
             print("👑 Dealer determined randomly: \(players[dealerIndex].name)")
@@ -207,6 +208,7 @@ class Game: ObservableObject {
             // The player to the right of the dealer leads the first trick
             currentPlayerIndex = (dealerIndex + 1) % players.count
             currentTrickLeader = currentPlayerIndex
+            currentPlayer.isCurrentPlayer = true // Set the first player as current
             print("🎯 First player: \(currentPlayer.name)")
             
             // FIX: Set phase to playing after random dealer determination
