@@ -14,8 +14,7 @@ struct GameBoardView: View {
     @State private var showDrawAnimation: Bool = false
     
     var body: some View {
-        ZStack {
-            // Main game content
+        GeometryReader { geometry in
             VStack(spacing: 0) {
                 // Message overlay area
                 messageOverlayView
@@ -23,21 +22,44 @@ struct GameBoardView: View {
                     .padding(.horizontal)
                 
                 // Main game content
-                VStack(spacing: 0) {
-                    gameInfoView
-                    badgeLegendButton
-                    playersInfoView
-                    centerSection
-                    bottomSection
+                if game.players.count == 2 {
+                    twoPlayerMainArea()
+                } else {
+                    // 3/4 player layout: current player at bottom, others at top/left/right
+                    let currentPlayer = game.players[game.currentPlayerIndex]
+                    VStack(spacing: 0) {
+                        // Top: all other players' hands (card backs)
+                        HStack(spacing: 16) {
+                            ForEach(game.players.indices.filter { $0 != game.currentPlayerIndex }, id: \.self) { idx in
+                                VStack {
+                                    Text(game.players[idx].name)
+                                        .font(.caption)
+                                    HStack {
+                                        ForEach(game.players[idx].hand) { _ in
+                                            CardBackView { }
+                                                .frame(width: 32, height: 48)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.top, 16)
+                        .padding(.bottom, 32)
+                        // Bottom: current player's hand (face up, interactive)
+                        playerInfoView(currentPlayer)
+                        if game.canPlayerMeld && currentPlayer.type == .human {
+                            meldInstructionsView(currentPlayer)
+                        }
+                        if !currentPlayer.meldsDeclared.isEmpty {
+                            meldsAreaView(currentPlayer)
+                        }
+                        actionButtonsView(currentPlayer)
+                        handView(currentPlayer)
+                    }
                 }
             }
-            
-            // Overlay messages on top
-            VStack {
-                Spacer()
-            }
         }
-        .background(Color.green.opacity(0.1))
+        .background(Color.green.opacity(0.3))
         .onAppear {
             print("🎮 GameBoardView appeared - Players: \(game.players.count), Current: \(game.currentPlayerIndex)")
         }
