@@ -14,48 +14,30 @@ struct GameBoardView: View {
     @State private var showDrawAnimation: Bool = false
     
     var body: some View {
-        GeometryReader { geometry in
+        ZStack {
+            // Main game content
             VStack(spacing: 0) {
-                scoreboardView
-                Spacer(minLength: 8)
-                if game.players.count == 2 {
-                    twoPlayerMainArea()
-                } else {
-                    // 3/4 player layout: current player at bottom, others at top/left/right
-                    let currentPlayer = game.players[game.currentPlayerIndex]
-                    VStack(spacing: 0) {
-                        // Top: all other players' hands (card backs)
-                        HStack(spacing: 16) {
-                            ForEach(game.players.indices.filter { $0 != game.currentPlayerIndex }, id: \.self) { idx in
-                                VStack {
-                                    Text(game.players[idx].name)
-                                        .font(.caption)
-                                    HStack {
-                                        ForEach(game.players[idx].hand) { _ in
-                                            CardBackView { }
-                                                .frame(width: 32, height: 48)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.top, 16)
-                        .padding(.bottom, 32)
-                        // Bottom: current player's hand (face up, interactive)
-                        playerInfoView(currentPlayer)
-                        if game.canPlayerMeld && currentPlayer.type == .human {
-                            meldInstructionsView(currentPlayer)
-                        }
-                        if !currentPlayer.meldsDeclared.isEmpty {
-                            meldsAreaView(currentPlayer)
-                        }
-                        actionButtonsView(currentPlayer)
-                        handView(currentPlayer)
-                    }
+                // Message overlay area
+                messageOverlayView
+                    .frame(height: 80)
+                    .padding(.horizontal)
+                
+                // Main game content
+                VStack(spacing: 0) {
+                    gameInfoView
+                    badgeLegendButton
+                    playersInfoView
+                    centerSection
+                    bottomSection
                 }
             }
+            
+            // Overlay messages on top
+            VStack {
+                Spacer()
+            }
         }
-        .background(Color.green.opacity(0.3))
+        .background(Color.green.opacity(0.1))
         .onAppear {
             print("🎮 GameBoardView appeared - Players: \(game.players.count), Current: \(game.currentPlayerIndex)")
         }
@@ -68,6 +50,57 @@ struct GameBoardView: View {
         .sheet(isPresented: $showingBadgeLegend) {
             BadgeLegendView(settings: settings)
         }
+    }
+    
+    // MARK: - Message Overlay System
+    private var messageOverlayView: some View {
+        VStack(spacing: 8) {
+            // Dealer message
+            if let dealer = game.players.first(where: { $0.isDealer }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "crown.fill")
+                        .foregroundColor(.yellow)
+                        .font(.title2)
+                    Text("Dealer: \(dealer.name)")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.yellow.opacity(0.2))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.yellow, lineWidth: 2)
+                )
+            }
+            
+            // Current player turn message
+            if game.currentPhase == .playing {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.right.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.title2)
+                    Text("\(game.currentPlayer.name)'s Turn")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.blue)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.blue.opacity(0.2))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.blue, lineWidth: 2)
+                )
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .background(Color.white.opacity(0.95))
+        .cornerRadius(12)
+        .shadow(radius: 4)
     }
     
     // MARK: - Scoreboard
@@ -202,23 +235,6 @@ struct GameBoardView: View {
     
     private var gameInfoView: some View {
         VStack(spacing: 8) {
-            // Dealer message (prominent)
-            if let dealer = game.players.first(where: { $0.isDealer }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "crown.fill")
-                        .foregroundColor(.yellow)
-                        .font(.title2)
-                    Text("Dealer: \(dealer.name)")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.yellow.opacity(0.15))
-                .cornerRadius(8)
-            }
-            
             // Main game info row
             HStack {
                 Text("Round \(game.roundNumber)")
@@ -242,23 +258,6 @@ struct GameBoardView: View {
             .padding(.horizontal)
             .background(game.isEndgame ? Color.orange.opacity(0.1) : Color.clear)
             .cornerRadius(8)
-            
-            // Current player turn indicator
-            if game.currentPhase == .playing {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.right.circle.fill")
-                        .foregroundColor(.blue)
-                        .scaleEffect(1.2)
-                    Text("\(game.currentPlayer.name)'s Turn")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.blue)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.blue.opacity(0.15))
-                .cornerRadius(8)
-            }
         }
     }
     
