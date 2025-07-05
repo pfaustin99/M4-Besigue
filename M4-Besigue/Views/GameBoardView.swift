@@ -1142,71 +1142,50 @@ struct AnimatedCardView: View {
     }
 }
 
-// MARK: - Enhanced Draw Pile View
+// MARK: - Enhanced Draw Pile View (Perpendicular Ramp)
 struct EnhancedDrawPileView: View {
+    let cards: [Card] // Use the actual deck
     let cardWidth: CGFloat
     let cardHeight: CGFloat
     let showTapToDraw: Bool
     let onTap: () -> Void
+    let numberOfPlayers: Int
+    let longEdgeAngle: Double // θ, in degrees, defines the long edge orientation
+    let rampLength: CGFloat // How far the ramp extends perpendicular to the long edge
+    let rampStep: CGFloat? // Optional: override ramp step per card
+    let zOffset: Double? // Optional: zIndex boost for top N cards
     
-    // Constants for the enhanced visual effect
-    private let stackDepth: Int = 5 // Number of cards to show in the stack
-    private let elevationAngle: Double = 15 // Degrees of forward tilt
-    private let fanSpread: Double = 8 // Degrees of fan spread
-    private let cardSpacing: CGFloat = 2 // Vertical spacing between cards
-    private let platformHeight: CGFloat = 8 // Height of the elevation platform
+    private let maxStackDepth: Int = 16 // Max cards to show for performance
     
     var body: some View {
-        VStack(spacing: 4) {
-            // Enhanced draw pile with elevation and angle
-            ZStack {
-                // Elevation platform (subtle wedge)
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: cardWidth + 8, height: platformHeight)
-                    .offset(y: cardHeight / 2 + platformHeight / 2)
-                
-                // Stack of cards with elevation and fan effect
-                ForEach(0..<stackDepth, id: \.self) { index in
-                    let reverseIndex = stackDepth - 1 - index
-                    let yOffset = CGFloat(reverseIndex) * cardSpacing
-                    let rotationOffset = Double(reverseIndex) * (fanSpread / Double(stackDepth))
-                    
-                    Image("card_back")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: cardWidth, height: cardHeight)
-                        .cornerRadius(8)
-                        .shadow(radius: 2, x: 0, y: 1)
-                        .rotationEffect(.degrees(elevationAngle + rotationOffset))
-                        .offset(
-                            x: CGFloat(reverseIndex) * 0.5, // Slight horizontal spread
-                            y: yOffset
-                        )
-                        .zIndex(Double(reverseIndex))
-                }
+        // Calculate the perpendicular direction (θ+90°)
+        let perpRadians = (longEdgeAngle + 90) * .pi / 180
+        let perpDx = cos(perpRadians)
+        let perpDy = sin(perpRadians)
+        let stackDepth = min(cards.count, maxStackDepth)
+        let topIndex = stackDepth - 1
+        let rampStepValue = rampStep ?? (rampLength / CGFloat(max(1, stackDepth - 1)))
+        
+        ZStack(alignment: .leading) {
+            ForEach(Array(cards.prefix(maxStackDepth).enumerated()), id: \.offset) { (index, card) in
+                let offsetStep = topIndex - index
+                let rampOffset = CGFloat(offsetStep) * rampStepValue
+                let xOffset = rampOffset * perpDx
+                let yOffset = rampOffset * perpDy
+                let z: Double = (zOffset != nil && offsetStep < numberOfPlayers) ? 100 + Double(offsetStep) * (zOffset ?? 1) : Double(index)
+                Image("card_back")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: cardWidth, height: cardHeight)
+                    .offset(x: xOffset, y: yOffset)
+                    .zIndex(z)
             }
-            .frame(width: cardWidth + 16, height: cardHeight + platformHeight + CGFloat(stackDepth) * cardSpacing)
-            .onTapGesture {
-                onTap()
-            }
-            
-            // "Tap to draw" message
+        }
+        .frame(width: cardWidth + abs(perpDx) * rampLength, height: cardHeight + abs(perpDy) * rampLength)
+        .contentShape(Rectangle())
+        .onTapGesture {
             if showTapToDraw {
-                Text("Tap to draw")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.accentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.accentColor.opacity(0.1))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
-                    )
+                onTap()
             }
         }
     }
@@ -1233,6 +1212,7 @@ struct TrickView: View {
                 if shouldShowDrawPileLeft {
                     VStack(spacing: 6) {
                         EnhancedDrawPileView(
+                            cards: game.deck.cards,
                             cardWidth: cardWidth,
                             cardHeight: cardHeight,
                             showTapToDraw: shouldShowTapToDraw,
@@ -1240,7 +1220,12 @@ struct TrickView: View {
                                 if shouldShowTapToDraw {
                                     game.drawCardForCurrentPlayer()
                                 }
-                            }
+                            },
+                            numberOfPlayers: game.players.count,
+                            longEdgeAngle: 45,
+                            rampLength: 0,
+                            rampStep: nil,
+                            zOffset: nil
                         )
                     }
                     .padding(.leading, 12) // Pad from left edge
@@ -1264,6 +1249,7 @@ struct TrickView: View {
                 if shouldShowDrawPileRight {
                     VStack(spacing: 6) {
                         EnhancedDrawPileView(
+                            cards: game.deck.cards,
                             cardWidth: cardWidth,
                             cardHeight: cardHeight,
                             showTapToDraw: shouldShowTapToDraw,
@@ -1271,7 +1257,12 @@ struct TrickView: View {
                                 if shouldShowTapToDraw {
                                     game.drawCardForCurrentPlayer()
                                 }
-                            }
+                            },
+                            numberOfPlayers: game.players.count,
+                            longEdgeAngle: 45,
+                            rampLength: 0,
+                            rampStep: nil,
+                            zOffset: nil
                         )
                     }
                     .padding(.trailing, 12) // Pad from right edge
