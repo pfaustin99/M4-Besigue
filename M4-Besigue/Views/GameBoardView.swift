@@ -991,26 +991,40 @@ struct GameBoardView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(player.meldsDeclared) { meld in
-                        VStack(spacing: 2) {
-                            HStack(spacing: 2) {
+                        VStack(spacing: 4) {
+                            HStack(spacing: 4) {
                                 ForEach(meld.cards) { card in
-                                    Image(card.imageName)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(width: 32, height: 48)
-                                        .cornerRadius(4)
+                                    CardView(
+                                        card: card,
+                                        isSelected: selectedCards.contains(card),
+                                        isPlayable: game.awaitingMeldChoice && game.currentPlayer.type == .human,
+                                        showHint: false,
+                                        onTap: {
+                                            if game.awaitingMeldChoice && game.currentPlayer.type == .human {
+                                                handleCardTap(card)
+                                            }
+                                        }
+                                    )
+                                    .frame(width: 80, height: 120)
                                 }
                             }
-                            Text(meld.type.name)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            Text("+\(meld.pointValue)")
-                                .font(.caption2)
-                                .foregroundColor(.green)
+                            HStack(spacing: 8) {
+                                Text(meld.type.name)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("+\(meld.pointValue)")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                    .bold()
+                            }
                         }
-                        .padding(4)
+                        .padding(8)
                         .background(Color.yellow.opacity(0.15))
-                        .cornerRadius(6)
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+                        )
                     }
                 }
                 .padding(.horizontal, 4)
