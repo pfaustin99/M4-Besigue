@@ -719,6 +719,7 @@ class Game: ObservableObject {
         isDrawCycle = true
         mustDrawCard = true
         canPlayerMeld = true
+        awaitingMeldChoice = true
         
         // Reset draw tracking for the new trick
         for player in players {
@@ -756,9 +757,11 @@ class Game: ObservableObject {
         lastTrickWinner = nil
         winningCardIndex = nil
         canPlayerMeld = false
+        awaitingMeldChoice = false
         print("   Current trick count after clear: \(currentTrick.count)")
         print("   Is showing trick result: \(isShowingTrickResult)")
         print("   Can player meld: \(canPlayerMeld)")
+        print("   Awaiting meld choice: \(awaitingMeldChoice)")
     }
     
     // Draw card for the current draw turn player
@@ -965,6 +968,9 @@ class Game: ObservableObject {
         print("   Is first trick: \(isFirstTrick)")
         print("   Is showing trick result: \(isShowingTrickResult)")
         print("   Last trick winner: \(lastTrickWinner ?? "none")")
+        
+        // Clear meld choice state when player draws
+        awaitingMeldChoice = false
         
         // Clear the trick area when winner takes action
         clearTrickArea()
@@ -1250,6 +1256,9 @@ class Game: ObservableObject {
     // Declare a meld
     func declareMeld(_ meld: Meld, by player: Player) {
         if canDeclareMeld(meld, by: player) {
+            // Clear meld choice state when player declares meld
+            awaitingMeldChoice = false
+            
             // Clear the trick area when winner takes action (declares meld)
             clearTrickArea()
             
