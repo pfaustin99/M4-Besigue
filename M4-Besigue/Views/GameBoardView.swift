@@ -1115,19 +1115,7 @@ struct GameBoardView: View {
                 .font(.headline)
             }
             
-            // Draw Card button: when player needs to draw
-            if game.mustDrawCard && game.currentPlayer.id == player.id {
-                Button(action: {
-                    game.drawCardForCurrentPlayer()
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.down.circle.fill")
-                        Text("Draw Card")
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .font(.headline)
-            }
+
         }
         .padding(.horizontal)
     }
