@@ -132,6 +132,30 @@ struct GameBoardView: View {
             .background(Color.gray.opacity(0.2))
             .cornerRadius(6)
             
+            // Unrestricted Mode Toggle
+            Button(game.isUnrestrictedMode ? "Disable Unrestricted" : "Enable Unrestricted") {
+                if game.isUnrestrictedMode {
+                    game.disableUnrestrictedMode()
+                } else {
+                    game.enableUnrestrictedMode()
+                }
+            }
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(game.isUnrestrictedMode ? Color.red.opacity(0.2) : Color.green.opacity(0.2))
+            .cornerRadius(6)
+            
+            // Run Tests Button
+            Button("Run Tests") {
+                game.runAllTests()
+            }
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.orange.opacity(0.2))
+            .cornerRadius(6)
+            
             // Single Player Mode Badge (stationary in menu)
             if isSinglePlayerMode {
                 HStack(spacing: 4) {

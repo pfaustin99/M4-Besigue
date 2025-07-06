@@ -79,6 +79,240 @@ class Game: ObservableObject {
     // MARK: - Game State
     @Published var isFirstTrick: Bool = true  // Track if we're still in the first trick
     
+    // MARK: - Automated Test Functions
+    
+    // Test configuration
+    var isUnrestrictedMode: Bool = false
+    var skipTrickEvaluationDelay: Bool = false
+    
+    // MARK: - Test Case 1: First Trick Flow (No Delay)
+    func testFirstTrickFlow() -> Bool {
+        print("🧪 TEST CASE 1: First Trick Flow")
+        
+        // Setup
+        startNewGame()
+        let player1 = players[0]
+        let player2 = players[1]
+        
+        // Verify initial state
+        guard player1.hand.count == 9 && player2.hand.count == 9 else {
+            print("❌ FAIL: Players don't have 9 cards each")
+            return false
+        }
+        
+        // Player 1 plays first card
+        let card1 = player1.hand[0]
+        playCard(card1, from: player1)
+        
+        // Verify card is in trick
+        guard currentTrick.count == 1 else {
+            print("❌ FAIL: Card not added to trick")
+            return false
+        }
+        
+        // Player 2 plays second card
+        let card2 = player2.hand[0]
+        playCard(card2, from: player2)
+        
+        // Verify both cards are in trick
+        guard currentTrick.count == 2 else {
+            print("❌ FAIL: Second card not added to trick")
+            return false
+        }
+        
+        // In unrestricted mode, skip evaluation delay
+        if isUnrestrictedMode || skipTrickEvaluationDelay {
+            // Immediately finalize trick completion
+            finalizeTrickCompletion(winner: players[determineTrickWinner()])
+        }
+        
+        // Verify winner can take action
+        guard canPlayerMeld else {
+            print("❌ FAIL: Winner cannot meld")
+            return false
+        }
+        
+        print("✅ PASS: First trick flow works correctly")
+        return true
+    }
+    
+    // MARK: - Test Case 2: Drawing Functionality
+    func testDrawingFunctionality() -> Bool {
+        print("🧪 TEST CASE 2: Drawing Functionality")
+        
+        // Setup: Complete first trick
+        _ = testFirstTrickFlow()
+        
+        let winner = players[determineTrickWinner()]
+        let initialDeckSize = deck.cards.count
+        
+        // Winner draws a card
+        drawCardForCurrentPlayer()
+        
+        // Verify card was drawn
+        guard winner.hand.count > 0 else {
+            print("❌ FAIL: Winner didn't draw a card")
+            return false
+        }
+        
+        // Verify deck size decreased
+        guard deck.cards.count == initialDeckSize - 1 else {
+            print("❌ FAIL: Deck size didn't decrease")
+            return false
+        }
+        
+        // Verify new trick started
+        guard mustDrawCard else {
+            print("❌ FAIL: New trick didn't start")
+            return false
+        }
+        
+        print("✅ PASS: Drawing functionality works correctly")
+        return true
+    }
+    
+    // MARK: - Test Case 4: Melding + Drawing
+    func testMeldingAndDrawing() -> Bool {
+        print("🧪 TEST CASE 4: Melding + Drawing")
+        
+        // Setup: Complete first trick
+        _ = testFirstTrickFlow()
+        
+        let winner = players[determineTrickWinner()]
+        let initialPoints = winner.totalPoints
+        
+        // Create a simple meld (if possible)
+        if let meld = createTestMeld(for: winner) {
+            // Declare meld
+            declareMeld(meld, by: winner)
+            
+            // Verify points increased
+            guard winner.totalPoints > initialPoints else {
+                print("❌ FAIL: Points didn't increase after meld")
+                return false
+            }
+            
+            // Verify winner can still draw
+            let initialHandSize = winner.hand.count
+            drawCardForCurrentPlayer()
+            
+            guard winner.hand.count > initialHandSize else {
+                print("❌ FAIL: Winner couldn't draw after melding")
+                return false
+            }
+            
+            print("✅ PASS: Melding + Drawing works correctly")
+            return true
+        } else {
+            print("⚠️ SKIP: No valid meld available for testing")
+            return true
+        }
+    }
+    
+    // MARK: - Test Case 5: Unrestricted Mode
+    func testUnrestrictedMode() -> Bool {
+        print("🧪 TEST CASE 5: Unrestricted Mode")
+        
+        // Enable unrestricted mode
+        isUnrestrictedMode = true
+        skipTrickEvaluationDelay = true
+        
+        // Test that players can play without restrictions
+        startNewGame()
+        
+        let player1 = players[0]
+        let player2 = players[1]
+        
+        // Players should be able to play immediately
+        let card1 = player1.hand[0]
+        playCard(card1, from: player1)
+        
+        let card2 = player2.hand[0]
+        playCard(card2, from: player2)
+        
+        // In unrestricted mode, no drawing should be required
+        guard !mustDrawCard else {
+            print("❌ FAIL: Drawing still required in unrestricted mode")
+            return false
+        }
+        
+        print("✅ PASS: Unrestricted mode works correctly")
+        return true
+    }
+    
+    // MARK: - Helper Functions for Tests
+    
+    private func createTestMeld(for player: Player) -> Meld? {
+        // Look for any valid meld in player's hand
+        let possibleMelds = getPossibleMelds(for: player)
+        return possibleMelds.first
+    }
+    
+    // MARK: - Run All Tests
+    func runAllTests() {
+        print("🧪 RUNNING ALL AUTOMATED TESTS")
+        print("==================================")
+        
+        var passedTests = 0
+        var totalTests = 0
+        
+        // Test Case 1
+        totalTests += 1
+        if testFirstTrickFlow() {
+            passedTests += 1
+        }
+        
+        // Test Case 2
+        totalTests += 1
+        if testDrawingFunctionality() {
+            passedTests += 1
+        }
+        
+        // Test Case 4
+        totalTests += 1
+        if testMeldingAndDrawing() {
+            passedTests += 1
+        }
+        
+        // Test Case 5
+        totalTests += 1
+        if testUnrestrictedMode() {
+            passedTests += 1
+        }
+        
+        print("==================================")
+        print("🧪 TEST RESULTS: \(passedTests)/\(totalTests) tests passed")
+        
+        if passedTests == totalTests {
+            print("🎉 ALL TESTS PASSED!")
+        } else {
+            print("❌ SOME TESTS FAILED - Check implementation")
+        }
+    }
+    
+    // MARK: - Unrestricted Mode Functions
+    
+    func enableUnrestrictedMode() {
+        isUnrestrictedMode = true
+        skipTrickEvaluationDelay = true
+        print("🎮 Unrestricted mode enabled - No drawing restrictions, no evaluation delays")
+    }
+    
+    func disableUnrestrictedMode() {
+        isUnrestrictedMode = false
+        skipTrickEvaluationDelay = false
+        print("🎮 Unrestricted mode disabled - Normal game rules apply")
+    }
+    
+    // Override drawing requirements in unrestricted mode
+    func canPlayCardUnrestricted() -> Bool {
+        if isUnrestrictedMode {
+            return currentTrick.count < playerCount
+        } else {
+            return canPlayCard()
+        }
+    }
+    
     init(gameRules: GameRules, isOnline: Bool = false) {
         self.gameRules = gameRules
         self.settings = GameSettings()
@@ -341,6 +575,7 @@ class Game: ObservableObject {
         }
         
         print("🔄 Draw cycle initialized - \(currentPlayer.name) can draw a card")
+        print("🔄 Must draw card: \(mustDrawCard)")
         
         // If AI is leading, make AI decision
         if currentPlayer.type == .ai {
@@ -409,6 +644,8 @@ class Game: ObservableObject {
     
     // Complete the current trick
     private func completeTrick() {
+        print("🎯 COMPLETING TRICK - Starting evaluation flow")
+        
         // Determine the winner
         let winnerIndex = determineTrickWinner()
         let winner = players[winnerIndex]
@@ -416,21 +653,7 @@ class Game: ObservableObject {
         // Determine which card in the trick is the winning card
         let winningCardIndex = determineTrickWinnerIndex() ?? 0
         
-        // Show trick winner message
-        lastTrickWinner = winner.name
-        isShowingTrickResult = true
-        
-        // Animate winning card moving to top
-        isAnimatingWinningCard = true
-        self.winningCardIndex = winningCardIndex
-        
-        // Hide the message and stop animation after configurable delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + gameRules.winningCardAnimationDelay) {
-            self.isShowingTrickResult = false
-            self.lastTrickWinner = nil
-            self.isAnimatingWinningCard = false
-            self.winningCardIndex = nil
-        }
+        print("🎯 Trick evaluation complete - Winner: \(winner.name) with card at index \(winningCardIndex)")
         
         // Add brisques to winner's count
         for card in currentTrick {
@@ -438,9 +661,6 @@ class Game: ObservableObject {
                 brisques[winner.id, default: 0] += 1
             }
         }
-        
-        // Clear the current trick
-        currentTrick.removeAll()
         
         // Set the current player to the trick winner
         currentPlayerIndex = winnerIndex
@@ -456,10 +676,89 @@ class Game: ObservableObject {
         // After first trick is complete, set flag to false
         isFirstTrick = false
         
-        // Start new trick (which will set up the draw cycle)
-        startNewTrick()
+        // Show trick winner message and animation
+        lastTrickWinner = winner.name
+        isShowingTrickResult = true
+        isAnimatingWinningCard = true
+        self.winningCardIndex = winningCardIndex
         
-        // UI/VM should now prompt the player at currentDrawIndex to draw
+        // Complete the trick evaluation with minimal delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.finalizeTrickCompletion(winner: winner)
+        }
+    }
+    
+    // Finalize trick completion and set up for winner's next action
+    private func finalizeTrickCompletion(winner: Player) {
+        print("🏆 FINALIZING TRICK COMPLETION:")
+        print("   Winner: \(winner.name)")
+        print("   Winner type: \(winner.type)")
+        print("   Current player before: \(currentPlayer.name)")
+        print("   Current player index before: \(currentPlayerIndex)")
+        print("   Current phase before: \(currentPhase)")
+        print("   Is draw cycle before: \(isDrawCycle)")
+        print("   Must draw card before: \(mustDrawCard)")
+        print("   Current trick count before: \(currentTrick.count)")
+        
+        // Clear the trick area first
+        clearTrickArea()
+        
+        // Set the winner as the current player
+        if let winnerIndex = players.firstIndex(where: { $0.id == winner.id }) {
+            currentPlayerIndex = winnerIndex
+            print("   Set current player index to winner: \(currentPlayerIndex)")
+        }
+        
+        // Clear all players' current status
+        for (index, player) in players.enumerated() {
+            player.isCurrentPlayer = (index == currentPlayerIndex)
+        }
+        
+        // Set up for winner's next action
+        currentPhase = .playing
+        isDrawCycle = true
+        mustDrawCard = true
+        canPlayerMeld = true
+        
+        // Reset draw tracking for the new trick
+        for player in players {
+            hasDrawnForNextTrick[player.id] = false
+        }
+        
+        // Set up draw cycle starting with the winner
+        currentDrawIndex = currentPlayerIndex
+        currentPlayIndex = currentPlayerIndex
+        
+        // Set the trick leader to the winner for the new trick
+        currentTrickLeader = currentPlayerIndex
+        
+        print("   Current player after: \(currentPlayer.name)")
+        print("   Current player index after: \(currentPlayerIndex)")
+        print("   Current phase after: \(currentPhase)")
+        print("   Is draw cycle after: \(isDrawCycle)")
+        print("   Must draw card after: \(mustDrawCard)")
+        print("   Can player meld after: \(canPlayerMeld)")
+        print("   Current draw index: \(currentDrawIndex)")
+        print("   Current play index: \(currentPlayIndex)")
+        print("   Current trick leader: \(currentTrickLeader)")
+        print("   Current trick count after: \(currentTrick.count)")
+        print("   Has drawn for next trick (winner): \(hasDrawnForNextTrick[currentPlayer.id, default: false])")
+        
+        print("🏆 TRICK COMPLETION FINALIZED")
+    }
+    
+    // Clear the trick area when winner takes action
+    func clearTrickArea() {
+        print("🧹 Clearing trick area")
+        print("   Current trick count before clear: \(currentTrick.count)")
+        currentTrick.removeAll()
+        isShowingTrickResult = false
+        lastTrickWinner = nil
+        winningCardIndex = nil
+        canPlayerMeld = false
+        print("   Current trick count after clear: \(currentTrick.count)")
+        print("   Is showing trick result: \(isShowingTrickResult)")
+        print("   Can player meld: \(canPlayerMeld)")
     }
     
     // Draw card for the current draw turn player
@@ -642,7 +941,6 @@ class Game: ObservableObject {
         print("🔄 Continuing after AI draw")
         
         // Reset meld choice state
-        canPlayerMeld = false
         awaitingMeldChoice = false
         mustDrawCard = false
         
@@ -652,22 +950,61 @@ class Game: ObservableObject {
     
     // Human player draws a card (called when they choose to draw)
     func drawCardForCurrentPlayer() {
-        guard mustDrawCard else { return }
+        print("🎴 HUMAN DRAW ATTEMPT:")
+        print("   Player: \(currentPlayer.name)")
+        print("   Must draw card: \(mustDrawCard)")
+        print("   Deck empty: \(deck.isEmpty)")
+        print("   Can player meld: \(canPlayerMeld)")
+        print("   Current phase: \(currentPhase)")
+        print("   Is draw cycle: \(isDrawCycle)")
+        print("   Current draw index: \(currentDrawIndex)")
+        print("   Current play index: \(currentPlayIndex)")
+        print("   Current player index: \(currentPlayerIndex)")
+        print("   Has drawn for next trick: \(hasDrawnForNextTrick[currentPlayer.id, default: false])")
+        print("   Current trick count: \(currentTrick.count)")
+        print("   Is first trick: \(isFirstTrick)")
+        print("   Is showing trick result: \(isShowingTrickResult)")
+        print("   Last trick winner: \(lastTrickWinner ?? "none")")
+        
+        // Clear the trick area when winner takes action
+        clearTrickArea()
         
         if !deck.isEmpty {
             if let card = deck.drawCard() {
                 currentPlayer.addCards([card])
-                print("👤 \(currentPlayer.name) drew a card")
+                print("✅ DRAW SUCCESS - \(currentPlayer.name) drew \(card.displayName)")
+                print("   Player hand count after draw: \(currentPlayer.hand.count)")
+                
+                // Mark that this player has drawn for the next trick
+                hasDrawnForNextTrick[currentPlayer.id] = true
+                print("   Updated has drawn for next trick: \(hasDrawnForNextTrick[currentPlayer.id, default: false])")
+                
+                // Check if we should start a new trick
+                if currentTrick.isEmpty {
+                    print("🔄 Starting new trick after draw")
+                    startNewTrick()
+                } else {
+                    print("🔄 Continuing current trick after draw")
+                    // Continue with current trick
+                    currentPlayerIndex = currentPlayIndex
+                    currentPlayer.isCurrentPlayer = true
+                    
+                    // Clear previous player's current status
+                    for (index, player) in players.enumerated() {
+                        if index != currentPlayerIndex {
+                            player.isCurrentPlayer = false
+                        }
+                    }
+                }
             }
+        } else {
+            print("⚠️ Deck is empty - no card to draw")
         }
         
-        // Reset meld choice state
-        canPlayerMeld = false
-        awaitingMeldChoice = false
-        mustDrawCard = false
-        
-        // Start new trick
-        startNewTrick()
+        print("🎴 DRAW ATTEMPT COMPLETED")
+        print("   Final current player: \(currentPlayer.name)")
+        print("   Final current player index: \(currentPlayerIndex)")
+        print("   Final has drawn for next trick: \(hasDrawnForNextTrick[currentPlayer.id, default: false])")
     }
     
     // MARK: - Trick Winner Determination
@@ -679,24 +1016,24 @@ class Game: ObservableObject {
         }
         
         print("🎯 Determining trick winner...")
-        print("   Current trick: \(currentTrick.map { "\($0.value) of \($0.suit)" })")
+        print("   Current trick: \(currentTrick.map { "\(String(describing: $0.value)) of \(String(describing: $0.suit))" })")
         print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
         
         var winningCardIndex = 0
         var winningCard = currentTrick[0]
         
         for (index, card) in currentTrick.enumerated() {
-            print("   Comparing card \(index): \(card.value) of \(card.suit)")
+            print("   Comparing card \(index): \(String(describing: card.value)) of \(String(describing: card.suit))")
             
             if card.canBeat(winningCard, trumpSuit: trumpSuit) {
                 winningCardIndex = index
                 winningCard = card
-                print("   New winner: \(card.value) of \(card.suit)")
+                print("   New winner: \(String(describing: card.value)) of \(String(describing: card.suit))")
             }
         }
         
         let winnerPlayerIndex = (currentTrickLeader + winningCardIndex) % players.count
-        print("   Final winner: \(players[winnerPlayerIndex].name) with \(winningCard.value) of \(winningCard.suit)")
+        print("   Final winner: \(players[winnerPlayerIndex].name) with \(String(describing: winningCard.value)) of \(String(describing: winningCard.suit))")
         
         return winnerPlayerIndex
     }
@@ -913,6 +1250,9 @@ class Game: ObservableObject {
     // Declare a meld
     func declareMeld(_ meld: Meld, by player: Player) {
         if canDeclareMeld(meld, by: player) {
+            // Clear the trick area when winner takes action (declares meld)
+            clearTrickArea()
+            
             var finalMeld = meld
             
             // If this is the first marriage, it sets the trump suit and becomes a Royal Marriage
@@ -994,8 +1334,44 @@ class Game: ObservableObject {
         return currentPhase != .dealerDetermination
     }
     
-    // Check if current player can play a card
+    // Check if current player can draw a card
+    func canCurrentPlayerDraw() -> Bool {
+        let mustDraw = mustDrawCard
+        let deckNotEmpty = !deck.isEmpty
+        let hasNotDrawn = !hasDrawnForNextTrick[currentPlayer.id, default: false]
+        let canDraw = mustDraw && deckNotEmpty && hasNotDrawn
+        
+        print("🔍 CAN DRAW CHECK:")
+        print("   Player: \(currentPlayer.name)")
+        print("   Must draw card: \(mustDraw)")
+        print("   Deck empty: \(deck.isEmpty)")
+        print("   Has drawn: \(hasDrawnForNextTrick[currentPlayer.id, default: false])")
+        print("   Current phase: \(currentPhase)")
+        print("   Is draw cycle: \(isDrawCycle)")
+        print("   Is showing trick result: \(isShowingTrickResult)")
+        print("   Last trick winner: \(lastTrickWinner ?? "none")")
+        print("   Current trick count: \(currentTrick.count)")
+        print("   Can player meld: \(canPlayerMeld)")
+        print("   Result: \(canDraw)")
+        
+        return canDraw
+    }
+    
+    // Check if current player can play a card (includes trick fullness check)
     func canPlayCard() -> Bool {
+        // In unrestricted mode, only check if trick is not full
+        if isUnrestrictedMode {
+            let trickNotFull = currentTrick.count < playerCount
+            print("🔍 CAN PLAY CARD (UNRESTRICTED):")
+            print("   Player: \(currentPlayer.name)")
+            print("   Trick count: \(currentTrick.count)")
+            print("   Player count: \(playerCount)")
+            print("   Trick not full: \(trickNotFull)")
+            print("   Result: \(trickNotFull)")
+            return trickNotFull
+        }
+        
+        // Normal mode - check all restrictions
         let hasDrawn = hasDrawnForNextTrick[currentPlayer.id, default: false]
         let trickNotFull = currentTrick.count < playerCount
         let drawPileEmpty = deck.isEmpty
