@@ -84,6 +84,11 @@ struct GameBoardView: View {
                         .padding(.bottom, 32)
                         // Bottom: current player's hand (face up, interactive)
                         playerInfoView(currentPlayer)
+                        let _ = print("🔍 CHECKING MELD INSTRUCTIONS:")
+                        let _ = print("   canPlayerMeld: \(game.canPlayerMeld)")
+                        let _ = print("   currentPlayer.type: \(currentPlayer.type)")
+                        let _ = print("   Should show meld instructions: \(game.canPlayerMeld && currentPlayer.type == .human)")
+                        
                         if game.canPlayerMeld && currentPlayer.type == .human {
                             meldInstructionsView(currentPlayer)
                         }
@@ -396,6 +401,16 @@ struct GameBoardView: View {
     // MARK: - Single Player Layout (for testing)
     private func singlePlayerLayout(currentPlayer: Player) -> some View {
         VStack(spacing: 0) {
+            // Player info and meld instructions
+            playerInfoView(currentPlayer)
+            if game.canPlayerMeld && currentPlayer.type == .human {
+                meldInstructionsView(currentPlayer)
+            }
+            if !currentPlayer.meldsDeclared.isEmpty {
+                meldsAreaView(currentPlayer)
+            }
+            actionButtonsView(currentPlayer)
+            
             // Active player's hand (face up, interactive) - rotated to your view
             VStack(spacing: 4) {
                 Text("\(currentPlayer.name) (Your Turn)")
@@ -435,6 +450,16 @@ struct GameBoardView: View {
     // MARK: - Normal Two Player Layout
     private func normalTwoPlayerLayout(currentPlayer: Player) -> some View {
         VStack(spacing: 0) {
+            // Player info and meld instructions
+            playerInfoView(currentPlayer)
+            if game.canPlayerMeld && currentPlayer.type == .human {
+                meldInstructionsView(currentPlayer)
+            }
+            if !currentPlayer.meldsDeclared.isEmpty {
+                meldsAreaView(currentPlayer)
+            }
+            actionButtonsView(currentPlayer)
+            
             // Active player's hand (face up, interactive)
             HStack {
                 Spacer()
@@ -995,7 +1020,16 @@ struct GameBoardView: View {
     }
     
     private func actionButtonsView(_ player: Player) -> some View {
-        HStack(spacing: 15) {
+        print("🔍 ACTION BUTTONS VIEW CALLED:")
+        print("   Player: \(player.name)")
+        print("   Player type: \(player.type)")
+        print("   Current player: \(game.currentPlayer.name)")
+        print("   Current player type: \(game.currentPlayer.type)")
+        print("   Awaiting meld choice: \(game.awaitingMeldChoice)")
+        print("   Can player meld: \(game.canPlayerMeld)")
+        print("   Selected cards count: \(selectedCards.count)")
+        
+        return HStack(spacing: 15) {
             // Play Card button: when a card is selected and it's the player's turn to play
             if game.currentPhase == .playing && 
                game.currentPlayer.id == player.id && 
@@ -1018,14 +1052,43 @@ struct GameBoardView: View {
             }
             
             // Declare Meld button: only during meld choice
+            let _ = print("🔍 CHECKING MELD BUTTON CONDITIONS:")
+            let _ = print("   awaitingMeldChoice: \(game.awaitingMeldChoice)")
+            let _ = print("   currentPlayer.type: \(game.currentPlayer.type)")
+            let _ = print("   currentPlayer.name: \(game.currentPlayer.name)")
+            let _ = print("   player.name: \(player.name)")
+            let _ = print("   player.type: \(player.type)")
+            let _ = print("   Should show meld button: \(game.awaitingMeldChoice && game.currentPlayer.type == .human)")
+            
             if game.awaitingMeldChoice && game.currentPlayer.type == .human {
                 Button(action: {
+                    print("🔍 MELD BUTTON PRESSED:")
+                    print("   Awaiting meld choice: \(game.awaitingMeldChoice)")
+                    print("   Current player type: \(game.currentPlayer.type)")
+                    print("   Selected cards count: \(selectedCards.count)")
+                    print("   Selected cards: \(selectedCards.map { $0.displayName })")
+                    
                     if let humanPlayer = game.players.first, selectedCards.count >= 2, selectedCards.count <= 4 {
-                        let meld = Meld(cards: selectedCards, type: .besigue, pointValue: settings.besiguePoints, roundNumber: game.roundNumber)
-                        if game.canDeclareMeld(meld, by: humanPlayer) {
-                            game.declareMeld(meld, by: humanPlayer)
-                            selectedCards.removeAll()
+                        // Find the best meld type for the selected cards
+                        let possibleMelds = game.getPossibleMelds(for: humanPlayer).filter { meld in
+                            meld.cards.count == selectedCards.count && meld.cards.allSatisfy { selectedCards.contains($0) }
+                        }
+                        
+                        if let bestMeld = possibleMelds.first {
+                            print("   Found meld: \(bestMeld.type.name) with \(bestMeld.cards.count) cards")
+                            if game.canDeclareMeld(bestMeld, by: humanPlayer) {
+                                game.declareMeld(bestMeld, by: humanPlayer)
+                                selectedCards.removeAll()
+                            } else {
+                                print("   ❌ Cannot declare meld")
+                                withAnimation(.default) {
+                                    shakeMeldButton.toggle()
+                                    showInvalidMeld = true
+                                }
+                                game.playInvalidMeldAnimation()
+                            }
                         } else {
+                            print("   ❌ No valid meld found for selected cards")
                             withAnimation(.default) {
                                 shakeMeldButton.toggle()
                                 showInvalidMeld = true
@@ -1033,6 +1096,7 @@ struct GameBoardView: View {
                             game.playInvalidMeldAnimation()
                         }
                     } else {
+                        print("   ❌ Invalid card selection")
                         withAnimation(.default) {
                             shakeMeldButton.toggle()
                             showInvalidMeld = true
