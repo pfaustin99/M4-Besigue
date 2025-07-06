@@ -40,7 +40,7 @@ struct ContentView: View {
                     .padding()
                 } else {
                     // Show the main game board
-                    GameBoardView(game: game, settings: settings)
+                    GameBoardView(game: game, settings: settings, gameRules: gameRules)
                 }
             }
             .navigationTitle("M4-Bésigue")
@@ -101,9 +101,7 @@ struct ContentView: View {
         settings.minScoreForBrisques = gameRules.minScoreForBrisques
         settings.minBrisques = gameRules.minBrisques
         
-        // Apply global card size and animation timing to settings
-        settings.trickAreaCardSize = gameRules.globalCardSize
-        settings.playerHandCardSize = gameRules.globalCardSize
+        // Apply animation timing to settings
         settings.cardPlayDelay = gameRules.cardPlayDelay
         settings.cardPlayDuration = gameRules.cardPlayDuration
         settings.dealerDeterminationDelay = gameRules.dealerDeterminationDelay

@@ -125,6 +125,9 @@ class GameRules: ObservableObject, Codable, Equatable {
     var useHints: Bool { gameLevel == .novice }
     var aiFerocity: Int { gameLevel == .pro ? 2 : 1 }
     
+    // Scoreboard scale
+    @Published var scoreboardScale: CGFloat = 1.5 // Controls scoreboard font scaling
+    
     // Equatable conformance
     static func == (lhs: GameRules, rhs: GameRules) -> Bool {
         return lhs.playerCount == rhs.playerCount &&
@@ -162,7 +165,8 @@ class GameRules: ObservableObject, Codable, Equatable {
             lhs.dealerDeterminationDelay == rhs.dealerDeterminationDelay &&
             lhs.winningCardAnimationDelay == rhs.winningCardAnimationDelay &&
             lhs.trickAreaSize == rhs.trickAreaSize &&
-            lhs.dealerDeterminationMethod == rhs.dealerDeterminationMethod
+            lhs.dealerDeterminationMethod == rhs.dealerDeterminationMethod &&
+            lhs.scoreboardScale == rhs.scoreboardScale
     }
     
     // Codable conformance
@@ -175,7 +179,7 @@ class GameRules: ObservableObject, Codable, Equatable {
         case penalty, penaltyBelow100, penaltyFewBrisques, penaltyOutOfTurn
         case brisqueCutoff, minScoreForBrisques, minBrisques
         case globalCardSize, cardPlayDelay, cardPlayDuration, dealerDeterminationDelay, winningCardAnimationDelay, trickAreaSize
-        case dealerDeterminationMethod
+        case dealerDeterminationMethod, scoreboardScale
     }
     
     required init(from decoder: Decoder) throws {
@@ -216,6 +220,7 @@ class GameRules: ObservableObject, Codable, Equatable {
         winningCardAnimationDelay = try container.decode(Double.self, forKey: .winningCardAnimationDelay)
         trickAreaSize = try container.decode(TrickAreaSize.self, forKey: .trickAreaSize)
         dealerDeterminationMethod = try container.decode(DealerDeterminationMethod.self, forKey: .dealerDeterminationMethod)
+        scoreboardScale = try container.decode(CGFloat.self, forKey: .scoreboardScale)
     }
     
     init() {
@@ -261,6 +266,7 @@ class GameRules: ObservableObject, Codable, Equatable {
         try container.encode(winningCardAnimationDelay, forKey: .winningCardAnimationDelay)
         try container.encode(trickAreaSize, forKey: .trickAreaSize)
         try container.encode(dealerDeterminationMethod, forKey: .dealerDeterminationMethod)
+        try container.encode(scoreboardScale, forKey: .scoreboardScale)
     }
     
     // MARK: - Player Configuration Methods

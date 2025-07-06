@@ -3,6 +3,7 @@ import SwiftUI
 struct GameBoardView: View {
     @ObservedObject var game: Game
     @ObservedObject var settings: GameSettings
+    @ObservedObject var gameRules: GameRules
     @State private var selectedCards: [PlayerCard] = []
     @State private var showingMeldOptions = false
     @State private var showingSettings = false
@@ -28,22 +29,26 @@ struct GameBoardView: View {
                     .onTapGesture(count: 1) {
                         handleScoreTap()
                     }
+                    .padding(.bottom, 32) // Increased space between scores and game messages
                 
                 // Global Messages Area (Dynamic Single Message)
                 globalMessagesView
                     .frame(height: 50)
                     .padding(.horizontal)
+                    .padding(.bottom, 32) // Increased space between game messages and player's back card hands
                 
                 // Other Player's Hand (moved here)
                 otherPlayerHandView
                     .frame(height: 80)
                     .padding(.horizontal)
+                    .padding(.bottom, 36) // Increased space between other player's hand and trick area
                 
                 // Trick Area (increased height)
                 TrickView(
                     cards: game.currentTrick,
                     game: game,
-                    settings: settings
+                    settings: settings,
+                    gameRules: gameRules
                 )
                 .frame(height: geometry.size.height * 0.35) // Increased from 0.25 to 0.35
                 .padding(.bottom, 8)
@@ -330,20 +335,18 @@ struct GameBoardView: View {
     
     // MARK: - Scoreboard
     private var scoreboardView: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 24) {
             Text("Player 1: \(game.players.first?.totalPoints ?? 0)")
-                .font(.headline)
-                .fontWeight(.semibold)
+                .font(.system(size: 32 * gameRules.scoreboardScale, weight: .bold, design: .rounded))
             Divider()
             Text("Player 2: \(game.players.last?.totalPoints ?? 0)")
-                .font(.headline)
-                .fontWeight(.semibold)
+                .font(.system(size: 32 * gameRules.scoreboardScale, weight: .bold, design: .rounded))
         }
-        .padding(.vertical, 0)
-        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 24)
         .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color.white.opacity(0.8))
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.9))
         )
         .fixedSize()
     }
@@ -694,7 +697,8 @@ struct GameBoardView: View {
                 TrickView(
                     cards: game.currentTrick,
                     game: game,
-                    settings: settings
+                    settings: settings,
+                    gameRules: gameRules
                 )
                 // Bottom: current player's hand (face up, interactive)
                 HStack {
@@ -735,7 +739,8 @@ struct GameBoardView: View {
             TrickView(
                 cards: game.currentTrick,
                 game: game,
-                settings: settings
+                settings: settings,
+                gameRules: gameRules
             )
         }
     }
@@ -744,7 +749,7 @@ struct GameBoardView: View {
     private var drawPileSection: some View {
         VStack(spacing: 4) {
             drawPileView
-                .frame(width: 40 * settings.playerHandCardSize.rawValue, height: 60 * settings.playerHandCardSize.rawValue)
+                                        .frame(width: 40 * gameRules.globalCardSize.rawValue, height: 60 * gameRules.globalCardSize.rawValue)
             Text("Cards: \(game.deck.remainingCount)")
                 .font(.caption2)
                 .foregroundColor(.secondary)
@@ -1549,10 +1554,11 @@ struct TrickView: View {
     let cards: [PlayerCard]
     @ObservedObject var game: Game
     let settings: GameSettings
+    @ObservedObject var gameRules: GameRules
 
     // Use a single constant for card size
-    private var cardWidth: CGFloat { 40 * settings.trickAreaCardSize.rawValue }
-    private var cardHeight: CGFloat { 60 * settings.trickAreaCardSize.rawValue }
+    private var cardWidth: CGFloat { 40 * gameRules.globalCardSize.rawValue }
+    private var cardHeight: CGFloat { 60 * gameRules.globalCardSize.rawValue }
 
     var body: some View {
         ZStack {
@@ -1670,7 +1676,7 @@ struct TrickView: View {
             Image(card.imageName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 80 * settings.trickAreaCardSize.rawValue, height: 120 * settings.trickAreaCardSize.rawValue)
+                .frame(width: 80 * gameRules.globalCardSize.rawValue, height: 120 * gameRules.globalCardSize.rawValue)
                 .cornerRadius(8)
                 .shadow(radius: 4)
                 .rotationEffect(.degrees(scaledRotation))
@@ -1685,7 +1691,7 @@ struct TrickView: View {
             (cards.count - 1 - i, cards[i])
         }
         ForEach(displayTuples, id: \.0) { tuple in
-            CardStackedView(card: tuple.1, displayIndex: tuple.0, settings: settings)
+            CardStackedView(card: tuple.1, displayIndex: tuple.0, settings: settings, gameRules: gameRules)
         }
     }
 }
@@ -1796,6 +1802,7 @@ struct CardStackedView: View {
     let card: PlayerCard
     let displayIndex: Int
     let settings: GameSettings
+    @ObservedObject var gameRules: GameRules
     
     // Generate a random rotation based on the card's ID for consistency
     private var randomRotation: Double {
@@ -1808,7 +1815,7 @@ struct CardStackedView: View {
         Image(card.imageName)
             .resizable()
             .aspectRatio(contentMode: .fit)
-            .frame(width: 80 * settings.trickAreaCardSize.rawValue, height: 120 * settings.trickAreaCardSize.rawValue)
+            .frame(width: 80 * gameRules.globalCardSize.rawValue, height: 120 * gameRules.globalCardSize.rawValue)
             .cornerRadius(8)
             .shadow(radius: 4)
             .offset(x: CGFloat(displayIndex) * 12, y: CGFloat(displayIndex) * 6 + CGFloat(displayIndex) * 2)
@@ -1916,11 +1923,11 @@ struct AICardDrawAnimationView: View {
 #if DEBUG
 struct GameBoardView_Previews: PreviewProvider {
     static var previews: some View {
-        GameBoardView(game: Game(gameRules: GameRules()), settings: GameSettings())
+        GameBoardView(game: Game(gameRules: GameRules()), settings: GameSettings(), gameRules: GameRules())
     }
 }
 #endif
 
 #Preview {
-    GameBoardView(game: Game(gameRules: GameRules()), settings: GameSettings())
+    GameBoardView(game: Game(gameRules: GameRules()), settings: GameSettings(), gameRules: GameRules())
 } 

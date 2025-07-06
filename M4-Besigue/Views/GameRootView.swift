@@ -10,7 +10,7 @@ struct GameRootView: View {
     @ObservedObject var game: Game
     
     var body: some View {
-        GameBoardView(game: game, settings: game.settings)
+        GameBoardView(game: game, settings: game.settings, gameRules: game.gameRules)
     }
 }
 
