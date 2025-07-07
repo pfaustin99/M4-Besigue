@@ -1204,36 +1204,27 @@ class Game: ObservableObject {
         
         // Check if player has all the cards for this meld (in hand or already melded)
         let allAvailableCards = player.hand + player.meldsDeclared.flatMap { $0.cards }
-        
+        var availableCardIDs = allAvailableCards.map { $0.id }
         for meldCard in meld.cards {
-            let hasCard = allAvailableCards.contains { playerCard in
-                playerCard.suit == meldCard.suit && 
-                playerCard.value == meldCard.value &&
-                playerCard.isJoker == meldCard.isJoker
-            }
-            if !hasCard {
+            if let idx = availableCardIDs.firstIndex(of: meldCard.id) {
+                availableCardIDs.remove(at: idx)
+            } else {
                 print("❌ Missing card for meld: \(meldCard.displayName)")
                 return false
             }
         }
-        
         // Check if at least one card is in hand (can't meld only with already melded cards)
         let cardsInHand = meld.cards.filter { meldCard in
-            player.hand.contains { playerCard in
-                playerCard.suit == meldCard.suit && 
-                playerCard.value == meldCard.value &&
-                playerCard.isJoker == meldCard.isJoker
-            }
+            player.hand.contains { $0.id == meldCard.id }
         }
         if cardsInHand.isEmpty {
             print("❌ No cards in hand for meld")
             return false
         }
-        
         // Check if any card has already been used for this meld type
         for meldCard in meld.cards {
-            // Find the matching PlayerCard in hand or melds
-            if let matching = allAvailableCards.first(where: { $0.suit == meldCard.suit && $0.value == meldCard.value && $0.isJoker == meldCard.isJoker }) {
+            // Find the matching PlayerCard in hand or melds by id
+            if let matching = allAvailableCards.first(where: { $0.id == meldCard.id }) {
                 if matching.usedInMeldTypes.contains(meld.type) {
                     print("❌ Card \(matching.displayName) already used for meld type \(meld.type.name)")
                     return false

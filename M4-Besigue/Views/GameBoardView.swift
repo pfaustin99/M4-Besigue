@@ -241,28 +241,7 @@ struct GameBoardView: View {
     // MARK: - Global Messages Area (Dynamic Single Message)
     private var globalMessagesView: some View {
         Group {
-            if let userMsg = game.userMessage {
-                // Priority 0: Custom user message (e.g., meld error)
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
-                        .font(.title3)
-                    Text(userMsg)
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.orange)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.orange.opacity(0.3), lineWidth: 2)
-                        )
-                )
-            } else if game.isShowingTrickResult, let winnerName = game.lastTrickWinner {
+            if game.isShowingTrickResult, let winnerName = game.lastTrickWinner {
                 // Priority 1: Trick winner message (Green theme)
                 HStack(spacing: 6) {
                     Image(systemName: "trophy.fill")
@@ -639,41 +618,44 @@ struct GameBoardView: View {
                     VStack(spacing: 2) {
                         HStack(spacing: 2) {
                             ForEach(meld.cards) { card in
-                                CardView(
-                                    card: card,
-                                    isSelected: selectedCards.contains(card),
-                                    isPlayable: game.awaitingMeldChoice && game.currentPlayer.type == .human,
-                                    showHint: false,
-                                    onTap: {
-                                            if game.awaitingMeldChoice && game.currentPlayer.type == .human {
-                                                handleCardTap(card)
+                                ZStack(alignment: .topTrailing) {
+                                    Image(card.imageName)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(width: 20, height: 30)
+                                        .cornerRadius(3)
+                                    HStack(spacing: 1) {
+                                        if card.usedInMeldTypes.count == MeldType.allCases.count {
+                                            Text("⚠️")
+                                                .font(.system(size: 10))
+                                                .padding(1)
+                                        } else {
+                                            ForEach(Array(card.usedInMeldTypes), id: \.self) { meldType in
+                                                Text(badgeIcon(for: meldType, card: card))
+                                                    .font(.system(size: 10))
+                                                    .padding(1)
                                             }
                                         }
-                                    )
-                                    .frame(width: 80, height: 120)
+                                    }
+                                    .background(Color.white.opacity(0.7))
+                                    .clipShape(Capsule())
+                                    .offset(x: 2, y: -2)
                                 }
                             }
-                            HStack(spacing: 8) {
-                                Text(meld.type.name)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text("+\(meld.pointValue)")
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                                    .bold()
-                            }
                         }
-                        .padding(8)
-                        .background(Color.yellow.opacity(0.15))
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
-                        )
+                        Text(meld.type.name)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Text("+\(meld.pointValue)")
+                            .font(.caption2)
+                            .foregroundColor(.green)
                     }
+                    .padding(2)
+                    .background(Color.yellow.opacity(0.12))
+                    .cornerRadius(4)
                 }
-                .padding(.horizontal, 4)
             }
+            .padding(.horizontal, 2)
         }
     }
     
@@ -1101,34 +1083,30 @@ struct GameBoardView: View {
                     print("   Selected cards: \(selectedCards.map { $0.displayName })")
                     
                     if let humanPlayer = game.players.first, selectedCards.count >= 2, selectedCards.count <= 4 {
-                        // Create meld directly from selected cards
-                        let meldType = determineMeldType(from: selectedCards, trumpSuit: game.trumpSuit)
-                        let pointValue = getMeldPointValue(for: meldType, settings: settings)
+                        // Find the best meld type for the selected cards
+                        let possibleMelds = game.getPossibleMelds(for: humanPlayer).filter { meld in
+                            meld.cards.count == selectedCards.count && meld.cards.allSatisfy { selectedCards.contains($0) }
+                        }
                         
-                        if let type = meldType {
-                            let meld = Meld(cards: selectedCards, type: type, pointValue: pointValue, roundNumber: game.roundNumber)
-                            print("   Created meld: \(meld.type.name) with \(meld.cards.count) cards")
-                            
-                            if game.canDeclareMeld(meld, by: humanPlayer) {
-                                game.declareMeld(meld, by: humanPlayer)
+                        if let bestMeld = possibleMelds.first {
+                            print("   Found meld: \(bestMeld.type.name) with \(bestMeld.cards.count) cards")
+                            if game.canDeclareMeld(bestMeld, by: humanPlayer) {
+                                game.declareMeld(bestMeld, by: humanPlayer)
                                 selectedCards.removeAll()
-                                game.userMessage = nil // Clear any previous error
                             } else {
                                 print("   ❌ Cannot declare meld")
                                 withAnimation(.default) {
                                     shakeMeldButton.toggle()
                                     showInvalidMeld = true
                                 }
-                                game.userMessage = "Cannot declare meld: check meld rules or card usage." // Set error message
                                 game.playInvalidMeldAnimation()
                             }
                         } else {
-                            print("   ❌ No valid meld type for selected cards")
+                            print("   ❌ No valid meld found for selected cards")
                             withAnimation(.default) {
                                 shakeMeldButton.toggle()
                                 showInvalidMeld = true
                             }
-                            game.userMessage = "Selected cards do not form a valid meld."
                             game.playInvalidMeldAnimation()
                         }
                     } else {
@@ -1137,7 +1115,6 @@ struct GameBoardView: View {
                             shakeMeldButton.toggle()
                             showInvalidMeld = true
                         }
-                        game.userMessage = "Select 2-4 cards to declare a meld."
                         game.playInvalidMeldAnimation()
                     }
                 }) {
@@ -1371,86 +1348,7 @@ struct GameBoardView: View {
             }
         }
     }
-    
-    // MARK: - Helper Functions for Meld Creation
-    
-    private func determineMeldType(from cards: [PlayerCard], trumpSuit: Suit?) -> MeldType? {
-        guard cards.count >= 2 && cards.count <= 4 else { return nil }
-        
-        // Check for Bésigue (Queen of Spades + Jack of Diamonds)
-        if cards.count == 2 {
-            let hasQueenOfSpades = cards.contains { $0.value == .queen && $0.suit == .spades }
-            let hasJackOfDiamonds = cards.contains { $0.value == .jack && $0.suit == .diamonds }
-            if hasQueenOfSpades && hasJackOfDiamonds {
-                return .besigue
-            }
-        }
-        
-        // Check for marriages (King + Queen of same suit)
-        if cards.count == 2 {
-            for suit in Suit.allCases {
-                let hasKing = cards.contains { $0.value == .king && $0.suit == suit }
-                let hasQueen = cards.contains { $0.value == .queen && $0.suit == suit }
-                if hasKing && hasQueen {
-                    // If trump suit is established and this is the trump suit, it's a royal marriage
-                    if let trump = trumpSuit, suit == trump {
-                        return .royalMarriage
-                    } else {
-                        return .commonMarriage
-                    }
-                }
-            }
-        }
-        
-        // Check for four-of-a-kind (4 cards of same value)
-        if cards.count == 4 {
-            let firstValue = cards.first?.value
-            if cards.allSatisfy({ $0.value == firstValue }) {
-                switch firstValue {
-                case .ace: return .fourAces
-                case .king: return .fourKings
-                case .queen: return .fourQueens
-                case .jack: return .fourJacks
-                default: break
-                }
-            }
-            
-            // Check for four jokers
-            if cards.allSatisfy({ $0.isJoker }) {
-                return .fourJokers
-            }
-        }
-        
-        // Check for sequence (Ace, King, Queen, Jack of trump suit)
-        if cards.count == 4, let trump = trumpSuit {
-            let hasAce = cards.contains { $0.value == .ace && $0.suit == trump }
-            let hasKing = cards.contains { $0.value == .king && $0.suit == trump }
-            let hasQueen = cards.contains { $0.value == .queen && $0.suit == trump }
-            let hasJack = cards.contains { $0.value == .jack && $0.suit == trump }
-            if hasAce && hasKing && hasQueen && hasJack {
-                return .sequence
-            }
-        }
-        
-        return nil
-    }
-    
-    private func getMeldPointValue(for meldType: MeldType?, settings: GameSettings) -> Int {
-        guard let type = meldType else { return 0 }
-        
-        switch type {
-        case .besigue: return settings.besiguePoints
-        case .commonMarriage: return settings.commonMarriagePoints
-        case .royalMarriage: return settings.royalMarriagePoints
-        case .fourAces: return settings.fourAcesPoints
-        case .fourKings: return settings.fourKingsPoints
-        case .fourQueens: return settings.fourQueensPoints
-        case .fourJacks: return settings.fourJacksPoints
-        case .fourJokers: return settings.fourJokersPoints
-        case .sequence: return settings.sequencePoints
-        }
-    }
-
+}
 
 // MARK: - AI Player View
 struct AIPlayerView: View {
