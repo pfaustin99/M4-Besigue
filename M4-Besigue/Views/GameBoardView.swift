@@ -45,10 +45,10 @@ struct GameBoardView: View {
                 
                 // Trick Area (increased height)
                 TrickView(
-                    cards: game.currentTrick,
-                    game: game,
-                    settings: settings,
-                    gameRules: gameRules
+                    cards: self.game.currentTrick,
+                    game: self.game,
+                    settings: self.settings,
+                    gameRules: self.gameRules
                 )
                 .frame(height: geometry.size.height * 0.35) // Increased from 0.25 to 0.35
                 .padding(.bottom, 8)
@@ -59,20 +59,20 @@ struct GameBoardView: View {
                     .padding(.horizontal)
                 
                 // Main game content
-                if game.players.count == 2 {
+                if self.game.players.count == 2 {
                     twoPlayerMainArea()
                 } else {
                     // 3/4 player layout: current player at bottom, others at top/left/right
-                    let currentPlayer = game.players[game.currentPlayerIndex]
+                    let currentPlayer = self.game.players[self.game.currentPlayerIndex]
                     VStack(spacing: 0) {
                         // Top: all other players' hands (card backs)
                         HStack(spacing: 16) {
-                            ForEach(game.players.indices.filter { $0 != game.currentPlayerIndex }, id: \.self) { idx in
+                            ForEach(self.game.players.indices.filter { $0 != self.game.currentPlayerIndex }, id: \.self) { idx in
                                 VStack {
-                                    Text(game.players[idx].name)
+                                    Text(self.game.players[idx].name)
                                         .font(.caption)
                                     HStack {
-                                        ForEach(game.players[idx].hand) { _ in
+                                        ForEach(self.game.players[idx].hand) { _ in
                                             CardBackView { }
                                                 .frame(width: 32, height: 48)
                                         }
@@ -85,11 +85,11 @@ struct GameBoardView: View {
                         // Bottom: current player's hand (face up, interactive)
                         playerInfoView(currentPlayer)
                         let _ = print("🔍 CHECKING MELD INSTRUCTIONS:")
-                        let _ = print("   canPlayerMeld: \(game.canPlayerMeld)")
+                        let _ = print("   canPlayerMeld: \(self.game.canPlayerMeld)")
                         let _ = print("   currentPlayer.type: \(currentPlayer.type)")
-                        let _ = print("   Should show meld instructions: \(game.canPlayerMeld && currentPlayer.type == .human)")
+                        let _ = print("   Should show meld instructions: \(self.game.canPlayerMeld && currentPlayer.type == .human)")
                         
-                        if game.canPlayerMeld && currentPlayer.type == .human {
+                        if self.game.canPlayerMeld && currentPlayer.type == .human {
                             meldInstructionsView(currentPlayer)
                         }
                         if !currentPlayer.meldsDeclared.isEmpty {
@@ -103,16 +103,16 @@ struct GameBoardView: View {
         }
         .background(Color.green.opacity(0.3))
         .onAppear {
-            print("🎮 GameBoardView appeared - Players: \(game.players.count), Current: \(game.currentPlayerIndex)")
+            print("🎮 GameBoardView appeared - Players: \(self.game.players.count), Current: \(self.game.currentPlayerIndex)")
         }
         .sheet(isPresented: $showingMeldOptions) {
-            MeldOptionsView(game: game, settings: settings, selectedCards: $selectedCards)
+            MeldOptionsView(game: self.game, settings: self.settings, selectedCards: $selectedCards)
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsView(settings: settings)
+            SettingsView(settings: self.settings)
         }
         .sheet(isPresented: $showingBadgeLegend) {
-            BadgeLegendView(settings: settings)
+            BadgeLegendView(settings: self.settings)
         }
     }
     
@@ -138,22 +138,22 @@ struct GameBoardView: View {
             .cornerRadius(6)
             
             // Unrestricted Mode Toggle
-            Button(game.isUnrestrictedMode ? "Disable Unrestricted" : "Enable Unrestricted") {
-                if game.isUnrestrictedMode {
-                    game.disableUnrestrictedMode()
+            Button(self.game.isUnrestrictedMode ? "Disable Unrestricted" : "Enable Unrestricted") {
+                if self.game.isUnrestrictedMode {
+                    self.game.disableUnrestrictedMode()
                 } else {
-                    game.enableUnrestrictedMode()
+                    self.game.enableUnrestrictedMode()
                 }
             }
             .font(.caption)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(game.isUnrestrictedMode ? Color.red.opacity(0.2) : Color.green.opacity(0.2))
+            .background(self.game.isUnrestrictedMode ? Color.red.opacity(0.2) : Color.green.opacity(0.2))
             .cornerRadius(6)
             
             // Run Tests Button
             Button("Run Tests") {
-                game.runAllTests()
+                self.game.runAllTests()
             }
             .font(.caption)
             .padding(.horizontal, 8)
@@ -200,8 +200,8 @@ struct GameBoardView: View {
     
     // MARK: - Other Player's Hand View
     private var otherPlayerHandView: some View {
-        let currentPlayer = game.players[game.currentPlayerIndex]
-        let otherPlayer = game.players[(game.currentPlayerIndex + 1) % 2]
+        let currentPlayer = self.game.players[self.game.currentPlayerIndex]
+        let otherPlayer = self.game.players[(self.game.currentPlayerIndex + 1) % 2]
         
         return VStack(spacing: 4) {
             Text(otherPlayer.name)
@@ -241,7 +241,7 @@ struct GameBoardView: View {
     // MARK: - Global Messages Area (Dynamic Single Message)
     private var globalMessagesView: some View {
         Group {
-            if game.isShowingTrickResult, let winnerName = game.lastTrickWinner {
+            if self.game.isShowingTrickResult, let winnerName = self.game.lastTrickWinner {
                 // Priority 1: Trick winner message (Green theme)
                 HStack(spacing: 6) {
                     Image(systemName: "trophy.fill")
@@ -262,13 +262,13 @@ struct GameBoardView: View {
                                 .stroke(Color.green.opacity(0.3), lineWidth: 2)
                         )
                 )
-            } else if game.currentPhase == .playing {
+            } else if self.game.currentPhase == .playing {
                 // Priority 2: Current player turn message (Blue theme)
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.right.circle.fill")
                         .foregroundColor(.blue)
                         .font(.title3)
-                    Text("\(game.currentPlayer.name)'s Turn")
+                    Text("\(self.game.currentPlayer.name)'s Turn")
                         .font(.headline)
                         .fontWeight(.bold)
                         .foregroundColor(.blue)
@@ -285,7 +285,7 @@ struct GameBoardView: View {
                 )
             } else {
                 // Priority 3: Dealer message (Gold theme)
-                if let dealer = game.players.first(where: { $0.isDealer }) {
+                if let dealer = self.game.players.first(where: { $0.isDealer }) {
                     HStack(spacing: 6) {
                         Image(systemName: "crown.fill")
                             .foregroundColor(.yellow)
@@ -309,20 +309,20 @@ struct GameBoardView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .animation(.easeInOut(duration: 0.3), value: game.currentPhase)
-        .animation(.easeInOut(duration: 0.3), value: game.currentPlayerIndex)
-        .animation(.easeInOut(duration: 0.3), value: game.isShowingTrickResult)
-        .animation(.easeInOut(duration: 0.3), value: game.lastTrickWinner)
+        .animation(.easeInOut(duration: 0.3), value: self.game.currentPhase)
+        .animation(.easeInOut(duration: 0.3), value: self.game.currentPlayerIndex)
+        .animation(.easeInOut(duration: 0.3), value: self.game.isShowingTrickResult)
+        .animation(.easeInOut(duration: 0.3), value: self.game.lastTrickWinner)
     }
     
     // MARK: - Player-Specific Messages Area
     private var playerSpecificMessagesView: some View {
         VStack(spacing: 2) {
-            if game.currentPhase == .playing {
-                let currentPlayer = game.currentPlayer
+            if self.game.currentPhase == .playing {
+                let currentPlayer = self.game.currentPlayer
                 
                 // Draw card message - show when it's the player's turn to draw
-                if game.mustDrawCard && currentPlayer.id == game.currentPlayer.id && !game.hasDrawnForNextTrick[currentPlayer.id, default: false] && !game.deck.isEmpty {
+                if self.game.mustDrawCard && currentPlayer.id == self.game.currentPlayer.id && !self.game.hasDrawnForNextTrick[currentPlayer.id, default: false] && !self.game.deck.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.down.circle.fill")
                             .foregroundColor(.green)
@@ -339,7 +339,7 @@ struct GameBoardView: View {
                 }
                 
                 // Play card message - show when player has drawn and can play
-                if game.hasDrawnForNextTrick[currentPlayer.id, default: false] && game.canPlayCard() && currentPlayer.id == game.currentPlayer.id {
+                if self.game.hasDrawnForNextTrick[currentPlayer.id, default: false] && self.game.canPlayCard() && currentPlayer.id == self.game.currentPlayer.id {
                     HStack(spacing: 4) {
                         Image(systemName: "play.circle.fill")
                             .foregroundColor(.orange)
@@ -365,11 +365,11 @@ struct GameBoardView: View {
     // MARK: - Scoreboard
     private var scoreboardView: some View {
         HStack(spacing: 24) {
-            Text("Player 1: \(game.players.first?.totalPoints ?? 0)")
-                .font(.system(size: 32 * gameRules.scoreboardScale, weight: .bold, design: .rounded))
+            Text("Player 1: \(self.game.players.first?.totalPoints ?? 0)")
+                .font(.system(size: 32 * self.gameRules.scoreboardScale, weight: .bold, design: .rounded))
             Divider()
-            Text("Player 2: \(game.players.last?.totalPoints ?? 0)")
-                .font(.system(size: 32 * gameRules.scoreboardScale, weight: .bold, design: .rounded))
+            Text("Player 2: \(self.game.players.last?.totalPoints ?? 0)")
+                .font(.system(size: 32 * self.gameRules.scoreboardScale, weight: .bold, design: .rounded))
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 24)
@@ -382,7 +382,7 @@ struct GameBoardView: View {
     
     // MARK: - 2-Player Main Area
     private func twoPlayerMainArea() -> some View {
-        let currentPlayer = game.players[game.currentPlayerIndex]
+        let currentPlayer = self.game.players[self.game.currentPlayerIndex]
         
         return VStack(spacing: 0) {
             if isSinglePlayerMode {
@@ -403,7 +403,7 @@ struct GameBoardView: View {
         VStack(spacing: 0) {
             // Player info and meld instructions
             playerInfoView(currentPlayer)
-            if game.canPlayerMeld && currentPlayer.type == .human {
+            if self.game.canPlayerMeld && currentPlayer.type == .human {
                 meldInstructionsView(currentPlayer)
             }
             if !currentPlayer.meldsDeclared.isEmpty {
@@ -423,7 +423,7 @@ struct GameBoardView: View {
                     ForEach(currentPlayer.hand) { card in
                         CardView(
                             card: card,
-                            isSelected: selectedCards.contains(card),
+                            isSelected: self.selectedCards.contains(card),
                             isPlayable: true, // Always playable in single player mode
                             showHint: false,
                             onTap: {
@@ -440,10 +440,10 @@ struct GameBoardView: View {
             .padding(.top, 8)
             .padding(.bottom, 16)
         }
-        .onChange(of: game.currentPlayerIndex) { newIndex in
+        .onChange(of: self.game.currentPlayerIndex) { newIndex in
             // In single player mode, automatically switch to the current player's hand
             // This ensures the trick winner's hand becomes active
-            print("🎮 Single Player Mode: Switched to \(game.players[newIndex].name)'s hand")
+            print("🎮 Single Player Mode: Switched to \(self.game.players[newIndex].name)'s hand")
         }
     }
     
@@ -452,7 +452,7 @@ struct GameBoardView: View {
         VStack(spacing: 0) {
             // Player info and meld instructions
             playerInfoView(currentPlayer)
-            if game.canPlayerMeld && currentPlayer.type == .human {
+            if self.game.canPlayerMeld && currentPlayer.type == .human {
                 meldInstructionsView(currentPlayer)
             }
             if !currentPlayer.meldsDeclared.isEmpty {
