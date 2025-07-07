@@ -88,12 +88,31 @@ class Player: ObservableObject, Identifiable {
     func declareMeld(_ meld: Meld) {
         meldsDeclared.append(meld)
         addPoints(meld.pointValue)
-        // Mark meld usage on the involved PlayerCards
-        for card in meld.cards {
+        
+        // Remove the melded cards from the player's hand (only if they're still there)
+        for i in 0..<meld.cards.count {
+            removeCard(meld.cards[i])
+        }
+        
+        // Mark meld usage on the involved PlayerCards (in hand and in melds)
+        for i in 0..<meld.cards.count {
+            let card = meld.cards[i]
+            // Update in hand
             if let idx = hand.firstIndex(of: card) {
                 hand[idx].usedInMeldTypes.insert(meld.type)
             }
+            // Update in melds
+            for meldIdx in 0..<meldsDeclared.count {
+                if let cardIdx = meldsDeclared[meldIdx].cards.firstIndex(of: card) {
+                    meldsDeclared[meldIdx].cards[cardIdx].usedInMeldTypes.insert(meld.type)
+                }
+            }
         }
+        
+        print("🎴 \(name) declared \(meld.type.name) with \(meld.cards.count) cards")
+        print("   Cards removed from hand: \(meld.cards.map { $0.displayName })")
+        print("   Remaining hand size: \(hand.count)")
+        print("   Total melds: \(meldsDeclared.count)")
     }
     
     // Reset player for new game
@@ -121,7 +140,7 @@ class Player: ObservableObject, Identifiable {
 /// Represents a meld declared by a player in Bésigue.
 struct Meld: Identifiable, Equatable {
     let id = UUID()
-    let cards: [PlayerCard]
+    var cards: [PlayerCard]
     let type: MeldType
     let pointValue: Int // Now set dynamically from GameSettings
     let roundNumber: Int // Track the round when the meld was declared
