@@ -1202,12 +1202,12 @@ class Game: ObservableObject {
         }
         
         // Only one meld per opportunity
-        if player.meldsDeclared.last?.roundNumber == roundNumber {
+      /**  if player.meldsDeclared.last?.roundNumber == roundNumber {
             print("❌ Meld validation failed: already declared meld this round")
             print("   Last meld round: \(player.meldsDeclared.last?.roundNumber ?? -1)")
             print("   Current round: \(roundNumber)")
             return false
-        }
+        } **/
         
         print("🔍 Validating meld: \(meld.type.name) with \(meld.cards.count) cards")
         print("🔍 Trump suit: \(trumpSuit?.rawValue ?? "None")")

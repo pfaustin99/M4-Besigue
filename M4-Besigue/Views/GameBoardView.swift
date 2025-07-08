@@ -1081,45 +1081,41 @@ struct GameBoardView: View {
                     print("   Current player type: \(game.currentPlayer.type)")
                     print("   Selected cards count: \(selectedCards.count)")
                     print("   Selected cards: \(selectedCards.map { $0.displayName })")
-                    
+
                     let humanPlayer = game.currentPlayer
                     if humanPlayer.type == .human, selectedCards.count >= 2, selectedCards.count <= 4 {
-                        print("🔍 VALIDATING MELD ATTEMPT:")
-                        print("   Player: \(humanPlayer.name)")
-                        print("   Selected cards: \(selectedCards.map { $0.displayName })")
-                        
-                        // Find the best meld for the selected cards
+                        // Find the best meld type for the selected cards
                         let possibleMelds = game.getPossibleMelds(for: humanPlayer).filter { meld in
                             meld.cards.count == selectedCards.count && meld.cards.allSatisfy { selectedCards.contains($0) }
                         }
-                        
-                        print("🔍 POSSIBLE MELDS FOUND:")
-                        print("   Total possible melds for player: \(game.getPossibleMelds(for: humanPlayer).count)")
-                        print("   Melds matching selected cards: \(possibleMelds.count)")
-                        for (index, meld) in possibleMelds.enumerated() {
-                            print("   Meld \(index + 1): \(meld.type) - \(meld.cards.map { $0.displayName })")
-                        }
-                        
                         if let bestMeld = possibleMelds.first {
-                            print("🔍 ATTEMPTING TO DECLARE MELD:")
-                            print("   Meld type: \(bestMeld.type)")
-                            print("   Meld cards: \(bestMeld.cards.map { $0.displayName })")
-                            print("   Can declare meld check: \(game.canDeclareMeld(bestMeld, by: humanPlayer))")
-                            
+                            print("   Found meld: \(bestMeld.type.name) with \(bestMeld.cards.count) cards")
                             if game.canDeclareMeld(bestMeld, by: humanPlayer) {
-                                print("✅ DECLARING MELD SUCCESSFULLY")
                                 game.declareMeld(bestMeld, by: humanPlayer)
                                 selectedCards.removeAll()
                             } else {
-                                print("❌ MELD DECLARATION FAILED - canDeclareMeld returned false")
+                                print("   ❌ Cannot declare meld")
+                                withAnimation(.default) {
+                                    shakeMeldButton.toggle()
+                                    showInvalidMeld = true
+                                }
+                                game.playInvalidMeldAnimation()
                             }
                         } else {
-                            print("❌ NO VALID MELD FOUND FOR SELECTED CARDS")
+                            print("   ❌ No valid meld found for selected cards")
+                            withAnimation(.default) {
+                                shakeMeldButton.toggle()
+                                showInvalidMeld = true
+                            }
+                            game.playInvalidMeldAnimation()
                         }
                     } else {
-                        print("❌ INVALID MELD ATTEMPT:")
-                        print("   Player type: \(humanPlayer.type)")
-                        print("   Selected cards count: \(selectedCards.count)")
+                        print("   ❌ Invalid card selection")
+                        withAnimation(.default) {
+                            shakeMeldButton.toggle()
+                            showInvalidMeld = true
+                        }
+                        game.playInvalidMeldAnimation()
                     }
                 }) {
                     HStack(spacing: 4) {
@@ -1183,29 +1179,19 @@ struct GameBoardView: View {
     
     // MARK: - Actions
     private func handleCardTap(_ card: PlayerCard) {
-        print("🎯 CARD TAP HANDLED:")
-        print("   Card: \(card.displayName)")
-        print("   Awaiting meld choice: \(game.awaitingMeldChoice)")
-        print("   Current player: \(game.currentPlayer.name)")
-        print("   Selected cards count: \(selectedCards.count)")
-        
-        if game.awaitingMeldChoice && game.currentPlayer.type == .human {
-            print("🎯 MELD PHASE - Processing card selection")
-            if selectedCards.contains(card) {
-                selectedCards.removeAll { $0.id == card.id }
-                print("   ✅ Card deselected: \(card.displayName)")
-            } else {
-                selectedCards.append(card)
-                print("   ✅ Card selected: \(card.displayName)")
-            }
-            print("   Updated selected cards: \(selectedCards.map { $0.displayName })")
-            print("   Selected cards count: \(selectedCards.count)")
-        } else if game.currentPhase == .playing && game.currentPlayer.type == .human && !game.awaitingMeldChoice {
+        if game.currentPhase == .playing && game.currentPlayer.type == .human && !game.awaitingMeldChoice {
             // In playing phase, single tap selects card, double tap plays it
             if selectedCards.contains(card) {
                 selectedCards.removeAll { $0 == card }
             } else {
                 selectedCards = [card]
+            }
+        } else if game.awaitingMeldChoice && game.currentPlayer.type == .human {
+            // In melding phase, tap to select/deselect cards for melds
+            if selectedCards.contains(card) {
+                selectedCards.removeAll { $0 == card }
+            } else {
+                selectedCards.append(card)
             }
         }
         if game.mustDrawCard { return }
