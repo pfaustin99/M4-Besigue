@@ -1188,6 +1188,14 @@ class Game: ObservableObject {
     
     // Check if a meld can be declared
     func canDeclareMeld(_ meld: Meld, by player: Player) -> Bool {
+        print("🔍 CAN DECLARE MELD CHECK:")
+        print("   Player: \(player.name)")
+        print("   Meld type: \(meld.type)")
+        print("   Meld cards: \(meld.cards.map { $0.displayName })")
+        print("   Current player: \(currentPlayer.name)")
+        print("   Can player meld: \(canPlayerMeld)")
+        print("   Awaiting meld choice: \(awaitingMeldChoice)")
+        
         guard player.id == currentPlayer.id && canPlayerMeld else {
             print("❌ Meld validation failed: not current player or can't meld")
             return false
@@ -1196,6 +1204,8 @@ class Game: ObservableObject {
         // Only one meld per opportunity
         if player.meldsDeclared.last?.roundNumber == roundNumber {
             print("❌ Meld validation failed: already declared meld this round")
+            print("   Last meld round: \(player.meldsDeclared.last?.roundNumber ?? -1)")
+            print("   Current round: \(roundNumber)")
             return false
         }
         
@@ -1205,9 +1215,17 @@ class Game: ObservableObject {
         // Check if player has all the cards for this meld (in hand or already melded)
         let allAvailableCards = player.hand + player.meldsDeclared.flatMap { $0.cards }
         var availableCardIDs = allAvailableCards.map { $0.id }
+        print("🔍 CARD AVAILABILITY CHECK:")
+        print("   Player hand cards: \(player.hand.map { $0.displayName })")
+        print("   Player melded cards: \(player.meldsDeclared.flatMap { $0.cards }.map { $0.displayName })")
+        print("   Total available cards: \(allAvailableCards.map { $0.displayName })")
+        print("   Available card IDs: \(availableCardIDs)")
+        
         for meldCard in meld.cards {
+            print("   Checking meld card: \(meldCard.displayName) (ID: \(meldCard.id))")
             if let idx = availableCardIDs.firstIndex(of: meldCard.id) {
                 availableCardIDs.remove(at: idx)
+                print("   ✅ Found card in available cards")
             } else {
                 print("❌ Missing card for meld: \(meldCard.displayName)")
                 return false
@@ -1217,6 +1235,10 @@ class Game: ObservableObject {
         let cardsInHand = meld.cards.filter { meldCard in
             player.hand.contains { $0.id == meldCard.id }
         }
+        print("🔍 HAND CARD CHECK:")
+        print("   Cards in hand for meld: \(cardsInHand.map { $0.displayName })")
+        print("   At least one card in hand: \(!cardsInHand.isEmpty)")
+        
         if cardsInHand.isEmpty {
             print("❌ No cards in hand for meld")
             return false
@@ -1264,6 +1286,12 @@ class Game: ObservableObject {
     
     // Declare a meld
     func declareMeld(_ meld: Meld, by player: Player) {
+        print("🎯 DECLARE MELD CALLED:")
+        print("   Player: \(player.name)")
+        print("   Meld type: \(meld.type)")
+        print("   Meld cards: \(meld.cards.map { $0.displayName })")
+        print("   Current round: \(self.roundNumber)")
+        
         if canDeclareMeld(meld, by: player) {
             // Clear meld choice state when player declares meld
             awaitingMeldChoice = false
@@ -1287,7 +1315,11 @@ class Game: ObservableObject {
             removeCardsFromExistingMelds(meld.cards, player: player)
             
             player.declareMeld(finalMeld)
-            print("\(player.name) declared \(finalMeld.type.name) for \(finalMeld.pointValue) points")
+            print("✅ MELD DECLARED SUCCESSFULLY:")
+            print("   Player: \(player.name)")
+            print("   Meld type: \(finalMeld.type.name)")
+            print("   Meld points: \(finalMeld.pointValue)")
+            print("   Player new score: \(player.score)")
             
             // Handle point doubling for four-of-a-kind in trump suit
             if let trump = trumpSuit {
@@ -1342,11 +1374,12 @@ class Game: ObservableObject {
     
     // Get all possible melds for a player
     func getPossibleMelds(for player: Player) -> [Meld] {
-        var possibleMelds: [Meld] = []
-        
         print("🔍 GETTING POSSIBLE MELDS FOR \(player.name):")
         print("   Hand cards: \(player.hand.map { $0.displayName })")
         print("   Melded cards: \(player.meldsDeclared.flatMap { $0.cards }.map { $0.displayName })")
+        print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
+        
+        var possibleMelds: [Meld] = []
         
         // Get all cards available to the player (hand + previously melded)
         let allCards = player.hand + player.meldsDeclared.flatMap { $0.cards }
