@@ -971,6 +971,9 @@ class Game: ObservableObject {
         
         // Clear meld choice state when player draws
         awaitingMeldChoice = false
+
+        // Clear can player meld state when player draws
+        canPlayerMeld = false
         
         // Clear the trick area when winner takes action
         clearTrickArea()

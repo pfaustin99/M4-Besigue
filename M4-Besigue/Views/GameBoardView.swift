@@ -1190,9 +1190,10 @@ struct GameBoardView: View {
             // In melding phase, tap to select/deselect cards for melds
             if selectedCards.contains(card) {
                 selectedCards.removeAll { $0 == card }
-            } else {
+            } else if selectedCards.count < 4 {
                 selectedCards.append(card)
             }
+            // If already 4 cards, do nothing (cannot select more)
         }
         if game.mustDrawCard { return }
     }
