@@ -79,6 +79,10 @@ class Game: ObservableObject {
     // MARK: - Game State
     @Published var isFirstTrick: Bool = true  // Track if we're still in the first trick
     
+    // User message state
+    @Published var userMessage: String? = nil
+    @Published var trickWinnerId: UUID? = nil
+    
     // MARK: - Automated Test Functions
     
     // Test configuration
@@ -681,6 +685,7 @@ class Game: ObservableObject {
         isShowingTrickResult = true
         isAnimatingWinningCard = true
         self.winningCardIndex = winningCardIndex
+        self.trickWinnerId = winner.id
         
         // Complete the trick evaluation with minimal delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -1789,5 +1794,4 @@ class Game: ObservableObject {
         }
     }
     
-    @Published var userMessage: String? = nil
 }

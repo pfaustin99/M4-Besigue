@@ -83,20 +83,7 @@ struct GameBoardView: View {
                         .padding(.top, 16)
                         .padding(.bottom, 32)
                         // Bottom: current player's hand (face up, interactive)
-                        playerInfoView(currentPlayer)
-                        let _ = print("🔍 CHECKING MELD INSTRUCTIONS:")
-                        let _ = print("   canPlayerMeld: \(self.game.canPlayerMeld)")
-                        let _ = print("   currentPlayer.type: \(currentPlayer.type)")
-                        let _ = print("   Should show meld instructions: \(self.game.canPlayerMeld && currentPlayer.type == .human)")
-                        
-                        if self.game.canPlayerMeld && currentPlayer.type == .human {
-                            meldInstructionsView(currentPlayer)
-                        }
-                        if !currentPlayer.meldsDeclared.isEmpty {
-                            meldsAreaView(currentPlayer)
-                        }
-                        actionButtonsView(currentPlayer)
-                        handView(currentPlayer)
+                        playerMainArea(for: currentPlayer)
                     }
                 }
             }
@@ -686,15 +673,7 @@ struct GameBoardView: View {
                     .padding(.top, 16)
                     .padding(.bottom, 32)
                     // Bottom: current player's hand (face up, interactive)
-                    playerInfoView(currentPlayer)
-                    if game.canPlayerMeld && currentPlayer.type == .human {
-                        meldInstructionsView(currentPlayer)
-                    }
-                    if !currentPlayer.meldsDeclared.isEmpty {
-                        meldsAreaView(currentPlayer)
-                    }
-                    actionButtonsView(currentPlayer)
-                    handView(currentPlayer)
+                    playerMainArea(for: currentPlayer)
                 }
             }
         }
@@ -855,15 +834,7 @@ struct GameBoardView: View {
                     .padding(.bottom, 32)
                     // Center: trick, melds, etc. (already handled in centerSection)
                     // Bottom: current player's hand (face up, interactive)
-                    playerInfoView(currentPlayer)
-                    if game.canPlayerMeld && currentPlayer.type == .human {
-                        meldInstructionsView(currentPlayer)
-                    }
-                    if !currentPlayer.meldsDeclared.isEmpty {
-                        meldsAreaView(currentPlayer)
-                    }
-                    actionButtonsView(currentPlayer)
-                    handView(currentPlayer)
+                    playerMainArea(for: currentPlayer)
                 }
             } else {
                 // 3/4 player layout: current player at bottom, others at top/left/right
@@ -887,17 +858,24 @@ struct GameBoardView: View {
                     .padding(.top, 16)
                     .padding(.bottom, 32)
                     // Bottom: current player's hand (face up, interactive)
-                    playerInfoView(currentPlayer)
-                    if game.canPlayerMeld && currentPlayer.type == .human {
-                        meldInstructionsView(currentPlayer)
-                    }
-                    if !currentPlayer.meldsDeclared.isEmpty {
-                        meldsAreaView(currentPlayer)
-                    }
-                    actionButtonsView(currentPlayer)
-                    handView(currentPlayer)
+                    playerMainArea(for: currentPlayer)
                 }
             }
+        }
+    }
+    
+    private func playerMainArea(for player: Player) -> some View {
+        VStack(spacing: 0) {
+            playerInfoView(player)
+            let showMeldInstructions = game.canPlayerMeld && player.type == .human && player.id == game.trickWinnerId
+            if showMeldInstructions {
+                meldInstructionsView(player)
+            }
+            if !player.meldsDeclared.isEmpty {
+                meldsAreaView(player)
+            }
+            actionButtonsView(player)
+            handView(player)
         }
     }
     
@@ -1065,16 +1043,8 @@ struct GameBoardView: View {
                 .font(.headline)
             }
             
-            // Declare Meld button: only during meld choice
-            let _ = print("🔍 CHECKING MELD BUTTON CONDITIONS:")
-            let _ = print("   awaitingMeldChoice: \(game.awaitingMeldChoice)")
-            let _ = print("   currentPlayer.type: \(game.currentPlayer.type)")
-            let _ = print("   currentPlayer.name: \(game.currentPlayer.name)")
-            let _ = print("   player.name: \(player.name)")
-            let _ = print("   player.type: \(player.type)")
-            let _ = print("   Should show meld button: \(game.awaitingMeldChoice && game.currentPlayer.type == .human)")
-            
-            if game.awaitingMeldChoice && game.currentPlayer.type == .human {
+            // Declare Meld button: only for trick winner during meld choice and 2-4 cards selected
+            if game.awaitingMeldChoice && game.currentPlayer.type == .human && game.canPlayerMeld && selectedCards.count >= 2 && selectedCards.count <= 4 && player.id == game.trickWinnerId {
                 Button(action: {
                     print("🔍 MELD BUTTON PRESSED:")
                     print("   Awaiting meld choice: \(game.awaitingMeldChoice)")
@@ -1125,7 +1095,6 @@ struct GameBoardView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .modifier(Shake(animatableData: CGFloat(shakeMeldButton ? 1 : 0)))
-                .disabled(selectedCards.count < 2 || selectedCards.count > 4)
                 .font(.headline)
             }
             
@@ -1179,14 +1148,8 @@ struct GameBoardView: View {
     
     // MARK: - Actions
     private func handleCardTap(_ card: PlayerCard) {
-        if game.currentPhase == .playing && game.currentPlayer.type == .human && !game.awaitingMeldChoice {
-            // In playing phase, single tap selects card, double tap plays it
-            if selectedCards.contains(card) {
-                selectedCards.removeAll { $0 == card }
-            } else {
-                selectedCards = [card]
-            }
-        } else if game.awaitingMeldChoice && game.currentPlayer.type == .human {
+        // Only allow card selection for melding when the current player is the trick winner
+        if game.awaitingMeldChoice && game.currentPlayer.type == .human && game.canPlayerMeld && game.currentPlayer.id == game.trickWinnerId {
             // In melding phase, tap to select/deselect cards for melds
             if selectedCards.contains(card) {
                 selectedCards.removeAll { $0 == card }
@@ -1195,7 +1158,7 @@ struct GameBoardView: View {
             }
             // If already 4 cards, do nothing (cannot select more)
         }
-        if game.mustDrawCard { return }
+        // At all other times, do not allow card selection for melding or play
     }
     
     // Handle double-tap to play card

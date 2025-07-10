@@ -43,13 +43,10 @@ struct ContentView: View {
                     GameBoardView(game: game, settings: settings, gameRules: gameRules)
                 }
             }
-            .navigationTitle("M4-Bésigue")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Your Title")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("New Game") {
-                        showingGameSettings = true
-                    }
+                ToolbarItem(placement: .automatic) {
+                    // Place your toolbar button(s) here
                 }
             }
         }
