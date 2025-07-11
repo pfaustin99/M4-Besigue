@@ -22,11 +22,31 @@ class Player: ObservableObject, Identifiable {
         hand.append(contentsOf: cards.map { PlayerCard(card: $0) })
     }
     
-    // Remove card from hand
+    // Remove card from hand or melds
     func removeCard(_ card: PlayerCard) {
+        // Remove from hand if present
         if let index = hand.firstIndex(of: card) {
             hand.remove(at: index)
+            print("🎴 \(name) removed \(card.displayName) from hand")
+            return
         }
+        
+        // Remove from melds if present
+        for meldIndex in 0..<meldsDeclared.count {
+            if let cardIndex = meldsDeclared[meldIndex].cards.firstIndex(of: card) {
+                meldsDeclared[meldIndex].cards.remove(at: cardIndex)
+                print("🎴 \(name) removed \(card.displayName) from meld \(meldsDeclared[meldIndex].type.name)")
+                
+                // If meld is now empty, remove the entire meld
+                if meldsDeclared[meldIndex].cards.isEmpty {
+                    meldsDeclared.remove(at: meldIndex)
+                    print("🎴 \(name) removed empty meld")
+                }
+                return
+            }
+        }
+        
+        print("⚠️ \(name) tried to remove \(card.displayName) but card not found in hand or melds")
     }
     
     // Check if player has a specific card
