@@ -606,11 +606,24 @@ struct GameBoardView: View {
                         HStack(spacing: 2) {
                             ForEach(meld.cards) { card in
                                 ZStack(alignment: .topTrailing) {
+                                    let isPlayable = game.getPlayableCards().contains(card)
                                     Image(card.imageName)
                                         .resizable()
                                         .aspectRatio(contentMode: .fit)
-                                        .frame(width: 20, height: 30)
-                                        .cornerRadius(3)
+                                        .frame(width: 80 * settings.playerHandCardSize.rawValue, height: 120 * settings.playerHandCardSize.rawValue)
+                                        .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(isPlayable ? Color.blue : Color.clear, lineWidth: isPlayable ? 2 : 0)
+                                        )
+                                        .scaleEffect(isPlayable ? 1.05 : 1.0)
+                                        .opacity(isPlayable ? 1.0 : 0.7)
+                                        .onTapGesture {
+                                            handleCardTap(card)
+                                        }
+                                        .onTapGesture(count: 2) {
+                                            handleCardDoubleTap(card)
+                                        }
                                     HStack(spacing: 1) {
                                         if card.usedInMeldTypes.count == MeldType.allCases.count {
                                             Text("⚠️")
