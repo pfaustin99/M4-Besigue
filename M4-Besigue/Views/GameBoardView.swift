@@ -390,7 +390,7 @@ struct GameBoardView: View {
         VStack(spacing: 0) {
             // Player info and meld instructions
             playerInfoView(currentPlayer)
-            if self.game.canPlayerMeld && currentPlayer.type == .human {
+            if self.game.canPlayerMeld && currentPlayer.type == .human && currentPlayer.id == game.trickWinnerId {
                 meldInstructionsView(currentPlayer)
             }
             if !currentPlayer.meldsDeclared.isEmpty {
@@ -439,7 +439,7 @@ struct GameBoardView: View {
         VStack(spacing: 0) {
             // Player info and meld instructions
             playerInfoView(currentPlayer)
-            if self.game.canPlayerMeld && currentPlayer.type == .human {
+            if self.game.canPlayerMeld && currentPlayer.type == .human && currentPlayer.id == game.trickWinnerId {
                 meldInstructionsView(currentPlayer)
             }
             if !currentPlayer.meldsDeclared.isEmpty {

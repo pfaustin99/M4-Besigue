@@ -656,8 +656,18 @@ class Game: ObservableObject {
         
         // Determine which card in the trick is the winning card
         let winningCardIndex = determineTrickWinnerIndex() ?? 0
+        let winningCard = currentTrick[winningCardIndex]
         
         print("🎯 Trick evaluation complete - Winner: \(winner.name) with card at index \(winningCardIndex)")
+        print("   Winning card: \(winningCard.displayName)")
+        print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
+        
+        // Award 10 points for winning with 7 of trump suit
+        if let trumpSuit = trumpSuit, winningCard.suit == trumpSuit && winningCard.value == .seven {
+            winner.addPoints(10)
+            print("🎉 BONUS: \(winner.name) wins with 7 of \(trumpSuit.rawValue) - awarded 10 points!")
+            print("   New score: \(winner.totalPoints)")
+        }
         
         // Add brisques to winner's count
         for card in currentTrick {
@@ -761,12 +771,8 @@ class Game: ObservableObject {
         isShowingTrickResult = false
         lastTrickWinner = nil
         winningCardIndex = nil
-        canPlayerMeld = false
-        awaitingMeldChoice = false
         print("   Current trick count after clear: \(currentTrick.count)")
         print("   Is showing trick result: \(isShowingTrickResult)")
-        print("   Can player meld: \(canPlayerMeld)")
-        print("   Awaiting meld choice: \(awaitingMeldChoice)")
     }
     
     // Draw card for the current draw turn player
@@ -782,6 +788,10 @@ class Game: ObservableObject {
             print("❌ DRAW FAILED - Conditions not met")
             return 
         }
+        
+        // Reset meld state when any player draws during draw cycle
+        canPlayerMeld = false
+        awaitingMeldChoice = false
         
         if let card = deck.drawCard() {
             player.addCards([card])
@@ -1301,11 +1311,12 @@ class Game: ObservableObject {
         print("   Current round: \(self.roundNumber)")
         
         if canDeclareMeld(meld, by: player) {
-            // Clear meld choice state when player declares meld
-            awaitingMeldChoice = false
-            
             // Clear the trick area when winner takes action (declares meld)
             clearTrickArea()
+            
+            // Reset meld state after declaring meld
+            canPlayerMeld = false
+            awaitingMeldChoice = false
             
             var finalMeld = meld
             
