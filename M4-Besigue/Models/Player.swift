@@ -59,24 +59,27 @@ class Player: ObservableObject, Identifiable {
         print("   🎴 Player \(name) getPlayableCards:")
         print("     Lead suit: \(leadSuit?.rawValue ?? "None")")
         print("     Trump suit: \(trumpSuit?.rawValue ?? "None")")
-        print("     All cards: \(hand.map { $0.displayName })")
+        
+        // Combine held and melded cards
+        let allCards = hand + meldsDeclared.flatMap { $0.cards }
+        print("     All cards (held + melded): \(allCards.map { $0.displayName })")
         
         // If no lead suit, all cards are playable
         guard let leadSuit = leadSuit else {
             print("     No lead suit - all cards playable")
-            return hand
+            return allCards
         }
         
         // If player can follow suit, they must play a card of that suit
-        if canFollowSuit(leadSuit: leadSuit) {
-            let suitCards = cardsOfSuit(leadSuit)
+        let suitCards = allCards.filter { !$0.isJoker && $0.suit == leadSuit }
+        if !suitCards.isEmpty {
             print("     Can follow suit \(leadSuit.rawValue) - must play: \(suitCards.map { $0.displayName })")
             return suitCards
         }
         
         // If they can't follow suit, they can play any card
         print("     Cannot follow suit \(leadSuit.rawValue) - can play any card")
-        return hand
+        return allCards
     }
     
     // Add points to score
@@ -89,7 +92,7 @@ class Player: ObservableObject, Identifiable {
         meldsDeclared.append(meld)
         addPoints(meld.pointValue)
         
-        // Remove the melded cards from the player's hand (only if they're still there)
+        // Restore: Remove the melded cards from the player's hand (only if they're still there)
         for i in 0..<meld.cards.count {
             removeCard(meld.cards[i])
         }
