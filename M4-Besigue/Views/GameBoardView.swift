@@ -605,42 +605,13 @@ struct GameBoardView: View {
                     VStack(spacing: 2) {
                         HStack(spacing: 2) {
                             ForEach(meld.cards) { card in
-                                ZStack(alignment: .topTrailing) {
-                                    let isPlayable = game.getPlayableCards().contains(card)
-                                    Image(card.imageName)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(width: 80 * settings.playerHandCardSize.rawValue, height: 120 * settings.playerHandCardSize.rawValue)
-                                        .cornerRadius(8)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(isPlayable ? Color.blue : Color.clear, lineWidth: isPlayable ? 2 : 0)
-                                        )
-                                        .scaleEffect(isPlayable ? 1.05 : 1.0)
-                                        .opacity(isPlayable ? 1.0 : 0.7)
-                                        .onTapGesture {
-                                            handleCardTap(card)
-                                        }
-                                        .onTapGesture(count: 2) {
-                                            handleCardDoubleTap(card)
-                                        }
-                                    HStack(spacing: 1) {
-                                        if card.usedInMeldTypes.count == MeldType.allCases.count {
-                                            Text("⚠️")
-                                                .font(.system(size: 10))
-                                                .padding(1)
-                                        } else {
-                                            ForEach(Array(card.usedInMeldTypes), id: \.self) { meldType in
-                                                Text(badgeIcon(for: meldType, card: card))
-                                                    .font(.system(size: 10))
-                                                    .padding(1)
-                                            }
-                                        }
-                                    }
-                                    .background(Color.white.opacity(0.7))
-                                    .clipShape(Capsule())
-                                    .offset(x: 2, y: -2)
-                                }
+                                MeldCardView(
+                                    card: card,
+                                    settings: settings,
+                                    isPlayable: game.getPlayableCards().contains { $0.id == card.id },
+                                    onTap: { handleCardTap(card) },
+                                    onDoubleTap: { handleCardDoubleTap(card) }
+                                )
                             }
                         }
                         Text(meld.type.name)
@@ -656,6 +627,52 @@ struct GameBoardView: View {
                 }
             }
             .padding(.horizontal, 2)
+        }
+    }
+    
+    // MARK: - Meld Card View
+    private func MeldCardView(
+        card: PlayerCard,
+        settings: GameSettings,
+        isPlayable: Bool,
+        onTap: @escaping () -> Void,
+        onDoubleTap: @escaping () -> Void
+    ) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Image(card.imageName)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 80 * settings.playerHandCardSize.rawValue, height: 120 * settings.playerHandCardSize.rawValue)
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isPlayable ? Color.blue : Color.clear, lineWidth: isPlayable ? 2 : 0)
+                )
+                .scaleEffect(isPlayable ? 1.05 : 1.0)
+                .opacity(isPlayable ? 1.0 : 0.7)
+                .onTapGesture {
+                    onTap()
+                }
+                .onTapGesture(count: 2) {
+                    onDoubleTap()
+                }
+            
+            HStack(spacing: 1) {
+                if card.usedInMeldTypes.count == MeldType.allCases.count {
+                    Text("⚠️")
+                        .font(.system(size: 10))
+                        .padding(1)
+                } else {
+                    ForEach(Array(card.usedInMeldTypes), id: \.self) { meldType in
+                        Text(badgeIcon(for: meldType, card: card))
+                            .font(.system(size: 10))
+                            .padding(1)
+                    }
+                }
+            }
+            .background(Color.white.opacity(0.7))
+            .clipShape(Capsule())
+            .offset(x: 2, y: -2)
         }
     }
     
@@ -1068,14 +1085,14 @@ struct GameBoardView: View {
 
                     let humanPlayer = game.currentPlayer
                     if humanPlayer.type == .human, selectedCards.count >= 2, selectedCards.count <= 4 {
-                        // Find the best meld type for the selected cards
-                        let possibleMelds = game.getPossibleMelds(for: humanPlayer).filter { meld in
-                            meld.cards.count == selectedCards.count && meld.cards.allSatisfy { selectedCards.contains($0) }
-                        }
-                        if let bestMeld = possibleMelds.first {
-                            print("   Found meld: \(bestMeld.type.name) with \(bestMeld.cards.count) cards")
-                            if game.canDeclareMeld(bestMeld, by: humanPlayer) {
-                                game.declareMeld(bestMeld, by: humanPlayer)
+                        // Create a meld directly from the selected cards
+                        if let meldType = game.getMeldTypeForCards(selectedCards, trumpSuit: game.trumpSuit) {
+                            let pointValue = game.getPointValueForMeldType(meldType)
+                            let meld = Meld(cards: selectedCards, type: meldType, pointValue: pointValue, roundNumber: game.roundNumber)
+                            
+                            if game.canDeclareMeld(meld, by: humanPlayer) {
+                                print("   Found meld: \(meld.type.name) with \(meld.cards.count) cards")
+                                game.declareMeld(meld, by: humanPlayer)
                                 selectedCards.removeAll()
                             } else {
                                 print("   ❌ Cannot declare meld")

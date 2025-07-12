@@ -1330,9 +1330,6 @@ class Game: ObservableObject {
                 finalMeld = Meld(cards: meld.cards, type: .royalMarriage, pointValue: settings.royalMarriagePoints, roundNumber: self.roundNumber)
             }
             
-            // Remove cards from existing melds before declaring new meld
-            removeCardsFromExistingMelds(meld.cards, player: player)
-            
             player.declareMeld(finalMeld)
             print("✅ MELD DECLARED SUCCESSFULLY:")
             print("   Player: \(player.name)")
@@ -1357,37 +1354,64 @@ class Game: ObservableObject {
         }
     }
     
-    // Remove cards from existing melds when they're used in a new meld
-    private func removeCardsFromExistingMelds(_ cards: [PlayerCard], player: Player) {
-        print("🔍 Removing cards from existing melds:")
-        print("   Cards to remove: \(cards.map { $0.displayName })")
+
+    
+    // Get meld type for a set of cards
+    func getMeldTypeForCards(_ cards: [PlayerCard], trumpSuit: Suit?) -> MeldType? {
+        guard cards.count >= 2 && cards.count <= 4 else { return nil }
         
-        for card in cards {
-            // Find which existing meld contains this card
-            for (meldIndex, existingMeld) in player.meldsDeclared.enumerated() {
-                if let cardIndex = existingMeld.cards.firstIndex(where: { existingCard in
-                    existingCard.suit == card.suit && 
-                    existingCard.value == card.value &&
-                    existingCard.isJoker == card.isJoker
-                }) {
-                    print("   Removing \(card.displayName) from existing \(existingMeld.type.name)")
-                    
-                    // Remove the card from the existing meld
-                    var updatedMeld = existingMeld
-                    updatedMeld.cards.remove(at: cardIndex)
-                    
-                    // If the meld is now empty, remove it entirely
-                    if updatedMeld.cards.isEmpty {
-                        player.meldsDeclared.remove(at: meldIndex)
-                        print("   Removed empty meld: \(existingMeld.type.name)")
-                    } else {
-                        // Update the existing meld with the remaining cards
-                        player.meldsDeclared[meldIndex] = updatedMeld
-                        print("   Updated meld: \(existingMeld.type.name) now has \(updatedMeld.cards.count) cards")
-                    }
-                    break
+        // Check for Bésigue (Queen of Spades + Jack of Diamonds)
+        if cards.count == 2 {
+            let hasQueenOfSpades = cards.contains { $0.value == .queen && $0.suit == .spades }
+            let hasJackOfDiamonds = cards.contains { $0.value == .jack && $0.suit == .diamonds }
+            if hasQueenOfSpades && hasJackOfDiamonds {
+                return .besigue
+            }
+        }
+        
+        // Check for marriages (King + Queen of same suit)
+        if cards.count == 2 {
+            for suit in Suit.allCases {
+                let hasKing = cards.contains { $0.value == .king && $0.suit == suit }
+                let hasQueen = cards.contains { $0.value == .queen && $0.suit == suit }
+                if hasKing && hasQueen {
+                    return suit == trumpSuit ? .royalMarriage : .commonMarriage
                 }
             }
+        }
+        
+        // Check for four of a kind
+        if cards.count == 4 {
+            // Check if all cards have the same value
+            if let firstValue = cards.first?.value {
+                let allSameValue = cards.allSatisfy { $0.value == firstValue }
+                if allSameValue, let meldType = MeldType.forValue(firstValue) {
+                    return meldType
+                }
+            }
+            
+            // Check for four jokers
+            let allJokers = cards.allSatisfy { $0.isJoker }
+            if allJokers {
+                return .fourJokers
+            }
+        }
+        
+        return nil
+    }
+    
+    // Get point value for a meld type
+    func getPointValueForMeldType(_ meldType: MeldType) -> Int {
+        switch meldType {
+        case .besigue: return settings.besiguePoints
+        case .royalMarriage: return settings.royalMarriagePoints
+        case .commonMarriage: return settings.commonMarriagePoints
+        case .fourJacks: return settings.fourJacksPoints
+        case .fourQueens: return settings.fourQueensPoints
+        case .fourKings: return settings.fourKingsPoints
+        case .fourAces: return settings.fourAcesPoints
+        case .fourJokers: return settings.fourJokersPoints
+        case .sequence: return 100 // Default for sequence
         }
     }
     
