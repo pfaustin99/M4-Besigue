@@ -920,8 +920,9 @@ struct GameBoardView: View {
                     .font(.headline)
             }
             
-            // Hand count
-            Text("Hand: \(player.hand.count) cards")
+            // Hand count (held + melded)
+            let totalCards = player.hand.count + player.meldsDeclared.flatMap { $0.cards }.count
+            Text("Hand: \(totalCards) cards (\(player.hand.count) held, \(player.meldsDeclared.flatMap { $0.cards }.count) melded)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
