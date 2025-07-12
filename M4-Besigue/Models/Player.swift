@@ -112,6 +112,11 @@ class Player: ObservableObject, Identifiable {
         meldsDeclared.append(meld)
         addPoints(meld.pointValue)
         
+        // Restore: Remove the melded cards from the player's hand (only if they're still there)
+        for i in 0..<meld.cards.count {
+            removeCard(meld.cards[i])
+        }
+        
         // Mark meld usage on the involved PlayerCards (in hand and in melds)
         for i in 0..<meld.cards.count {
             let card = meld.cards[i]
@@ -128,8 +133,8 @@ class Player: ObservableObject, Identifiable {
         }
         
         print("🎴 \(name) declared \(meld.type.name) with \(meld.cards.count) cards")
-        print("   Cards remain in hand: \(meld.cards.map { $0.displayName })")
-        print("   Hand size: \(hand.count)")
+        print("   Cards removed from hand: \(meld.cards.map { $0.displayName })")
+        print("   Remaining hand size: \(hand.count)")
         print("   Total melds: \(meldsDeclared.count)")
     }
     
