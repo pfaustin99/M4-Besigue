@@ -362,8 +362,7 @@ class Game: ObservableObject {
     func startNewGame() {
         print("🎮 Starting new game...")
         
-        // Clear the PlayerCard registry for a fresh start
-        PlayerCard.clearRegistry()
+
         
         // Update players from current configuration
         updatePlayersFromConfiguration()
@@ -475,7 +474,7 @@ class Game: ObservableObject {
         for _ in 0..<9 {
             for player in players {
                 if let card = deck.drawCard() {
-                    let playerCard = PlayerCard.getOrCreate(for: card)
+                    let playerCard = PlayerCard(card: card)
                     player.hand.append(playerCard)
                 }
             }
@@ -926,7 +925,7 @@ class Game: ObservableObject {
         // AI draws a card (if available) with animation
         if !deck.isEmpty {
             if let card = deck.drawCard() {
-                let playerCard = PlayerCard.getOrCreate(for: card)
+                let playerCard = PlayerCard(card: card)
                 
                 print("🎬 Starting AI draw animation for \(currentPlayer.name)")
                 

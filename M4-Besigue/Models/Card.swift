@@ -235,10 +235,6 @@ struct PlayerCard: Identifiable, Equatable, Hashable {
     let card: Card
     var usedInMeldTypes: Set<MeldType> = []
     
-    // Static registry to ensure each Card object creates only one PlayerCard instance
-    private static var cardRegistry: [UUID: PlayerCard] = [:]
-    private static let registryLock = NSLock()
-    
     var id: UUID { card.id }
     var suit: Suit? { card.suit }
     var value: CardValue? { card.value }
@@ -249,12 +245,6 @@ struct PlayerCard: Identifiable, Equatable, Hashable {
     var rank: Int { card.rank }
     var isBrisque: Bool { card.isBrisque }
     
-    // Initialize PlayerCard with registry to ensure singleton instances
-    init(card: Card) {
-        self.card = card
-        self.usedInMeldTypes = []
-    }
-    
     // Check if this card can beat another card in a trick
     func canBeat(_ otherCard: PlayerCard, trumpSuit: Suit?, leadSuit: Suit?) -> Bool {
         return card.canBeat(otherCard.card, trumpSuit: trumpSuit, leadSuit: leadSuit)
@@ -263,27 +253,6 @@ struct PlayerCard: Identifiable, Equatable, Hashable {
     // Simplified canBeat method for tests (without leadSuit)
     func canBeat(_ otherCard: PlayerCard, trumpSuit: Suit?) -> Bool {
         return card.canBeat(otherCard.card, trumpSuit: trumpSuit)
-    }
-    
-    // Static method to clear registry (useful for testing or game reset)
-    static func clearRegistry() {
-        registryLock.lock()
-        defer { registryLock.unlock() }
-        cardRegistry.removeAll()
-    }
-    
-    // Static method to get existing PlayerCard instance or create new one
-    static func getOrCreate(for card: Card) -> PlayerCard {
-        registryLock.lock()
-        defer { registryLock.unlock() }
-        
-        if let existing = cardRegistry[card.id] {
-            return existing
-        } else {
-            let newPlayerCard = PlayerCard(card: card)
-            cardRegistry[card.id] = newPlayerCard
-            return newPlayerCard
-        }
     }
 }
 

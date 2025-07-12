@@ -19,7 +19,7 @@ class Player: ObservableObject, Identifiable {
     
     // Add cards to hand
     func addCards(_ cards: [Card]) {
-        hand.append(contentsOf: cards.map { PlayerCard.getOrCreate(for: $0) })
+        hand.append(contentsOf: cards.map { PlayerCard(card: $0) })
     }
     
     // Remove card from hand or melds

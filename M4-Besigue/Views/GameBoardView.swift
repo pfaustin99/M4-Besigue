@@ -1085,10 +1085,15 @@ struct GameBoardView: View {
 
                     let humanPlayer = game.currentPlayer
                     if humanPlayer.type == .human, selectedCards.count >= 2, selectedCards.count <= 4 {
-                        // Create a meld directly from the selected cards
-                        if let meldType = game.getMeldTypeForCards(selectedCards, trumpSuit: game.trumpSuit) {
+                        // Deduplicate selected cards to prevent duplicates in meld
+                        let uniqueSelectedCards = Array(Set(selectedCards))
+                        print("   Original selected cards: \(selectedCards.count)")
+                        print("   Unique selected cards: \(uniqueSelectedCards.count)")
+                        
+                        // Create a meld directly from the unique selected cards
+                        if let meldType = game.getMeldTypeForCards(uniqueSelectedCards, trumpSuit: game.trumpSuit) {
                             let pointValue = game.getPointValueForMeldType(meldType)
-                            let meld = Meld(cards: selectedCards, type: meldType, pointValue: pointValue, roundNumber: game.roundNumber)
+                            let meld = Meld(cards: uniqueSelectedCards, type: meldType, pointValue: pointValue, roundNumber: game.roundNumber)
                             
                             if game.canDeclareMeld(meld, by: humanPlayer) {
                                 print("   Found meld: \(meld.type.name) with \(meld.cards.count) cards")
@@ -1181,13 +1186,23 @@ struct GameBoardView: View {
     private func handleCardTap(_ card: PlayerCard) {
         // Only allow card selection for melding when the current player is the trick winner
         if game.awaitingMeldChoice && game.currentPlayer.type == .human && game.canPlayerMeld && game.currentPlayer.id == game.trickWinnerId {
+            print("🎯 CARD TAP:")
+            print("   Card: \(card.displayName) (ID: \(card.id))")
+            print("   Currently selected: \(selectedCards.map { "\($0.displayName) (ID: \($0.id))" })")
+            print("   Card already in selectedCards: \(selectedCards.contains(card))")
+            
             // In melding phase, tap to select/deselect cards for melds
             if selectedCards.contains(card) {
                 selectedCards.removeAll { $0 == card }
+                print("   ✅ Removed card from selection")
             } else if selectedCards.count < 4 {
                 selectedCards.append(card)
+                print("   ✅ Added card to selection")
+            } else {
+                print("   ❌ Cannot add more cards (already have 4)")
             }
-            // If already 4 cards, do nothing (cannot select more)
+            
+            print("   Final selected cards: \(selectedCards.map { "\($0.displayName) (ID: \($0.id))" })")
         }
         // At all other times, do not allow card selection for melding or play
     }
