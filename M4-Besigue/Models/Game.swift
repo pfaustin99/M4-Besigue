@@ -1330,9 +1330,6 @@ class Game: ObservableObject {
                 finalMeld = Meld(cards: meld.cards, type: .royalMarriage, pointValue: settings.royalMarriagePoints, roundNumber: self.roundNumber)
             }
             
-            // Remove cards from existing melds before declaring new meld
-            removeCardsFromExistingMelds(meld.cards, player: player)
-            
             player.declareMeld(finalMeld)
             print("✅ MELD DECLARED SUCCESSFULLY:")
             print("   Player: \(player.name)")
@@ -1357,39 +1354,7 @@ class Game: ObservableObject {
         }
     }
     
-    // Remove cards from existing melds when they're used in a new meld
-    private func removeCardsFromExistingMelds(_ cards: [PlayerCard], player: Player) {
-        print("🔍 Removing cards from existing melds:")
-        print("   Cards to remove: \(cards.map { $0.displayName })")
-        
-        for card in cards {
-            // Find which existing meld contains this card
-            for (meldIndex, existingMeld) in player.meldsDeclared.enumerated() {
-                if let cardIndex = existingMeld.cards.firstIndex(where: { existingCard in
-                    existingCard.suit == card.suit && 
-                    existingCard.value == card.value &&
-                    existingCard.isJoker == card.isJoker
-                }) {
-                    print("   Removing \(card.displayName) from existing \(existingMeld.type.name)")
-                    
-                    // Remove the card from the existing meld
-                    var updatedMeld = existingMeld
-                    updatedMeld.cards.remove(at: cardIndex)
-                    
-                    // If the meld is now empty, remove it entirely
-                    if updatedMeld.cards.isEmpty {
-                        player.meldsDeclared.remove(at: meldIndex)
-                        print("   Removed empty meld: \(existingMeld.type.name)")
-                    } else {
-                        // Update the existing meld with the remaining cards
-                        player.meldsDeclared[meldIndex] = updatedMeld
-                        print("   Updated meld: \(existingMeld.type.name) now has \(updatedMeld.cards.count) cards")
-                    }
-                    break
-                }
-            }
-        }
-    }
+
     
     // Get all possible melds for a player
     func getPossibleMelds(for player: Player) -> [Meld] {
