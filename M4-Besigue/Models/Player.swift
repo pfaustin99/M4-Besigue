@@ -112,29 +112,24 @@ class Player: ObservableObject, Identifiable {
         meldsDeclared.append(meld)
         addPoints(meld.pointValue)
         
-        // Restore: Remove the melded cards from the player's hand (only if they're still there)
-        for i in 0..<meld.cards.count {
-            removeCard(meld.cards[i])
+        // Remove the melded cards from the player's held cards (hand array)
+        for card in meld.cards {
+            if let index = hand.firstIndex(of: card) {
+                hand.remove(at: index)
+                print("🎴 \(name) moved \(card.displayName) from held to meld")
+            }
         }
         
-        // Mark meld usage on the involved PlayerCards (in hand and in melds)
-        for i in 0..<meld.cards.count {
-            let card = meld.cards[i]
-            // Update in hand
-            if let idx = hand.firstIndex(of: card) {
-                hand[idx].usedInMeldTypes.insert(meld.type)
-            }
-            // Update in melds
-            for meldIdx in 0..<meldsDeclared.count {
-                if let cardIdx = meldsDeclared[meldIdx].cards.firstIndex(of: card) {
-                    meldsDeclared[meldIdx].cards[cardIdx].usedInMeldTypes.insert(meld.type)
-                }
+        // Mark meld usage on the involved PlayerCards in melds
+        for meldIdx in 0..<meldsDeclared.count {
+            for cardIdx in 0..<meldsDeclared[meldIdx].cards.count {
+                meldsDeclared[meldIdx].cards[cardIdx].usedInMeldTypes.insert(meld.type)
             }
         }
         
         print("🎴 \(name) declared \(meld.type.name) with \(meld.cards.count) cards")
-        print("   Cards removed from hand: \(meld.cards.map { $0.displayName })")
-        print("   Remaining hand size: \(hand.count)")
+        print("   Cards moved from held to meld: \(meld.cards.map { $0.displayName })")
+        print("   Remaining held cards: \(hand.count)")
         print("   Total melds: \(meldsDeclared.count)")
     }
     
