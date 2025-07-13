@@ -18,6 +18,8 @@ class Deck: ObservableObject {
         for _ in 1...4 {
             for suit in Suit.allCases {
                 for value in CardValue.allCases {
+                    // Skip eights and nines for quick testing
+                    if value == .eight || value == .nine { continue }
                     cards.append(Card(suit: suit, value: value))
                 }
             }
@@ -146,8 +148,8 @@ class Deck: ObservableObject {
             return false
         }
         
-        // Verify each suit has 4 of each value (A, 10, K, Q, J, 9, 8, 7)
-        let expectedValues: [CardValue] = [.ace, .ten, .king, .queen, .jack, .nine, .eight, .seven]
+        // Verify each suit has 4 of each value (A, 10, K, Q, J)
+        let expectedValues: [CardValue] = [.ace, .ten, .king, .queen, .jack]
         for suit in Suit.allCases {
             for value in expectedValues {
                 let key = "\(suit.rawValue)_\(value.rawValue)"

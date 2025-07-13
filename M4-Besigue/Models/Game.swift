@@ -1360,13 +1360,21 @@ class Game: ObservableObject {
     
     // Get meld type for a set of cards
     func getMeldTypeForCards(_ cards: [PlayerCard], trumpSuit: Suit?) -> MeldType? {
-        guard cards.count >= 2 && cards.count <= 4 else { return nil }
+        print("🔍 getMeldTypeForCards called with cards: \(cards.map { "\($0.displayName) (ID: \($0.id))" })")
+        print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
+        
+        guard cards.count >= 2 && cards.count <= 4 else { 
+            print("   ❌ Invalid card count: \(cards.count) (must be 2-4)")
+            return nil 
+        }
         
         // Check for Bésigue (Queen of Spades + Jack of Diamonds)
         if cards.count == 2 {
             let hasQueenOfSpades = cards.contains { $0.value == .queen && $0.suit == .spades }
             let hasJackOfDiamonds = cards.contains { $0.value == .jack && $0.suit == .diamonds }
+            print("   🔍 Checking Bésigue: Queen of Spades=\(hasQueenOfSpades), Jack of Diamonds=\(hasJackOfDiamonds)")
             if hasQueenOfSpades && hasJackOfDiamonds {
+                print("   ✅ Found Bésigue")
                 return .besigue
             }
         }
@@ -1376,29 +1384,57 @@ class Game: ObservableObject {
             for suit in Suit.allCases {
                 let hasKing = cards.contains { $0.value == .king && $0.suit == suit }
                 let hasQueen = cards.contains { $0.value == .queen && $0.suit == suit }
+                print("   🔍 Checking marriage for \(suit.rawValue): King=\(hasKing), Queen=\(hasQueen)")
                 if hasKing && hasQueen {
-                    return suit == trumpSuit ? .royalMarriage : .commonMarriage
+                    let meldType = suit == trumpSuit ? MeldType.royalMarriage : MeldType.commonMarriage
+                    print("   ✅ Found \(meldType.name) for \(suit.rawValue)")
+                    return meldType
                 }
             }
         }
         
         // Check for four of a kind
         if cards.count == 4 {
+            print("   🔍 Checking four of a kind...")
+            
             // Check if all cards have the same value
             if let firstValue = cards.first?.value {
                 let allSameValue = cards.allSatisfy { $0.value == firstValue }
+                print("   First value: \(firstValue.rawValue), All same value: \(allSameValue)")
                 if allSameValue, let meldType = MeldType.forValue(firstValue) {
+                    print("   ✅ Found \(meldType.name)")
                     return meldType
                 }
             }
             
             // Check for four jokers
             let allJokers = cards.allSatisfy { $0.isJoker }
+            print("   All jokers: \(allJokers)")
             if allJokers {
+                print("   ✅ Found Four Jokers")
                 return .fourJokers
+            }
+            
+            // Check for four of a kind with jokers as wild cards
+            print("   🔍 Checking four of a kind with jokers as wild cards...")
+            let nonJokerCards = cards.filter { !$0.isJoker }
+            let jokerCards = cards.filter { $0.isJoker }
+            print("   Non-joker cards: \(nonJokerCards.map { "\($0.displayName) (ID: \($0.id))" })")
+            print("   Joker cards: \(jokerCards.map { "\($0.displayName) (ID: \($0.id))" })")
+            
+            if let firstValue = nonJokerCards.first?.value {
+                let allSameValue = nonJokerCards.allSatisfy { $0.value == firstValue }
+                let totalCards = nonJokerCards.count + jokerCards.count
+                print("   Non-joker value: \(firstValue.rawValue), All same value: \(allSameValue), Total cards: \(totalCards)")
+                
+                if allSameValue && totalCards == 4, let meldType = MeldType.forValue(firstValue) {
+                    print("   ✅ Found \(meldType.name) with jokers as wild cards")
+                    return meldType
+                }
             }
         }
         
+        print("   ❌ No valid meld type found")
         return nil
     }
     
@@ -1464,7 +1500,7 @@ class Game: ObservableObject {
                 // Can form marriage if at least one card is in held
                 if (kingInHeld || kingInMeld) && (queenInHeld || queenInMeld) {
                     let isTrump = suit == trumpSuit
-                    let meldType: MeldType = isTrump ? .royalMarriage : .commonMarriage
+                    let meldType = isTrump ? MeldType.royalMarriage : MeldType.commonMarriage
                     let points = isTrump ? settings.royalMarriagePoints : settings.commonMarriagePoints
                     let meldCards = [king!, queen!]
                     possibleMelds.append(Meld(type: meldType, cards: meldCards, points: points))

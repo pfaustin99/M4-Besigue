@@ -902,7 +902,7 @@ struct GameBoardView: View {
                 meldInstructionsView(player)
             }
             if !player.meldsDeclared.isEmpty {
-                meldsAreaView(player)
+                meldedCardsAreaView(player)
             }
             actionButtonsView(player)
             handView(player)
@@ -1097,6 +1097,13 @@ struct GameBoardView: View {
                         
                         print("🔍 MELD CREATION DEBUG:")
                         print("   Selected cards: \(uniqueSelectedCards.map { "\($0.displayName) (ID: \($0.id))" })")
+                        
+                        // Log all possible melds for comparison
+                        let possibleMelds = game.getPossibleMelds(for: humanPlayer)
+                        print("🔍 ALL POSSIBLE MELDS FOR PLAYER:")
+                        for meld in possibleMelds {
+                            print("   \(meld.type.name): \(meld.cards.map { "\($0.displayName) (ID: \($0.id))" })")
+                        }
                         
                         // Create a meld with the selected cards (they are already the correct instances)
                         if let meldType = game.getMeldTypeForCards(uniqueSelectedCards, trumpSuit: game.trumpSuit) {
@@ -1365,6 +1372,45 @@ struct GameBoardView: View {
                 handleCardDoubleTap(card)
             }
         }
+    }
+
+    // MARK: - Melded Cards Area (Unique Cards with All Badges)
+    private func meldedCardsAreaView(_ player: Player) -> some View {
+        // Get all unique melded cards
+        let uniqueMeldedCards = Array(Set(player.meldsDeclared.flatMap { $0.cards }))
+        return VStack(alignment: .leading, spacing: 4) {
+            Text("Your Melded Cards")
+                .font(.subheadline)
+                .bold()
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(uniqueMeldedCards) { card in
+                        CardView(
+                            card: card,
+                            isSelected: selectedCards.contains(card),
+                            isPlayable: false,
+                            showHint: false,
+                            onTap: { handleCardTap(card) }
+                        )
+                        .frame(width: 80, height: 120)
+                        .overlay(
+                            HStack(spacing: 1) {
+                                ForEach(Array(card.usedInMeldTypes), id: \.self) { meldType in
+                                    Text(badgeIcon(for: meldType, card: card))
+                                        .font(.system(size: 10))
+                                        .padding(1)
+                                }
+                            }
+                            .background(Color.white.opacity(0.7))
+                            .clipShape(Capsule())
+                            .offset(x: 2, y: -2)
+                        )
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+        }
+        .padding(.horizontal)
     }
 }
 
