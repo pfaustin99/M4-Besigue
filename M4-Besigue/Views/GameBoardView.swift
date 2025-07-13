@@ -1006,7 +1006,7 @@ struct GameBoardView: View {
                                     CardView(
                                         card: card,
                                         isSelected: selectedCards.contains(card),
-                                        isPlayable: game.canPlayCard() && game.currentPlayer.type == .human,
+                                        isPlayable: game.awaitingMeldChoice && game.currentPlayer.type == .human,
                                         showHint: false,
                                         onTap: {
                                             if game.awaitingMeldChoice && game.currentPlayer.type == .human {
@@ -1016,7 +1016,7 @@ struct GameBoardView: View {
                                     )
                                     .frame(width: 80, height: 120)
                                     .onTapGesture(count: 2) {
-                                        if game.canPlayCard() && game.currentPlayer.type == .human {
+                                        if !game.awaitingMeldChoice && game.canPlayCard() && game.currentPlayer.type == .human {
                                             handleCardDoubleTap(card)
                                         }
                                     }
