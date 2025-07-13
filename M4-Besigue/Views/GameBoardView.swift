@@ -1095,23 +1095,13 @@ struct GameBoardView: View {
                         print("   Original selected cards: \(selectedCards.count)")
                         print("   Unique selected cards: \(uniqueSelectedCards.count)")
                         
-                        // Find the actual PlayerCard instances from the player's hand that match the selected cards
-                        let actualMeldCards = uniqueSelectedCards.compactMap { selectedCard in
-                            // First try to find in held cards
-                            if let actualCard = humanPlayer.held.first(where: { $0.card.id == selectedCard.card.id }) {
-                                return actualCard
-                            }
-                            // Then try to find in melded cards
-                            if let actualCard = humanPlayer.meldsDeclared.flatMap({ $0.cards }).first(where: { $0.card.id == selectedCard.card.id }) {
-                                return actualCard
-                            }
-                            return nil
-                        }
+                        print("🔍 MELD CREATION DEBUG:")
+                        print("   Selected cards: \(uniqueSelectedCards.map { "\($0.displayName) (ID: \($0.id))" })")
                         
-                        // Create a meld with the actual PlayerCard instances
-                        if let meldType = game.getMeldTypeForCards(actualMeldCards, trumpSuit: game.trumpSuit) {
+                        // Create a meld with the selected cards (they are already the correct instances)
+                        if let meldType = game.getMeldTypeForCards(uniqueSelectedCards, trumpSuit: game.trumpSuit) {
                             let pointValue = game.getPointValueForMeldType(meldType)
-                            let meld = Meld(cards: actualMeldCards, type: meldType, pointValue: pointValue, roundNumber: game.roundNumber)
+                            let meld = Meld(cards: uniqueSelectedCards, type: meldType, pointValue: pointValue, roundNumber: game.roundNumber)
                             
                             if game.canDeclareMeld(meld, by: humanPlayer) {
                                 print("   Found meld: \(meld.type.name) with \(meld.cards.count) cards")
