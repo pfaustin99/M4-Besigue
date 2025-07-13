@@ -475,7 +475,7 @@ class Game: ObservableObject {
             for player in players {
                 if let card = deck.drawCard() {
                     let playerCard = PlayerCard(card: card)
-                    player.hand.append(playerCard)
+                    player.held.append(playerCard)
                 }
             }
         }
@@ -999,7 +999,7 @@ class Game: ObservableObject {
             if let card = deck.drawCard() {
                 currentPlayer.addCards([card])
                 print("✅ DRAW SUCCESS - \(currentPlayer.name) drew \(card.displayName)")
-                print("   Player hand count after draw: \(currentPlayer.hand.count)")
+                print("   Player held count after draw: \(currentPlayer.held.count)")
                 
                 // Mark that this player has drawn for the next trick
                 hasDrawnForNextTrick[currentPlayer.id] = true
@@ -1251,16 +1251,16 @@ class Game: ObservableObject {
                 return false
             }
         }
-        // Check if at least one card is in hand (can't meld only with already melded cards)
-        let cardsInHand = meld.cards.filter { meldCard in
-            player.hand.contains { $0.id == meldCard.id }
+        // Check if at least one card is in held (can't meld only with already melded cards)
+        let cardsInHeld = meld.cards.filter { meldCard in
+            player.held.contains { $0.id == meldCard.id }
         }
-        print("🔍 HAND CARD CHECK:")
-        print("   Cards in hand for meld: \(cardsInHand.map { $0.displayName })")
-        print("   At least one card in hand: \(!cardsInHand.isEmpty)")
+        print("🔍 HELD CARD CHECK:")
+        print("   Cards in held for meld: \(cardsInHeld.map { $0.displayName })")
+        print("   At least one card in held: \(!cardsInHeld.isEmpty)")
         
-        if cardsInHand.isEmpty {
-            print("❌ No cards in hand for meld")
+        if cardsInHeld.isEmpty {
+            print("❌ No cards in held for meld")
             return false
         }
         // Check if any card has already been used for this meld type
@@ -1420,15 +1420,15 @@ class Game: ObservableObject {
     // Get all possible melds for a player
     func getPossibleMelds(for player: Player) -> [Meld] {
         print("🔍 GETTING POSSIBLE MELDS FOR \(player.name):")
-        print("   Hand cards: \(player.hand.map { $0.displayName })")
+        print("   Held cards: \(player.held.map { $0.displayName })")
         print("   Melded cards: \(player.meldsDeclared.flatMap { $0.cards }.map { $0.displayName })")
         print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
         
         var possibleMelds: [Meld] = []
         
-        // Get all cards available to the player (hand + previously melded)
-        let allCards = player.hand + player.meldsDeclared.flatMap { $0.cards }
-        let handCards = player.hand
+        // Get all cards available to the player (held + previously melded)
+        let allCards = player.hand // This is the computed property (held + melded)
+        let heldCards = player.held
         let meldedCards = player.meldsDeclared.flatMap { $0.cards }
         
         // Check for Bésigue (Queen of Spades + Jack of Diamonds)
@@ -1437,13 +1437,13 @@ class Game: ObservableObject {
         
         if queenOfSpades != nil && jackOfDiamonds != nil {
             // Check if we can form Bésigue with available cards
-            let queenInHand = handCards.contains { $0.value == .queen && $0.suit == .spades }
-            let jackInHand = handCards.contains { $0.value == .jack && $0.suit == .diamonds }
+            let queenInHeld = heldCards.contains { $0.value == .queen && $0.suit == .spades }
+            let jackInHeld = heldCards.contains { $0.value == .jack && $0.suit == .diamonds }
             let queenInMeld = meldedCards.contains { $0.value == .queen && $0.suit == .spades }
             let jackInMeld = meldedCards.contains { $0.value == .jack && $0.suit == .diamonds }
             
-            // Can form Bésigue if at least one card is in hand
-            if (queenInHand || queenInMeld) && (jackInHand || jackInMeld) {
+            // Can form Bésigue if at least one card is in held
+            if (queenInHeld || queenInMeld) && (jackInHeld || jackInMeld) {
                 let meldCards = [queenOfSpades!, jackOfDiamonds!]
                 possibleMelds.append(Meld(type: .besigue, cards: meldCards, points: settings.besiguePoints))
                 print("   ✅ Found Bésigue: \(meldCards.map { $0.displayName })")
@@ -1456,13 +1456,13 @@ class Game: ObservableObject {
             let queen = allCards.first { $0.value == .queen && $0.suit == suit }
             
             if king != nil && queen != nil {
-                let kingInHand = handCards.contains { $0.value == .king && $0.suit == suit }
-                let queenInHand = handCards.contains { $0.value == .queen && $0.suit == suit }
+                let kingInHeld = heldCards.contains { $0.value == .king && $0.suit == suit }
+                let queenInHeld = heldCards.contains { $0.value == .queen && $0.suit == suit }
                 let kingInMeld = meldedCards.contains { $0.value == .king && $0.suit == suit }
                 let queenInMeld = meldedCards.contains { $0.value == .queen && $0.suit == suit }
                 
-                // Can form marriage if at least one card is in hand
-                if (kingInHand || kingInMeld) && (queenInHand || queenInMeld) {
+                // Can form marriage if at least one card is in held
+                if (kingInHeld || kingInMeld) && (queenInHeld || queenInMeld) {
                     let isTrump = suit == trumpSuit
                     let meldType: MeldType = isTrump ? .royalMarriage : .commonMarriage
                     let points = isTrump ? settings.royalMarriagePoints : settings.commonMarriagePoints
@@ -1476,7 +1476,7 @@ class Game: ObservableObject {
         // Check for four of a kind (including jokers as wild cards)
         for value in CardValue.allCases {
             let valueCards = allCards.filter { $0.value == value }
-            let jokers = handCards.filter { $0.isJoker }
+            let jokers = heldCards.filter { $0.isJoker }
             
             let totalAvailable = valueCards.count + jokers.count
             if totalAvailable >= 4, let meldType = MeldType.forValue(value) {
@@ -1510,11 +1510,11 @@ class Game: ObservableObject {
         // Check for four jokers (four-of-a-kind)
         let allJokers = allCards.filter { $0.isJoker }
         if allJokers.count >= 4 {
-            let jokersInHand = handCards.filter { $0.isJoker }
+            let jokersInHeld = heldCards.filter { $0.isJoker }
             let jokersInMeld = meldedCards.filter { $0.isJoker }
             
-            // Can form four jokers if at least one joker is in hand
-            if jokersInHand.count > 0 || jokersInMeld.count > 0 {
+            // Can form four jokers if at least one joker is in held
+            if jokersInHeld.count > 0 || jokersInMeld.count > 0 {
                 let meldCards = Array(allJokers.prefix(4))
                 possibleMelds.append(Meld(type: .fourJokers, cards: meldCards, points: settings.fourJokersPoints))
                 print("   ✅ Found Four Jokers: \(meldCards.map { $0.displayName })")

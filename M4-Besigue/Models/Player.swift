@@ -5,7 +5,13 @@ class Player: ObservableObject, Identifiable {
     let id = UUID()
     let name: String
     let type: PlayerType
-    @Published var hand: [PlayerCard] = []
+    @Published var held: [PlayerCard] = []
+    
+    // Computed property: hand = held + melded cards
+    var hand: [PlayerCard] {
+        return held + meldsDeclared.flatMap { $0.cards }
+    }
+    
     @Published var score: Int = 0
     @Published var tricksWon: Int = 0
     @Published var meldsDeclared: [Meld] = []
@@ -17,17 +23,17 @@ class Player: ObservableObject, Identifiable {
         self.type = type
     }
     
-    // Add cards to hand
+    // Add cards to held
     func addCards(_ cards: [Card]) {
-        hand.append(contentsOf: cards.map { PlayerCard(card: $0) })
+        held.append(contentsOf: cards.map { PlayerCard(card: $0) })
     }
     
-    // Remove card from hand or melds
+    // Remove card from held or melds
     func removeCard(_ card: PlayerCard) {
-        // Remove from hand if present
-        if let index = hand.firstIndex(of: card) {
-            hand.remove(at: index)
-            print("🎴 \(name) removed \(card.displayName) from hand")
+        // Remove from held if present
+        if let index = held.firstIndex(of: card) {
+            held.remove(at: index)
+            print("🎴 \(name) removed \(card.displayName) from held")
             return
         }
         
@@ -46,10 +52,10 @@ class Player: ObservableObject, Identifiable {
             }
         }
         
-        print("⚠️ \(name) tried to remove \(card.displayName) but card not found in hand or melds")
+        print("⚠️ \(name) tried to remove \(card.displayName) but card not found in held or melds")
     }
     
-    // Check if player has a specific card
+    // Check if player has a specific card (in hand - held or melded)
     func hasCard(_ card: PlayerCard) -> Bool {
         return hand.contains(card)
     }
@@ -80,18 +86,17 @@ class Player: ObservableObject, Identifiable {
         print("     Lead suit: \(leadSuit?.rawValue ?? "None")")
         print("     Trump suit: \(trumpSuit?.rawValue ?? "None")")
         
-        // Combine held and melded cards
-        let allCards = hand + meldsDeclared.flatMap { $0.cards }
-        print("     All cards (held + melded): \(allCards.map { $0.displayName })")
+        // Use the computed hand property (held + melded)
+        print("     All cards (hand): \(hand.map { $0.displayName })")
         
         // If no lead suit, all cards are playable
         guard let leadSuit = leadSuit else {
             print("     No lead suit - all cards playable")
-            return allCards
+            return hand
         }
         
         // If player can follow suit, they must play a card of that suit
-        let suitCards = allCards.filter { !$0.isJoker && $0.suit == leadSuit }
+        let suitCards = hand.filter { !$0.isJoker && $0.suit == leadSuit }
         if !suitCards.isEmpty {
             print("     Can follow suit \(leadSuit.rawValue) - must play: \(suitCards.map { $0.displayName })")
             return suitCards
@@ -99,7 +104,7 @@ class Player: ObservableObject, Identifiable {
         
         // If they can't follow suit, they can play any card
         print("     Cannot follow suit \(leadSuit.rawValue) - can play any card")
-        return allCards
+        return hand
     }
     
     // Add points to score
@@ -112,10 +117,10 @@ class Player: ObservableObject, Identifiable {
         meldsDeclared.append(meld)
         addPoints(meld.pointValue)
         
-        // Remove the melded cards from the player's held cards (hand array)
+        // Remove the melded cards from the player's held cards
         for card in meld.cards {
-            if let index = hand.firstIndex(of: card) {
-                hand.remove(at: index)
+            if let index = held.firstIndex(of: card) {
+                held.remove(at: index)
                 print("🎴 \(name) moved \(card.displayName) from held to meld")
             }
         }
@@ -129,13 +134,13 @@ class Player: ObservableObject, Identifiable {
         
         print("🎴 \(name) declared \(meld.type.name) with \(meld.cards.count) cards")
         print("   Cards moved from held to meld: \(meld.cards.map { $0.displayName })")
-        print("   Remaining held cards: \(hand.count)")
+        print("   Remaining held cards: \(held.count)")
         print("   Total melds: \(meldsDeclared.count)")
     }
     
     // Reset player for new game
     func reset() {
-        hand.removeAll()
+        held.removeAll()
         score = 0
         tricksWon = 0
         meldsDeclared.removeAll()

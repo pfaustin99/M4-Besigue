@@ -407,7 +407,7 @@ struct GameBoardView: View {
                 
                 HStack {
                     Spacer()
-                    ForEach(currentPlayer.hand) { card in
+                    ForEach(currentPlayer.held) { card in
                         CardView(
                             card: card,
                             isSelected: self.selectedCards.contains(card),
@@ -450,7 +450,7 @@ struct GameBoardView: View {
             // Active player's hand (face up, interactive)
             HStack {
                 Spacer()
-                ForEach(currentPlayer.hand) { card in
+                ForEach(currentPlayer.held) { card in
                     CardView(
                         card: card,
                         isSelected: selectedCards.contains(card),
@@ -575,13 +575,13 @@ struct GameBoardView: View {
                     .foregroundColor(.green)
             }
             HStack(spacing: 2) {
-                ForEach(0..<min(player.hand.count, 3), id: \.self) { _ in
+                ForEach(0..<min(player.held.count, 3), id: \.self) { _ in
                     CardBackView {
                         // No action
                     }
                     .frame(width: 24, height: 36)
                 }
-                if player.hand.count > 3 {
+                if player.held.count > 3 {
                     Text("+")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -745,7 +745,7 @@ struct GameBoardView: View {
             VStack(spacing: 0) {
                 // Top: other player's hand (card backs)
                 HStack {
-                    ForEach(otherPlayer.hand) { _ in
+                    ForEach(otherPlayer.held) { _ in
                         CardBackView { }
                             .frame(width: 36, height: 54)
                     }
@@ -760,7 +760,7 @@ struct GameBoardView: View {
                 )
                 // Bottom: current player's hand (face up, interactive)
                 HStack {
-                    ForEach(currentPlayer.hand) { card in
+                    ForEach(currentPlayer.held) { card in
                         CardView(
                             card: card,
                             isSelected: selectedCards.contains(card),
@@ -855,7 +855,7 @@ struct GameBoardView: View {
                 VStack(spacing: 0) {
                     // Top: other player's hand (card backs)
                     HStack {
-                        ForEach(otherPlayer.hand) { _ in
+                        ForEach(otherPlayer.held) { _ in
                             CardBackView { }
                                 .frame(width: 48, height: 72)
                         }
@@ -877,7 +877,7 @@ struct GameBoardView: View {
                                 Text(game.players[idx].name)
                                     .font(.caption)
                                 HStack {
-                                    ForEach(game.players[idx].hand) { _ in
+                                    ForEach(game.players[idx].held) { _ in
                                         CardBackView { }
                                             .frame(width: 32, height: 48)
                                     }
@@ -937,9 +937,9 @@ struct GameBoardView: View {
                     .font(.headline)
             }
             
-            // Hand count (held + melded)
-            let totalCards = player.hand.count + player.meldsDeclared.flatMap { $0.cards }.count
-            Text("Hand: \(totalCards) cards (\(player.hand.count) held, \(player.meldsDeclared.flatMap { $0.cards }.count) melded)")
+            // Hand count (total = held + melded)
+            let totalCards = player.hand.count
+            Text("Hand: \(totalCards) cards (\(player.held.count) held, \(player.meldsDeclared.flatMap { $0.cards }.count) melded)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -1006,7 +1006,7 @@ struct GameBoardView: View {
                                     CardView(
                                         card: card,
                                         isSelected: selectedCards.contains(card),
-                                        isPlayable: game.awaitingMeldChoice && game.currentPlayer.type == .human,
+                                        isPlayable: game.canPlayCard() && game.currentPlayer.type == .human,
                                         showHint: false,
                                         onTap: {
                                             if game.awaitingMeldChoice && game.currentPlayer.type == .human {
@@ -1015,6 +1015,11 @@ struct GameBoardView: View {
                                         }
                                     )
                                     .frame(width: 80, height: 120)
+                                    .onTapGesture(count: 2) {
+                                        if game.canPlayCard() && game.currentPlayer.type == .human {
+                                            handleCardDoubleTap(card)
+                                        }
+                                    }
                                 }
                             }
                             HStack(spacing: 8) {
@@ -1326,8 +1331,8 @@ struct GameBoardView: View {
     }
 
     private func handView(_ player: Player) -> some View {
-        let meldedCardIDs = Set(player.meldsDeclared.flatMap { $0.cards.map { $0.id } })
-        let handCards = player.hand.filter { !meldedCardIDs.contains($0.id) }
+        // Use held cards directly (no more filtering needed)
+        let heldCards = player.held
         let possibleMeldCards: Set<UUID> = {
             if settings.gameLevel == .novice {
                 let melds = game.getPossibleMelds(for: player)
@@ -1339,12 +1344,12 @@ struct GameBoardView: View {
         let canPlay = player.id == game.currentPlayer.id && game.hasDrawnForNextTrick[player.id, default: false] && !game.isDrawCycle
         let playableCards: [PlayerCard]
         if game.awaitingMeldChoice {
-            playableCards = handCards
+            playableCards = heldCards
         } else {
             playableCards = game.getPlayableCards()
         }
         return HandView(
-            cards: handCards,
+            cards: heldCards,
             playableCards: canPlay ? playableCards : [],
             selectedCards: selectedCards,
             showHintFor: possibleMeldCards
@@ -1380,13 +1385,13 @@ struct AIPlayerView: View {
             }
             // Show card backs for AI players (smaller)
             HStack(spacing: 2) {
-                ForEach(0..<min(player.hand.count, 3), id: \.self) { _ in
+                ForEach(0..<min(player.held.count, 3), id: \.self) { _ in
                     CardBackView {
                         // No action for AI cards
                     }
                     .frame(width: 24, height: 36)
                 }
-                if player.hand.count > 3 {
+                if player.held.count > 3 {
                     Text("+")
                         .font(.caption)
                         .foregroundColor(.secondary)
