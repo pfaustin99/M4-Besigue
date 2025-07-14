@@ -405,23 +405,19 @@ struct GameBoardView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.blue)
                 
-                HStack {
-                    Spacer()
-                    ForEach(currentPlayer.held) { card in
-                        CardView(
-                            card: card,
-                            isSelected: self.selectedCards.contains(card),
-                            isPlayable: true, // Always playable in single player mode
-                            showHint: false,
-                            onTap: {
-                                handleCardTap(card)
-                            }
-                        )
-                        .onTapGesture(count: 2) {
-                            handleCardDoubleTap(card)
-                        }
-                    }
-                    Spacer()
+                // Use HandView for drag-and-drop support
+                HandView(
+                    cards: currentPlayer.held,
+                    playableCards: currentPlayer.held, // All cards playable in single player mode
+                    selectedCards: self.selectedCards,
+                    showHintFor: []
+                ) { card in
+                    handleCardTap(card)
+                } onDoubleTap: { card in
+                    handleCardDoubleTap(card)
+                } onReorder: { newOrder in
+                    // Update the player's held cards order
+                    currentPlayer.held = newOrder
                 }
             }
             .padding(.top, 8)
@@ -448,27 +444,25 @@ struct GameBoardView: View {
             actionButtonsView(currentPlayer)
             
             // Active player's hand (face up, interactive)
-            HStack {
-                Spacer()
-                ForEach(currentPlayer.held) { card in
-                    CardView(
-                        card: card,
-                        isSelected: selectedCards.contains(card),
-                        isPlayable: game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }),
-                        showHint: false,
-                        onTap: {
-                            if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
-                                handleCardTap(card)
-                            }
-                        }
-                    )
-                    .onTapGesture(count: 2) {
-                        if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
-                            handleCardDoubleTap(card)
-                        }
-                    }
+            let isCurrentPlayer = game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id })
+            let playableCards = isCurrentPlayer ? game.getPlayableCards() : []
+            
+            HandView(
+                cards: currentPlayer.held,
+                playableCards: playableCards,
+                selectedCards: selectedCards,
+                showHintFor: []
+            ) { card in
+                if isCurrentPlayer {
+                    handleCardTap(card)
                 }
-                Spacer()
+            } onDoubleTap: { card in
+                if isCurrentPlayer {
+                    handleCardDoubleTap(card)
+                }
+            } onReorder: { newOrder in
+                // Update the player's held cards order
+                currentPlayer.held = newOrder
             }
             .padding(.top, 8)
             .padding(.bottom, 16)
@@ -759,27 +753,25 @@ struct GameBoardView: View {
                     gameRules: gameRules
                 )
                 // Bottom: current player's hand (face up, interactive)
-                HStack {
-                    ForEach(currentPlayer.held) { card in
-                        CardView(
-                            card: card,
-                            isSelected: selectedCards.contains(card),
-                            isPlayable: game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }),
-                            showHint: false,
-                            onTap: {
-                                if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
-                                    // Select or play card
-                                    // (You may want to call a play handler here)
-                                }
-                            }
-                        )
-                        .onTapGesture(count: 2) {
-                            if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
-                                // Play card on double tap
-                                // (You may want to call a play handler here)
-                            }
-                        }
+                let isCurrentPlayer = game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id })
+                let playableCards = isCurrentPlayer ? game.getPlayableCards() : []
+                
+                HandView(
+                    cards: currentPlayer.held,
+                    playableCards: playableCards,
+                    selectedCards: selectedCards,
+                    showHintFor: []
+                ) { card in
+                    if isCurrentPlayer {
+                        handleCardTap(card)
                     }
+                } onDoubleTap: { card in
+                    if isCurrentPlayer {
+                        handleCardDoubleTap(card)
+                    }
+                } onReorder: { newOrder in
+                    // Update the player's held cards order
+                    currentPlayer.held = newOrder
                 }
                 .padding(.bottom, 8)
             }
@@ -1371,20 +1363,23 @@ struct GameBoardView: View {
             if canPlay {
                 handleCardDoubleTap(card)
             }
+        } onReorder: { newOrder in
+            // Update the player's held cards order
+            player.updateHeldOrder(newOrder)
         }
     }
 
     // MARK: - Melded Cards Area (Unique Cards with All Badges)
     private func meldedCardsAreaView(_ player: Player) -> some View {
-        // Get all unique melded cards
-        let uniqueMeldedCards = Array(Set(player.meldsDeclared.flatMap { $0.cards }))
+        // Get melded cards in user-defined order
+        let meldedCards = player.getMeldedCardsInOrder()
         return VStack(alignment: .leading, spacing: 4) {
             Text("Your Melded Cards")
                 .font(.subheadline)
                 .bold()
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(uniqueMeldedCards) { card in
+                    ForEach(meldedCards) { card in
                         CardView(
                             card: card,
                             isSelected: selectedCards.contains(card),
@@ -1405,6 +1400,15 @@ struct GameBoardView: View {
                             .clipShape(Capsule())
                             .offset(x: 2, y: -2)
                         )
+                        .onDrag {
+                            // Create drag item with card ID
+                            NSItemProvider(object: card.id.uuidString as NSString)
+                        }
+                        .onDrop(of: [.text], delegate: MeldedCardDropDelegate(
+                            card: card,
+                            cards: meldedCards,
+                            player: player
+                        ))
                     }
                 }
                 .padding(.horizontal, 4)
@@ -2085,3 +2089,45 @@ struct GameBoardView_Previews: PreviewProvider {
 #Preview {
     GameBoardView(game: Game(gameRules: GameRules()), settings: GameSettings(), gameRules: GameRules())
 } 
+
+// MARK: - Melded Card Drop Delegate for Drag and Drop
+struct MeldedCardDropDelegate: DropDelegate {
+    let card: PlayerCard
+    let cards: [PlayerCard]
+    let player: Player
+    
+    func performDrop(info: DropInfo) -> Bool {
+        // Get the dragged card ID
+        guard let itemProvider = info.itemProviders(for: [.text]).first else { return false }
+        
+        itemProvider.loadObject(ofClass: NSString.self) { string, _ in
+            guard let cardIdString = string as? String,
+                  let draggedCardId = UUID(uuidString: cardIdString),
+                  let draggedCard = cards.first(where: { $0.id == draggedCardId }),
+                  let draggedIndex = cards.firstIndex(where: { $0.id == draggedCardId }),
+                  let dropIndex = cards.firstIndex(where: { $0.id == card.id }) else { return }
+            
+            DispatchQueue.main.async {
+                // Create new order by moving the dragged card to the drop position
+                var newOrder = cards
+                newOrder.remove(at: draggedIndex)
+                newOrder.insert(draggedCard, at: dropIndex)
+                
+                // Update the player's melded order
+                let newMeldedOrder = newOrder.map { $0.id }
+                player.updateMeldedOrder(newMeldedOrder)
+            }
+        }
+        
+        return true
+    }
+    
+    func dropEntered(info: DropInfo) {
+        // Visual feedback when dragging over a drop target
+        // This could be enhanced with more visual cues
+    }
+    
+    func dropExited(info: DropInfo) {
+        // Clear visual feedback when leaving drop target
+    }
+}

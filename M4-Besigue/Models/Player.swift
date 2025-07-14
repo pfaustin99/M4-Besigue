@@ -7,6 +7,9 @@ class Player: ObservableObject, Identifiable {
     let type: PlayerType
     @Published var held: [PlayerCard] = []
     
+    // User-driven order for melded cards
+    @Published var meldedOrder: [UUID] = []
+    
     // Computed property: hand = held + melded cards
     var hand: [PlayerCard] {
         return held + meldsDeclared.flatMap { $0.cards }
@@ -25,7 +28,18 @@ class Player: ObservableObject, Identifiable {
     
     // Add cards to held
     func addCards(_ cards: [Card]) {
-        held.append(contentsOf: cards.map { PlayerCard(card: $0) })
+        print("🎴 \(name) adding \(cards.count) cards to held:")
+        for card in cards {
+            print("   \(card.displayName) (ID: \(card.id))")
+        }
+        
+        let newPlayerCards = cards.map { PlayerCard(card: $0) }
+        held.append(contentsOf: newPlayerCards)
+        
+        print("🎴 \(name) held cards after adding:")
+        for playerCard in held {
+            print("   \(playerCard.displayName) (ID: \(playerCard.id))")
+        }
     }
     
     // Remove card from held or melds
@@ -125,6 +139,13 @@ class Player: ObservableObject, Identifiable {
             }
         }
         
+        // Update melded order: add new cards to the end if not already present
+        for card in meld.cards {
+            if !meldedOrder.contains(card.id) {
+                meldedOrder.append(card.id)
+            }
+        }
+        
         // Mark meld usage on the involved PlayerCards in melds
         for meldIdx in 0..<meldsDeclared.count {
             for cardIdx in 0..<meldsDeclared[meldIdx].cards.count {
@@ -136,11 +157,45 @@ class Player: ObservableObject, Identifiable {
         print("   Cards moved from held to meld: \(meld.cards.map { $0.displayName })")
         print("   Remaining held cards: \(held.count)")
         print("   Total melds: \(meldsDeclared.count)")
+        print("   Melded order: \(meldedOrder.count) cards")
+    }
+    
+    // Get melded cards in user-defined order
+    func getMeldedCardsInOrder() -> [PlayerCard] {
+        let allMeldedCards = meldsDeclared.flatMap { $0.cards }
+        var orderedCards: [PlayerCard] = []
+        
+        // Add cards in the order specified by meldedOrder
+        for cardId in meldedOrder {
+            if let card = allMeldedCards.first(where: { $0.id == cardId }) {
+                orderedCards.append(card)
+            }
+        }
+        
+        // Add any cards that might not be in meldedOrder (fallback)
+        for card in allMeldedCards {
+            if !orderedCards.contains(card) {
+                orderedCards.append(card)
+            }
+        }
+        
+        return orderedCards
+    }
+    
+    // Update melded card order (called when user drags and drops)
+    func updateMeldedOrder(_ newOrder: [UUID]) {
+        meldedOrder = newOrder
+    }
+    
+    // Update held card order (called when user drags and drops)
+    func updateHeldOrder(_ newOrder: [PlayerCard]) {
+        held = newOrder
     }
     
     // Reset player for new game
     func reset() {
         held.removeAll()
+        meldedOrder.removeAll()
         score = 0
         tricksWon = 0
         meldsDeclared.removeAll()

@@ -62,14 +62,16 @@ struct HandView: View {
     let showHintFor: Set<UUID>
     let onCardTap: (PlayerCard) -> Void
     let onDoubleTap: (PlayerCard) -> Void
+    let onReorder: (([PlayerCard]) -> Void)?
     
-    init(cards: [PlayerCard], playableCards: [PlayerCard], selectedCards: [PlayerCard], showHintFor: Set<UUID> = [], onCardTap: @escaping (PlayerCard) -> Void, onDoubleTap: @escaping (PlayerCard) -> Void) {
+    init(cards: [PlayerCard], playableCards: [PlayerCard], selectedCards: [PlayerCard], showHintFor: Set<UUID> = [], onCardTap: @escaping (PlayerCard) -> Void, onDoubleTap: @escaping (PlayerCard) -> Void, onReorder: (([PlayerCard]) -> Void)? = nil) {
         self.cards = cards
         self.playableCards = playableCards
         self.selectedCards = selectedCards
         self.showHintFor = showHintFor
         self.onCardTap = onCardTap
         self.onDoubleTap = onDoubleTap
+        self.onReorder = onReorder
     }
     
     var body: some View {
@@ -90,10 +92,65 @@ struct HandView: View {
                     .onTapGesture(count: 2) {
                         onDoubleTap(card)
                     }
+                    .onDrag {
+                        // Create drag item with card ID
+                        NSItemProvider(object: card.id.uuidString as NSString)
+                    }
+                    .onDrop(of: [.text], delegate: CardDropDelegate(
+                        card: card,
+                        cards: cards,
+                        onReorder: onReorder
+                    ))
+                    .scaleEffect(isSelected ? 1.1 : 1.0)
+                    .shadow(color: isSelected ? .blue.opacity(0.5) : .clear, radius: isSelected ? 8 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: isSelected)
                 }
             }
             .padding(.horizontal)
         }
+    }
+}
+
+// MARK: - Card Drop Delegate for Drag and Drop
+struct CardDropDelegate: DropDelegate {
+    let card: PlayerCard
+    let cards: [PlayerCard]
+    let onReorder: (([PlayerCard]) -> Void)?
+    
+    func performDrop(info: DropInfo) -> Bool {
+        guard let onReorder = onReorder else { return false }
+        
+        // Get the dragged card ID
+        guard let itemProvider = info.itemProviders(for: [.text]).first else { return false }
+        
+        itemProvider.loadObject(ofClass: NSString.self) { string, _ in
+            guard let cardIdString = string as? String,
+                  let draggedCardId = UUID(uuidString: cardIdString),
+                  let draggedCard = cards.first(where: { $0.id == draggedCardId }),
+                  let draggedIndex = cards.firstIndex(where: { $0.id == draggedCardId }),
+                  let dropIndex = cards.firstIndex(where: { $0.id == card.id }) else { return }
+            
+            DispatchQueue.main.async {
+                // Create new order by moving the dragged card to the drop position
+                var newOrder = cards
+                newOrder.remove(at: draggedIndex)
+                newOrder.insert(draggedCard, at: dropIndex)
+                
+                // Call the reorder callback
+                onReorder(newOrder)
+            }
+        }
+        
+        return true
+    }
+    
+    func dropEntered(info: DropInfo) {
+        // Visual feedback when dragging over a drop target
+        // This could be enhanced with more visual cues
+    }
+    
+    func dropExited(info: DropInfo) {
+        // Clear visual feedback when leaving drop target
     }
 }
 

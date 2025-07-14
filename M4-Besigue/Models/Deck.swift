@@ -32,6 +32,17 @@ class Deck: ObservableObject {
         cards.append(Card(jokerType: .blackTwo))
         
         print("Created Bésigue deck with \(cards.count) cards")
+        
+        // Debug: Verify unique card IDs
+        let uniqueIds = Set(cards.map { $0.id })
+        print("🃏 Deck verification:")
+        print("   Total cards: \(cards.count)")
+        print("   Unique card IDs: \(uniqueIds.count)")
+        if cards.count != uniqueIds.count {
+            print("   ❌ WARNING: Duplicate card IDs found!")
+        } else {
+            print("   ✅ All card IDs are unique")
+        }
     }
     
     // Shuffle the deck
