@@ -38,7 +38,7 @@ class AIService: ObservableObject {
                 var maxSuitStrength = -1
                 
                 for marriage in marriages {
-                    guard let suit = marriage.cards.first?.suit else { continue }
+                    guard let suit = marriage.cardIDs.compactMap({ player.cardByID($0)?.suit }).first else { continue }
                     let strength = calculateSuitStrength(cards: player.cardsOfSuit(suit), suit: suit)
                     if strength > maxSuitStrength {
                         maxSuitStrength = strength
@@ -66,7 +66,7 @@ class AIService: ObservableObject {
             // Consider trump marriages more valuable
             let trumpMarriages = possibleMelds.filter { 
                 $0.type == .royalMarriage && 
-                $0.cards.first?.suit == game.trumpSuit 
+                $0.cardIDs.compactMap { player.cardByID($0)?.suit }.first == game.trumpSuit 
             }
             meldsToDeclare.append(contentsOf: trumpMarriages)
             

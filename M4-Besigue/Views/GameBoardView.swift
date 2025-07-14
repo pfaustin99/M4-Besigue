@@ -598,14 +598,16 @@ struct GameBoardView: View {
                 ForEach(player.meldsDeclared) { meld in
                     VStack(spacing: 2) {
                         HStack(spacing: 2) {
-                            ForEach(meld.cards) { card in
-                                MeldCardView(
-                                    card: card,
-                                    settings: settings,
-                                    isPlayable: game.getPlayableCards().contains { $0.id == card.id },
-                                    onTap: { handleCardTap(card) },
-                                    onDoubleTap: { handleCardDoubleTap(card) }
-                                )
+                            ForEach(meld.cardIDs, id: \.self) { cardID in
+                                if let card = player.cardByID(cardID) {
+                                    MeldCardView(
+                                        card: card,
+                                        settings: settings,
+                                        isPlayable: game.getPlayableCards().contains { $0.id == card.id },
+                                        onTap: { handleCardTap(card) },
+                                        onDoubleTap: { handleCardDoubleTap(card) }
+                                    )
+                                }
                             }
                         }
                         Text(meld.type.name)
@@ -931,7 +933,7 @@ struct GameBoardView: View {
             
             // Hand count (total = held + melded)
             let totalCards = player.hand.count
-            Text("Hand: \(totalCards) cards (\(player.held.count) held, \(player.meldsDeclared.flatMap { $0.cards }.count) melded)")
+            Text("Hand: \(totalCards) cards (\(player.held.count) held, \(player.meldsDeclared.flatMap { $0.cardIDs }.count) melded)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -959,8 +961,9 @@ struct GameBoardView: View {
                     .foregroundColor(.secondary)
             }
             if selectedCards.count >= 2 && selectedCards.count <= 4 {
+                let selectedIDs = Set(selectedCards.map { $0.id })
                 let possibleMelds = game.getPossibleMelds(for: player).filter { meld in
-                    meld.cards.count == selectedCards.count && meld.cards.allSatisfy { selectedCards.contains($0) }
+                    meld.cardIDs.count == selectedCards.count && Set(meld.cardIDs) == selectedIDs
                 }
                 if !possibleMelds.isEmpty {
                     Text("Possible melds:")
@@ -994,49 +997,33 @@ struct GameBoardView: View {
                     ForEach(player.meldsDeclared) { meld in
                         VStack(spacing: 4) {
                             HStack(spacing: 4) {
-                                ForEach(meld.cards) { card in
-                                    CardView(
-                                        card: card,
-                                        isSelected: selectedCards.contains(card),
-                                        isPlayable: game.awaitingMeldChoice && game.currentPlayer.type == .human,
-                                        showHint: false,
-                                        onTap: {
-                                            if game.awaitingMeldChoice && game.currentPlayer.type == .human {
-                                                handleCardTap(card)
+                                ForEach(meld.cardIDs, id: \.self) { cardID in
+                                    if let card = player.cardByID(cardID) {
+                                        CardView(
+                                            card: card,
+                                            isSelected: selectedCards.contains(card),
+                                            isPlayable: game.awaitingMeldChoice && game.currentPlayer.type == .human,
+                                            showHint: false,
+                                            onTap: {
+                                                if game.awaitingMeldChoice && game.currentPlayer.type == .human {
+                                                    handleCardTap(card)
+                                                }
                                             }
-                                        }
-                                    )
-                                    .frame(width: 80, height: 120)
-                                    .onTapGesture(count: 2) {
-                                        if !game.awaitingMeldChoice && game.canPlayCard() && game.currentPlayer.type == .human {
-                                            handleCardDoubleTap(card)
+                                        )
+                                        .frame(width: 80, height: 120)
+                                        .onTapGesture(count: 2) {
+                                            if !game.awaitingMeldChoice && game.canPlayCard() && game.currentPlayer.type == .human {
+                                                handleCardDoubleTap(card)
+                                            }
                                         }
                                     }
                                 }
                             }
-                            HStack(spacing: 8) {
-                                Text(meld.type.name)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text("+\(meld.pointValue)")
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                                    .bold()
-                            }
                         }
-                        .padding(8)
-                        .background(Color.yellow.opacity(0.15))
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
-                        )
                     }
                 }
-                .padding(.horizontal, 4)
             }
         }
-        .padding(.horizontal)
     }
     
     private func actionButtonsView(_ player: Player) -> some View {
@@ -1502,6 +1489,9 @@ struct MeldOptionsView: View {
 struct MeldRowView: View {
     let meld: Meld
     let onDeclare: () -> Void
+    @EnvironmentObject var game: Game
+    @EnvironmentObject var settings: GameSettings
+    @EnvironmentObject var player: Player
     
     var body: some View {
         HStack {
@@ -1517,12 +1507,14 @@ struct MeldRowView: View {
             Spacer()
             
             HStack(spacing: 4) {
-                ForEach(meld.cards) { card in
-                    Image(card.imageName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 30, height: 45)
-                        .cornerRadius(4)
+                ForEach(meld.cardIDs, id: \.self) { cardID in
+                    if let card = player.cardByID(cardID) {
+                        Image(card.imageName)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 30, height: 45)
+                            .cornerRadius(4)
+                    }
                 }
             }
             

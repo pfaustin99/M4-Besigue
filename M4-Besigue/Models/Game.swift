@@ -1211,7 +1211,7 @@ class Game: ObservableObject {
         print("🔍 CAN DECLARE MELD CHECK:")
         print("   Player: \(player.name)")
         print("   Meld type: \(meld.type)")
-        print("   Meld cards: \(meld.cards.map { $0.displayName })")
+        print("   Meld card IDs: \(meld.cardIDs)")
         print("   Current player: \(currentPlayer.name)")
         print("   Can player meld: \(canPlayerMeld)")
         print("   Awaiting meld choice: \(awaitingMeldChoice)")
@@ -1229,31 +1229,31 @@ class Game: ObservableObject {
             return false
         } **/
         
-        print("🔍 Validating meld: \(meld.type.name) with \(meld.cards.count) cards")
+        print("🔍 Validating meld: \(meld.type.name) with \(meld.cardIDs.count) cards")
         print("🔍 Trump suit: \(trumpSuit?.rawValue ?? "None")")
         
         // Check if player has all the cards for this meld (in hand or already melded)
-        let allAvailableCards = player.hand + player.meldsDeclared.flatMap { $0.cards }
+        let allAvailableCards = player.hand + player.meldsDeclared.flatMap { $0.cardIDs.compactMap { player.cardByID($0) } }
         var availableCardIDs = allAvailableCards.map { $0.id }
         print("🔍 CARD AVAILABILITY CHECK:")
         print("   Player hand cards: \(player.hand.map { $0.displayName })")
-        print("   Player melded cards: \(player.meldsDeclared.flatMap { $0.cards }.map { $0.displayName })")
+        print("   Player melded cards: \(player.meldsDeclared.flatMap { $0.cardIDs }.compactMap { player.cardByID($0)?.displayName })")
         print("   Total available cards: \(allAvailableCards.map { $0.displayName })")
         print("   Available card IDs: \(availableCardIDs)")
         
-        for meldCard in meld.cards {
-            print("   Checking meld card: \(meldCard.displayName) (ID: \(meldCard.id))")
-            if let idx = availableCardIDs.firstIndex(of: meldCard.id) {
+        for cardID in meld.cardIDs {
+            print("   Checking meld card: \(cardID) (ID: \(cardID))")
+            if let idx = availableCardIDs.firstIndex(of: cardID) {
                 availableCardIDs.remove(at: idx)
                 print("   ✅ Found card in available cards")
             } else {
-                print("❌ Missing card for meld: \(meldCard.displayName)")
+                print("❌ Missing card for meld: ID \(cardID)")
                 return false
             }
         }
         // Check if at least one card is in held (can't meld only with already melded cards)
-        let cardsInHeld = meld.cards.filter { meldCard in
-            player.held.contains { $0.id == meldCard.id }
+        let cardsInHeld = meld.cardIDs.compactMap { cardID in
+            player.held.first(where: { $0.id == cardID })
         }
         print("🔍 HELD CARD CHECK:")
         print("   Cards in held for meld: \(cardsInHeld.map { $0.displayName })")
@@ -1264,9 +1264,8 @@ class Game: ObservableObject {
             return false
         }
         // Check if any card has already been used for this meld type
-        for meldCard in meld.cards {
-            // Find the matching PlayerCard in hand or melds by id
-            if let matching = allAvailableCards.first(where: { $0.id == meldCard.id }) {
+        for cardID in meld.cardIDs {
+            if let matching = player.cardByID(cardID) {
                 if matching.usedInMeldTypes.contains(meld.type) {
                     print("❌ Card \(matching.displayName) already used for meld type \(meld.type.name)")
                     return false
@@ -1292,7 +1291,8 @@ class Game: ObservableObject {
         if meld.type == .sequence {
             // Check if royal marriage exists for the trump suit
             let hasRoyalMarriage = player.meldsDeclared.contains { meld in
-                meld.type == .royalMarriage && meld.cards.first?.suit == trumpSuit
+                meld.type == .royalMarriage &&
+                (meld.cardIDs.compactMap { player.cardByID($0) }.first?.suit == trumpSuit)
             }
             if !hasRoyalMarriage {
                 print("❌ Sequence requires royal marriage in trump suit")
@@ -1309,7 +1309,7 @@ class Game: ObservableObject {
         print("🎯 DECLARE MELD CALLED:")
         print("   Player: \(player.name)")
         print("   Meld type: \(meld.type)")
-        print("   Meld cards: \(meld.cards.map { $0.displayName })")
+        print("   Meld card IDs: \(meld.cardIDs)")
         print("   Current round: \(self.roundNumber)")
         
         if canDeclareMeld(meld, by: player) {
@@ -1324,12 +1324,14 @@ class Game: ObservableObject {
             
             // If this is the first marriage, it sets the trump suit and becomes a Royal Marriage
             if trumpSuit == nil, meld.type == .commonMarriage {
-                trumpSuit = meld.cards.first?.suit
-                finalMeld = Meld(cards: meld.cards, type: .royalMarriage, pointValue: settings.royalMarriagePoints, roundNumber: self.roundNumber)
-                print("Trump suit set to \(trumpSuit?.rawValue ?? "")")
-            } else if meld.type == .commonMarriage, let trump = trumpSuit, meld.cards.first?.suit == trump {
+                if let suit = meld.cardIDs.compactMap({ player.cardByID($0)?.suit }).first {
+                    trumpSuit = suit
+                    finalMeld = Meld(cardIDs: meld.cardIDs, type: .royalMarriage, pointValue: settings.royalMarriagePoints, roundNumber: self.roundNumber)
+                    print("Trump suit set to \(trumpSuit?.rawValue ?? "")")
+                }
+            } else if meld.type == .commonMarriage, let trump = trumpSuit, meld.cardIDs.compactMap({ player.cardByID($0)?.suit }).first == trump {
                 // This is a marriage in the trump suit, so it's a Royal Marriage
-                finalMeld = Meld(cards: meld.cards, type: .royalMarriage, pointValue: settings.royalMarriagePoints, roundNumber: self.roundNumber)
+                finalMeld = Meld(cardIDs: meld.cardIDs, type: .royalMarriage, pointValue: settings.royalMarriagePoints, roundNumber: self.roundNumber)
             }
             
             player.declareMeld(finalMeld)
@@ -1341,7 +1343,7 @@ class Game: ObservableObject {
             
             // Handle point doubling for four-of-a-kind in trump suit
             if let trump = trumpSuit {
-                let isTrumpMeld = finalMeld.cards.allSatisfy { $0.suit == trump }
+                let isTrumpMeld = finalMeld.cardIDs.compactMap { player.cardByID($0) }.allSatisfy { $0.suit == trump }
                 if isTrumpMeld {
                     switch finalMeld.type {
                     case .fourAces, .fourKings, .fourQueens, .fourJacks:
@@ -1465,13 +1467,13 @@ class Game: ObservableObject {
         // Get all cards available to the player (held + previously melded)
         let allCards = player.hand // This is the computed property (held + melded)
         let heldCards = player.held
-        let meldedCards = player.meldsDeclared.flatMap { $0.cards }
+        let meldedCards = player.meldsDeclared.flatMap { $0.cardIDs }.compactMap { player.cardByID($0) }
         
         // Check for Bésigue (Queen of Spades + Jack of Diamonds)
         let queenOfSpades = allCards.first { $0.value == .queen && $0.suit == .spades }
         let jackOfDiamonds = allCards.first { $0.value == .jack && $0.suit == .diamonds }
         
-        if queenOfSpades != nil && jackOfDiamonds != nil {
+        if let queenOfSpades = queenOfSpades, let jackOfDiamonds = jackOfDiamonds {
             // Check if we can form Bésigue with available cards
             let queenInHeld = heldCards.contains { $0.value == .queen && $0.suit == .spades }
             let jackInHeld = heldCards.contains { $0.value == .jack && $0.suit == .diamonds }
@@ -1480,9 +1482,9 @@ class Game: ObservableObject {
             
             // Can form Bésigue if at least one card is in held
             if (queenInHeld || queenInMeld) && (jackInHeld || jackInMeld) {
-                let meldCards = [queenOfSpades!, jackOfDiamonds!]
-                possibleMelds.append(Meld(type: .besigue, cards: meldCards, points: settings.besiguePoints))
-                print("   ✅ Found Bésigue: \(meldCards.map { $0.displayName })")
+                let meldCardIDs = [queenOfSpades.id, jackOfDiamonds.id]
+                possibleMelds.append(Meld(cardIDs: meldCardIDs, type: .besigue, pointValue: settings.besiguePoints, roundNumber: roundNumber))
+                print("   ✅ Found Bésigue: [\(queenOfSpades.displayName), \(jackOfDiamonds.displayName)]")
             }
         }
         
@@ -1491,7 +1493,7 @@ class Game: ObservableObject {
             let king = allCards.first { $0.value == .king && $0.suit == suit }
             let queen = allCards.first { $0.value == .queen && $0.suit == suit }
             
-            if king != nil && queen != nil {
+            if let king = king, let queen = queen {
                 let kingInHeld = heldCards.contains { $0.value == .king && $0.suit == suit }
                 let queenInHeld = heldCards.contains { $0.value == .queen && $0.suit == suit }
                 let kingInMeld = meldedCards.contains { $0.value == .king && $0.suit == suit }
@@ -1502,9 +1504,9 @@ class Game: ObservableObject {
                     let isTrump = suit == trumpSuit
                     let meldType = isTrump ? MeldType.royalMarriage : MeldType.commonMarriage
                     let points = isTrump ? settings.royalMarriagePoints : settings.commonMarriagePoints
-                    let meldCards = [king!, queen!]
-                    possibleMelds.append(Meld(type: meldType, cards: meldCards, points: points))
-                    print("   ✅ Found \(meldType.name) (\(suit.rawValue)): \(meldCards.map { $0.displayName })")
+                    let meldCardIDs = [king.id, queen.id]
+                    possibleMelds.append(Meld(cardIDs: meldCardIDs, type: meldType, pointValue: points, roundNumber: roundNumber))
+                    print("   ✅ Found \(meldType.name) (\(suit.rawValue)): [\(king.displayName), \(queen.displayName)]")
                 }
             }
         }
@@ -1517,18 +1519,15 @@ class Game: ObservableObject {
             let totalAvailable = valueCards.count + jokers.count
             if totalAvailable >= 4, let meldType = MeldType.forValue(value) {
                 // Create meld with available cards
-                var meldCards: [PlayerCard] = []
-                
+                var meldCardIDs: [UUID] = []
                 // Add actual value cards first (up to 4)
                 let valueCardsToUse = Array(valueCards.prefix(4))
-                meldCards.append(contentsOf: valueCardsToUse)
-                
+                meldCardIDs.append(contentsOf: valueCardsToUse.map { $0.id })
                 // Add jokers to fill remaining slots (up to 4 total)
-                let jokersNeeded = 4 - meldCards.count
+                let jokersNeeded = 4 - meldCardIDs.count
                 let jokersToUse = Array(jokers.prefix(jokersNeeded))
-                meldCards.append(contentsOf: jokersToUse)
-                
-                if meldCards.count == 4 {
+                meldCardIDs.append(contentsOf: jokersToUse.map { $0.id })
+                if meldCardIDs.count == 4 {
                     let points: Int
                     switch value {
                     case .ace: points = settings.fourAcesPoints
@@ -1537,8 +1536,8 @@ class Game: ObservableObject {
                     case .jack: points = settings.fourJacksPoints
                     default: points = 100 // Default fallback
                     }
-                    possibleMelds.append(Meld(type: meldType, cards: meldCards, points: points))
-                    print("   ✅ Found \(meldType.name): \(meldCards.map { $0.displayName })")
+                    possibleMelds.append(Meld(cardIDs: meldCardIDs, type: meldType, pointValue: points, roundNumber: roundNumber))
+                    print("   ✅ Found \(meldType.name): [\(meldCardIDs.map { player.cardByID($0)?.displayName ?? "?" })]")
                 }
             }
         }
@@ -1551,9 +1550,9 @@ class Game: ObservableObject {
             
             // Can form four jokers if at least one joker is in held
             if jokersInHeld.count > 0 || jokersInMeld.count > 0 {
-                let meldCards = Array(allJokers.prefix(4))
-                possibleMelds.append(Meld(type: .fourJokers, cards: meldCards, points: settings.fourJokersPoints))
-                print("   ✅ Found Four Jokers: \(meldCards.map { $0.displayName })")
+                let meldCardIDs = Array(allJokers.prefix(4)).map { $0.id }
+                possibleMelds.append(Meld(cardIDs: meldCardIDs, type: .fourJokers, pointValue: settings.fourJokersPoints, roundNumber: roundNumber))
+                print("   ✅ Found Four Jokers: [\(meldCardIDs.map { player.cardByID($0)?.displayName ?? "?" })]")
             }
         }
         

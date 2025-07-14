@@ -6,13 +6,23 @@ class Player: ObservableObject, Identifiable {
     let name: String
     let type: PlayerType
     @Published var held: [PlayerCard] = []
+    @Published var melded: [PlayerCard] = [] // Unique melded cards, orderable for drag-and-drop
     
     // User-driven order for melded cards
     @Published var meldedOrder: [UUID] = []
     
-    // Computed property: hand = held + melded cards
+    // Computed property: hand = held + melded cards (unique by UUID)
     var hand: [PlayerCard] {
-        return held + meldsDeclared.flatMap { $0.cards }
+        let allCards = held + melded
+        var seen = Set<UUID>()
+        var unique: [PlayerCard] = []
+        for card in allCards {
+            if !seen.contains(card.id) {
+                unique.append(card)
+                seen.insert(card.id)
+            }
+        }
+        return unique
     }
     
     @Published var score: Int = 0
@@ -53,12 +63,12 @@ class Player: ObservableObject, Identifiable {
         
         // Remove from melds if present
         for meldIndex in 0..<meldsDeclared.count {
-            if let cardIndex = meldsDeclared[meldIndex].cards.firstIndex(of: card) {
-                meldsDeclared[meldIndex].cards.remove(at: cardIndex)
+            if let cardIndex = meldsDeclared[meldIndex].cardIDs.firstIndex(of: card.id) {
+                meldsDeclared[meldIndex].cardIDs.remove(at: cardIndex)
                 print("🎴 \(name) removed \(card.displayName) from meld \(meldsDeclared[meldIndex].type.name)")
                 
                 // If meld is now empty, remove the entire meld
-                if meldsDeclared[meldIndex].cards.isEmpty {
+                if meldsDeclared[meldIndex].cardIDs.isEmpty {
                     meldsDeclared.remove(at: meldIndex)
                     print("🎴 \(name) removed empty meld")
                 }
@@ -128,33 +138,32 @@ class Player: ObservableObject, Identifiable {
     
     // Add a meld to the player's declared melds
     func declareMeld(_ meld: Meld) {
+        // For each card UUID in meld.cardIDs:
+        for cardID in meld.cardIDs {
+            // Find the PlayerCard in held or melded
+            if let heldIndex = held.firstIndex(where: { $0.id == cardID }) {
+                let card = held.remove(at: heldIndex)
+                if !melded.contains(where: { $0.id == cardID }) {
+                    melded.append(card)
+                }
+                // Update usedInMeldTypes
+                if let meldedIndex = melded.firstIndex(where: { $0.id == cardID }) {
+                    melded[meldedIndex].usedInMeldTypes.insert(meld.type)
+                }
+            } else if let meldedIndex = melded.firstIndex(where: { $0.id == cardID }) {
+                melded[meldedIndex].usedInMeldTypes.insert(meld.type)
+            } else {
+                print("⚠️ Card with ID \(cardID) not found in held or melded when declaring meld.")
+            }
+            // Update meldedOrder: add new cards to the end if not already present
+            if !meldedOrder.contains(cardID) {
+                meldedOrder.append(cardID)
+            }
+        }
         meldsDeclared.append(meld)
         addPoints(meld.pointValue)
-        
-        // Remove the melded cards from the player's held cards
-        for card in meld.cards {
-            if let index = held.firstIndex(of: card) {
-                held.remove(at: index)
-                print("🎴 \(name) moved \(card.displayName) from held to meld")
-            }
-        }
-        
-        // Update melded order: add new cards to the end if not already present
-        for card in meld.cards {
-            if !meldedOrder.contains(card.id) {
-                meldedOrder.append(card.id)
-            }
-        }
-        
-        // Mark meld usage on the involved PlayerCards in melds
-        for meldIdx in 0..<meldsDeclared.count {
-            for cardIdx in 0..<meldsDeclared[meldIdx].cards.count {
-                meldsDeclared[meldIdx].cards[cardIdx].usedInMeldTypes.insert(meld.type)
-            }
-        }
-        
-        print("🎴 \(name) declared \(meld.type.name) with \(meld.cards.count) cards")
-        print("   Cards moved from held to meld: \(meld.cards.map { $0.displayName })")
+        print("🎴 \(name) declared \(meld.type.name) with \(meld.cardIDs.count) cards")
+        print("   Cards moved from held to meld: \(meld.cardIDs)")
         print("   Remaining held cards: \(held.count)")
         print("   Total melds: \(meldsDeclared.count)")
         print("   Melded order: \(meldedOrder.count) cards")
@@ -162,23 +171,20 @@ class Player: ObservableObject, Identifiable {
     
     // Get melded cards in user-defined order
     func getMeldedCardsInOrder() -> [PlayerCard] {
-        let allMeldedCards = meldsDeclared.flatMap { $0.cards }
+        // Use meldedOrder to order melded cards
         var orderedCards: [PlayerCard] = []
-        
         // Add cards in the order specified by meldedOrder
         for cardId in meldedOrder {
-            if let card = allMeldedCards.first(where: { $0.id == cardId }) {
+            if let card = melded.first(where: { $0.id == cardId }) {
                 orderedCards.append(card)
             }
         }
-        
         // Add any cards that might not be in meldedOrder (fallback)
-        for card in allMeldedCards {
+        for card in melded {
             if !orderedCards.contains(card) {
                 orderedCards.append(card)
             }
         }
-        
         return orderedCards
     }
     
@@ -212,27 +218,38 @@ class Player: ObservableObject, Identifiable {
     var totalPoints: Int {
         return score
     }
+    
+    // Helper: Look up a PlayerCard by UUID from held or melded
+    func cardByID(_ id: UUID) -> PlayerCard? {
+        if let card = held.first(where: { $0.id == id }) {
+            return card
+        }
+        if let card = melded.first(where: { $0.id == id }) {
+            return card
+        }
+        return nil
+    }
 }
 
 // MARK: - Meld Model
 /// Represents a meld declared by a player in Bésigue.
 struct Meld: Identifiable, Equatable {
     let id = UUID()
-    var cards: [PlayerCard]
     let type: MeldType
     let pointValue: Int // Now set dynamically from GameSettings
     let roundNumber: Int // Track the round when the meld was declared
-    
-    init(cards: [PlayerCard], type: MeldType, pointValue: Int, roundNumber: Int) {
-        self.cards = cards
+    var cardIDs: [UUID] // Store only UUIDs, not PlayerCard objects
+
+    init(cardIDs: [UUID], type: MeldType, pointValue: Int, roundNumber: Int) {
+        self.cardIDs = cardIDs
         self.type = type
         self.pointValue = pointValue
         self.roundNumber = roundNumber
     }
     
     // Convenience initializer for tests
-    init(type: MeldType, cards: [PlayerCard], points: Int) {
-        self.cards = cards
+    init(type: MeldType, cardIDs: [UUID], points: Int) {
+        self.cardIDs = cardIDs
         self.type = type
         self.pointValue = points
         self.roundNumber = 1 // Default round number for tests
