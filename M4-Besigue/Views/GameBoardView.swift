@@ -752,53 +752,43 @@ struct GameBoardView: View {
         let currentPlayer = game.players[game.currentPlayerIndex]
         let otherPlayer = game.players[(game.currentPlayerIndex + 1) % 2]
         return HStack(alignment: .center, spacing: 0) {
-            if settings.drawPilePosition == .centerLeft {
-                drawPileSection
-                Spacer(minLength: 16)
-            }
-            VStack(spacing: 0) {
-                // Top: other player's hand (card backs)
-                HStack {
-                    ForEach(otherPlayer.held) { _ in
-                        CardBackView { }
-                            .frame(width: 36, height: 54)
-                    }
+            // Top: other player's hand (card backs)
+            HStack {
+                ForEach(otherPlayer.held) { _ in
+                    CardBackView { }
+                        .frame(width: 36, height: 54)
                 }
-                .padding(.top, 8)
-                // Center: Trick area (the table)
-                TrickView(
-                    cards: game.currentTrick,
-                    game: game,
-                    settings: settings,
-                    gameRules: gameRules
-                )
-                // Bottom: current player's hand (face up, interactive)
-                let isCurrentPlayer = game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id })
-                let playableCards = isCurrentPlayer ? game.getPlayableCards() : []
-                
-                HandView(
-                    cards: currentPlayer.held,
-                    playableCards: playableCards,
-                    selectedCards: selectedCards,
-                    showHintFor: []
-                ) { card in
-                    if isCurrentPlayer {
-                        handleCardTap(card)
-                    }
-                } onDoubleTap: { card in
-                    if isCurrentPlayer {
-                        handleCardDoubleTap(card)
-                    }
-                } onReorder: { newOrder in
-                    // Update the player's held cards order
-                    currentPlayer.held = newOrder
+            }
+            .padding(.top, 8)
+            // Center: Trick area (the table)
+            TrickView(
+                cards: game.currentTrick,
+                game: game,
+                settings: settings,
+                gameRules: gameRules
+            )
+            // Bottom: current player's hand (face up, interactive)
+            let isCurrentPlayer = game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id })
+            let playableCards = isCurrentPlayer ? game.getPlayableCards() : []
+            
+            HandView(
+                cards: currentPlayer.held,
+                playableCards: playableCards,
+                selectedCards: selectedCards,
+                showHintFor: []
+            ) { card in
+                if isCurrentPlayer {
+                    handleCardTap(card)
                 }
-                .padding(.bottom, 8)
+            } onDoubleTap: { card in
+                if isCurrentPlayer {
+                    handleCardDoubleTap(card)
+                }
+            } onReorder: { newOrder in
+                // Update the player's held cards order
+                currentPlayer.held = newOrder
             }
-            if settings.drawPilePosition == .centerRight {
-                Spacer(minLength: 16)
-                drawPileSection
-            }
+            .padding(.bottom, 8)
         }
     }
     
@@ -818,11 +808,16 @@ struct GameBoardView: View {
     // MARK: - Draw Pile Section
     private var drawPileSection: some View {
         VStack(spacing: 4) {
+            // Label for cards left, color changes when 4 or fewer rounds remain
+            let cardsLeft = game.deck.remainingCount
+            let playerCount = game.players.count
+            let roundsLeft = playerCount > 0 ? cardsLeft / playerCount : 0
+            Text("Cards left: \(cardsLeft)")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(roundsLeft <= 4 ? .red : .primary)
             drawPileView
-                                        .frame(width: 40 * gameRules.globalCardSize.rawValue, height: 60 * gameRules.globalCardSize.rawValue)
-            Text("Cards: \(game.deck.remainingCount)")
-                .font(.caption2)
-                .foregroundColor(.secondary)
+                .frame(width: 40 * gameRules.globalCardSize.rawValue, height: 60 * gameRules.globalCardSize.rawValue)
         }
     }
     
@@ -1810,27 +1805,37 @@ struct TrickView: View {
                 .fill(Color.gray.opacity(0.1))
                 .stroke(Color.gray.opacity(0.3), lineWidth: 1)
 
-            HStack(alignment: .top, spacing: 24) {
+            HStack(alignment: .center, spacing: 24) {
                 if shouldShowDrawPileLeft {
-                    VStack(spacing: 6) {
-                        EnhancedDrawPileView(
-                            cards: game.deck.cards,
-                            cardWidth: cardWidth,
-                            cardHeight: cardHeight,
-                            showTapToDraw: shouldShowTapToDraw,
-                            onTap: {
-                                if shouldShowTapToDraw {
-                                    game.drawCardForCurrentDrawTurn()
-                                }
-                            },
-                            numberOfPlayers: game.players.count,
-                            longEdgeAngle: 45,
-                            rampLength: 0,
-                            rampStep: nil,
-                            zOffset: nil
-                        )
+                    VStack {
+                        Spacer()
+                        VStack(spacing: 4) {
+                            let cardsLeft = game.deck.remainingCount
+                            let playerCount = game.players.count
+                            let roundsLeft = playerCount > 0 ? cardsLeft / playerCount : 0
+                            Text("Cards left: \(cardsLeft)")
+                              .font(.caption)
+                              .fontWeight(.semibold)
+                              .foregroundColor(roundsLeft <= 4 ? .red : .primary)
+                            EnhancedDrawPileView(
+                                cards: game.deck.cards,
+                                cardWidth: cardWidth,
+                                cardHeight: cardHeight,
+                                showTapToDraw: shouldShowTapToDraw,
+                                onTap: {
+                                    if shouldShowTapToDraw {
+                                        game.drawCardForCurrentDrawTurn()
+                                    }
+                                },
+                                numberOfPlayers: game.players.count,
+                                longEdgeAngle: 45,
+                                rampLength: 0,
+                                rampStep: nil,
+                                zOffset: nil
+                            )
+                        }
+                        .padding(.leading, 12) // Pad from left edge
                     }
-                    .padding(.leading, 12) // Pad from left edge
                 }
                 Spacer(minLength: 0)
                 ZStack {
@@ -1849,25 +1854,35 @@ struct TrickView: View {
                 }
                 Spacer(minLength: 0)
                 if shouldShowDrawPileRight {
-                    VStack(spacing: 6) {
-                        EnhancedDrawPileView(
-                            cards: game.deck.cards,
-                            cardWidth: cardWidth,
-                            cardHeight: cardHeight,
-                            showTapToDraw: shouldShowTapToDraw,
-                            onTap: {
-                                if shouldShowTapToDraw {
-                                    game.drawCardForCurrentDrawTurn()
-                                }
-                            },
-                            numberOfPlayers: game.players.count,
-                            longEdgeAngle: 45,
-                            rampLength: 0,
-                            rampStep: nil,
-                            zOffset: nil
-                        )
+                    VStack {
+                        Spacer()
+                        VStack(spacing: 4) {
+                            let cardsLeft = game.deck.remainingCount
+                            let playerCount = game.players.count
+                            let roundsLeft = playerCount > 0 ? cardsLeft / playerCount : 0
+                            Text("Cards left: \(cardsLeft)")
+                              .font(.caption)
+                              .fontWeight(.semibold)
+                              .foregroundColor(roundsLeft <= 4 ? .red : .primary)
+                            EnhancedDrawPileView(
+                                cards: game.deck.cards,
+                                cardWidth: cardWidth,
+                                cardHeight: cardHeight,
+                                showTapToDraw: shouldShowTapToDraw,
+                                onTap: {
+                                    if shouldShowTapToDraw {
+                                        game.drawCardForCurrentDrawTurn()
+                                    }
+                                },
+                                numberOfPlayers: game.players.count,
+                                longEdgeAngle: 45,
+                                rampLength: 0,
+                                rampStep: nil,
+                                zOffset: nil
+                            )
+                        }
+                        .padding(.trailing, 12) // Pad from right edge
                     }
-                    .padding(.trailing, 12) // Pad from right edge
                 }
             }
             // Animated card being played (if any)
