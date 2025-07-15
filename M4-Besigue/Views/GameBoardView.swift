@@ -1486,6 +1486,9 @@ struct GameBoardView: View {
                 )
                 .frame(width: 80, height: 112)
                 .padding(12)
+                .onTapGesture {
+                    onTap()
+                }
                 .onTapGesture(count: 2) {
                     onDoubleTap()
                 }
