@@ -641,8 +641,8 @@ struct GameBoardView: View {
                             showHint: false,
                             onTap: { handleCardTap(card) }
                         )
-                        .frame(width: 85, height: 125)
-                        .padding(6)
+                        .frame(width: 80, height: 112)
+                        .padding(12)
                         .opacity(1.0)
                         .onTapGesture(count: 2) {
                             handleCardDoubleTap(card)
@@ -1018,11 +1018,11 @@ struct GameBoardView: View {
                     // Display unique melded cards instead of iterating over melds
                     ForEach(meldedCards) { card in
                         VStack(spacing: 2) {
-                            // Row 1: 4 badge cells in a 2x2 grid
+                            // Row 1: 4 badge cells in a 1x4 grid
                             VStack(spacing: 1) {
                                 HStack(spacing: 1) {
-                                    // Top row: badges 1 and 2
-                                    ForEach(0..<2, id: \.self) { index in
+                                    // Top row: badges 1 and 4
+                                    ForEach(0..<4, id: \.self) { index in
                                         if index < card.usedInMeldTypes.count {
                                             let meldType = Array(card.usedInMeldTypes)[index]
                                             Text(badgeIcon(for: meldType, card: card))
@@ -1038,7 +1038,7 @@ struct GameBoardView: View {
                                         }
                                     }
                                 }
-                                HStack(spacing: 1) {
+                                /* HStack(spacing: 1) {
                                     // Bottom row: badges 3 and 4
                                     ForEach(2..<4, id: \.self) { index in
                                         if index < card.usedInMeldTypes.count {
@@ -1055,7 +1055,7 @@ struct GameBoardView: View {
                                                 .frame(width: 20, height: 20)
                                         }
                                     }
-                                }
+                                }  */
                             }
                             .padding(.bottom, 0)
                             
@@ -1067,8 +1067,8 @@ struct GameBoardView: View {
                                 showHint: false,
                                 onTap: { handleCardTap(card) }
                             )
-                            .frame(width: 85, height: 125)
-                            .padding(6)
+                            .frame(width: 80, height: 112)
+                            .padding(12)
                             .opacity(1.0)
                             .onTapGesture(count: 2) {
                                 handleCardDoubleTap(card)
@@ -1484,7 +1484,8 @@ struct GameBoardView: View {
                     showHint: false,
                     onTap: onTap
                 )
-                .padding(.vertical, 6)
+                .frame(width: 80, height: 112)
+                .padding(12)
                 .onTapGesture(count: 2) {
                     onDoubleTap()
                 }

@@ -20,8 +20,8 @@ struct CardView: View {
             VStack(spacing: 0) {
                 Image(card.imageName)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 80, height: 120)
+                    .aspectRatio(2.5/3.5, contentMode: .fit)
+                    .frame(width: 80, height: 112)
                     .background(Color.white)
                     .cornerRadius(8)
                     .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
@@ -46,8 +46,8 @@ struct CardBackView: View {
         Button(action: onTap) {
             Image("card_back")
                 .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 80, height: 120)
+                .aspectRatio(2.5/3.5, contentMode: .fit)
+                .frame(width: 80, height: 112)
                 .background(Color.white)
                 .cornerRadius(8)
                 .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
@@ -76,7 +76,7 @@ struct HandView: View {
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: -24) {
                 ForEach(cards) { card in
                     let isPlayable = playableCards.contains(card)
                     let isSelected = selectedCards.contains(card)
@@ -104,6 +104,7 @@ struct HandView: View {
                     .scaleEffect(isSelected ? 1.1 : 1.0)
                     .shadow(color: isSelected ? .blue.opacity(0.5) : .clear, radius: isSelected ? 8 : 0)
                     .animation(.easeInOut(duration: 0.2), value: isSelected)
+                    .padding(12)
                 }
             }
             .padding(.horizontal)
