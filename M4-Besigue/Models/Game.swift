@@ -785,6 +785,13 @@ class Game: ObservableObject {
         print("   Has drawn: \(hasDrawnForNextTrick[player.id, default: false])")
         print("   Deck empty: \(deck.isEmpty)")
         print("   Must draw card: \(mustDrawCard)")
+        print("   Current hand size: \(player.hand.count) (held: \(player.held.count), melded: \(player.melded.count))")
+        
+        // Check 9-card limit (held + melded)
+        if player.hand.count >= 9 {
+            print("❌ DRAW FAILED - Player already has 9 cards (limit reached)")
+            return
+        }
         
         guard hasDrawnForNextTrick[player.id] == false, !deck.isEmpty else { 
             print("❌ DRAW FAILED - Conditions not met")
@@ -924,6 +931,13 @@ class Game: ObservableObject {
         
         // AI draws a card (if available) with animation
         if !deck.isEmpty {
+            // Check 9-card limit for AI player
+            if currentPlayer.hand.count >= 9 {
+                print("❌ AI DRAW FAILED - \(currentPlayer.name) already has 9 cards (limit reached)")
+                continueAfterAIDraw()
+                return
+            }
+            
             if let card = deck.drawCard() {
                 let playerCard = PlayerCard(card: card)
                 
@@ -1459,7 +1473,7 @@ class Game: ObservableObject {
     func getPossibleMelds(for player: Player) -> [Meld] {
         print("🔍 GETTING POSSIBLE MELDS FOR \(player.name):")
         print("   Held cards: \(player.held.map { $0.displayName })")
-        print("   Melded cards: \(player.meldsDeclared.flatMap { $0.cards }.map { $0.displayName })")
+        print("   Melded cards: \(player.meldsDeclared.flatMap { $0.cardIDs }.compactMap { player.cardByID($0)?.displayName })")
         print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
         
         var possibleMelds: [Meld] = []

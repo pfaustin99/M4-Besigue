@@ -50,7 +50,7 @@ struct GameBoardView: View {
                     settings: self.settings,
                     gameRules: self.gameRules
                 )
-                .frame(height: geometry.size.height * 0.35) // Increased from 0.25 to 0.35
+                .frame(height: geometry.size.height * (self.settings.trickAreaHeightPercentage / 100.0))
                 .padding(.bottom, 8)
                 
                 // Player-Specific Messages Area
@@ -438,30 +438,24 @@ struct GameBoardView: View {
             if self.game.canPlayerMeld && currentPlayer.type == .human && currentPlayer.id == game.trickWinnerId {
                 meldInstructionsView(currentPlayer)
             }
-            if !currentPlayer.meldsDeclared.isEmpty {
-                meldsAreaView(currentPlayer)
+            if !currentPlayer.melded.isEmpty {
+                meldedCardsAreaView(currentPlayer)
             }
             actionButtonsView(currentPlayer)
-            
-            // Active player's hand (face up, interactive)
-            let isCurrentPlayer = game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id })
-            let playableCards = isCurrentPlayer ? game.getPlayableCards() : []
-            
             HandView(
                 cards: currentPlayer.held,
-                playableCards: playableCards,
+                playableCards: game.getPlayableCards(),
                 selectedCards: selectedCards,
                 showHintFor: []
             ) { card in
-                if isCurrentPlayer {
+                if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
                     handleCardTap(card)
                 }
             } onDoubleTap: { card in
-                if isCurrentPlayer {
+                if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
                     handleCardDoubleTap(card)
                 }
             } onReorder: { newOrder in
-                // Update the player's held cards order
                 currentPlayer.held = newOrder
             }
             .padding(.top, 8)
@@ -582,7 +576,7 @@ struct GameBoardView: View {
                 }
             }
             // Meld area for each player
-            if !player.meldsDeclared.isEmpty {
+            if !player.melded.isEmpty {
                 PlayerMeldsView(player: player, settings: settings)
             }
         }
@@ -595,31 +589,74 @@ struct GameBoardView: View {
     private func PlayerMeldsView(player: Player, settings: GameSettings) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(player.meldsDeclared) { meld in
+                // Display unique melded cards instead of iterating over melds
+                ForEach(player.getMeldedCardsInOrder()) { card in
                     VStack(spacing: 2) {
-                        HStack(spacing: 2) {
-                            ForEach(meld.cardIDs, id: \.self) { cardID in
-                                if let card = player.cardByID(cardID) {
-                                    MeldCardView(
-                                        card: card,
-                                        settings: settings,
-                                        isPlayable: game.getPlayableCards().contains { $0.id == card.id },
-                                        onTap: { handleCardTap(card) },
-                                        onDoubleTap: { handleCardDoubleTap(card) }
-                                    )
+                        // Row 1: 4 badge cells in a 2x2 grid
+                        VStack(spacing: 1) {
+                            HStack(spacing: 1) {
+                                // Top row: badges 1 and 2
+                                ForEach(0..<2, id: \.self) { index in
+                                    if index < card.usedInMeldTypes.count {
+                                        let meldType = Array(card.usedInMeldTypes)[index]
+                                        Text(badgeIcon(for: meldType, card: card))
+                                            .font(.system(size: 12))
+                                            .padding(2)
+                                            .background(Color.white.opacity(0.8))
+                                            .clipShape(Circle())
+                                    } else {
+                                        // Empty cell
+                                        Circle()
+                                            .fill(Color.clear)
+                                            .frame(width: 20, height: 20)
+                                    }
+                                }
+                            }
+                            HStack(spacing: 1) {
+                                // Bottom row: badges 3 and 4
+                                ForEach(2..<4, id: \.self) { index in
+                                    if index < card.usedInMeldTypes.count {
+                                        let meldType = Array(card.usedInMeldTypes)[index]
+                                        Text(badgeIcon(for: meldType, card: card))
+                                            .font(.system(size: 12))
+                                            .padding(2)
+                                            .background(Color.white.opacity(0.8))
+                                            .clipShape(Circle())
+                                    } else {
+                                        // Empty cell
+                                        Circle()
+                                            .fill(Color.clear)
+                                            .frame(width: 20, height: 20)
+                                    }
                                 }
                             }
                         }
-                        Text(meld.type.name)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text("+\(meld.pointValue)")
-                            .font(.caption2)
-                            .foregroundColor(.green)
+                        .padding(.bottom, 0)
+                        
+                        // Row 2: The card
+                        CardView(
+                            card: card,
+                            isSelected: selectedCards.contains(card),
+                            isPlayable: false,
+                            showHint: false,
+                            onTap: { handleCardTap(card) }
+                        )
+                        .frame(width: 85, height: 125)
+                        .padding(6)
+                        .opacity(1.0)
+                        .onTapGesture(count: 2) {
+                            handleCardDoubleTap(card)
+                        }
                     }
-                    .padding(2)
-                    .background(Color.yellow.opacity(0.12))
-                    .cornerRadius(4)
+                    .onDrag {
+                        // Create drag item with card ID
+                        NSItemProvider(object: card.id.uuidString as NSString)
+                    }
+                    .onDrop(of: [.text], delegate: MeldedCardDropDelegate(
+                        card: card,
+                        cards: player.getMeldedCardsInOrder(),
+                        player: player
+                    ))
                 }
             }
             .padding(.horizontal, 2)
@@ -634,42 +671,23 @@ struct GameBoardView: View {
         onTap: @escaping () -> Void,
         onDoubleTap: @escaping () -> Void
     ) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Image(card.imageName)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 80 * settings.playerHandCardSize.rawValue, height: 120 * settings.playerHandCardSize.rawValue)
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isPlayable ? Color.blue : Color.clear, lineWidth: isPlayable ? 2 : 0)
-                )
-                .scaleEffect(isPlayable ? 1.05 : 1.0)
-                .opacity(isPlayable ? 1.0 : 0.7)
-                .onTapGesture {
-                    onTap()
-                }
-                .onTapGesture(count: 2) {
-                    onDoubleTap()
-                }
-            
-            HStack(spacing: 1) {
-                if card.usedInMeldTypes.count == MeldType.allCases.count {
-                    Text("⚠️")
-                        .font(.system(size: 10))
-                        .padding(1)
-                } else {
-                    ForEach(Array(card.usedInMeldTypes), id: \.self) { meldType in
-                        Text(badgeIcon(for: meldType, card: card))
-                            .font(.system(size: 10))
-                            .padding(1)
-                    }
-                }
+        Image(card.imageName)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 80 * settings.playerHandCardSize.rawValue, height: 120 * settings.playerHandCardSize.rawValue)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isPlayable ? Color.blue : Color.clear, lineWidth: isPlayable ? 2 : 0)
+            )
+            .scaleEffect(isPlayable ? 1.05 : 1.0)
+            .opacity(isPlayable ? 1.0 : 0.7)
+            .onTapGesture {
+                onTap()
             }
-            .background(Color.white.opacity(0.7))
-            .clipShape(Capsule())
-            .offset(x: 2, y: -2)
-        }
+            .onTapGesture(count: 2) {
+                onDoubleTap()
+            }
     }
     
     // MARK: - Center Section
@@ -895,7 +913,7 @@ struct GameBoardView: View {
             if showMeldInstructions {
                 meldInstructionsView(player)
             }
-            if !player.meldsDeclared.isEmpty {
+            if !player.melded.isEmpty {
                 meldedCardsAreaView(player)
             }
             actionButtonsView(player)
@@ -933,7 +951,7 @@ struct GameBoardView: View {
             
             // Hand count (total = held + melded)
             let totalCards = player.hand.count
-            Text("Hand: \(totalCards) cards (\(player.held.count) held, \(player.meldsDeclared.flatMap { $0.cardIDs }.count) melded)")
+            Text("Hand: \(totalCards) cards (\(player.held.count) held, \(player.melded.count) melded)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -988,42 +1006,89 @@ struct GameBoardView: View {
     }
     
     private func meldsAreaView(_ player: Player) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        // Get melded cards in user-defined order
+        let meldedCards = player.getMeldedCardsInOrder()
+        
+        return VStack(alignment: .leading, spacing: 4) {
             Text("Your Melds")
                 .font(.subheadline)
                 .bold()
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(player.meldsDeclared) { meld in
-                        VStack(spacing: 4) {
-                            HStack(spacing: 4) {
-                                ForEach(meld.cardIDs, id: \.self) { cardID in
-                                    if let card = player.cardByID(cardID) {
-                                        CardView(
-                                            card: card,
-                                            isSelected: selectedCards.contains(card),
-                                            isPlayable: game.awaitingMeldChoice && game.currentPlayer.type == .human,
-                                            showHint: false,
-                                            onTap: {
-                                                if game.awaitingMeldChoice && game.currentPlayer.type == .human {
-                                                    handleCardTap(card)
-                                                }
-                                            }
-                                        )
-                                        .frame(width: 80, height: 120)
-                                        .onTapGesture(count: 2) {
-                                            if !game.awaitingMeldChoice && game.canPlayCard() && game.currentPlayer.type == .human {
-                                                handleCardDoubleTap(card)
-                                            }
+                    // Display unique melded cards instead of iterating over melds
+                    ForEach(meldedCards) { card in
+                        VStack(spacing: 2) {
+                            // Row 1: 4 badge cells in a 2x2 grid
+                            VStack(spacing: 1) {
+                                HStack(spacing: 1) {
+                                    // Top row: badges 1 and 2
+                                    ForEach(0..<2, id: \.self) { index in
+                                        if index < card.usedInMeldTypes.count {
+                                            let meldType = Array(card.usedInMeldTypes)[index]
+                                            Text(badgeIcon(for: meldType, card: card))
+                                                .font(.system(size: 12))
+                                                .padding(2)
+                                                .background(Color.white.opacity(0.8))
+                                                .clipShape(Circle())
+                                        } else {
+                                            // Empty cell
+                                            Circle()
+                                                .fill(Color.clear)
+                                                .frame(width: 20, height: 20)
+                                        }
+                                    }
+                                }
+                                HStack(spacing: 1) {
+                                    // Bottom row: badges 3 and 4
+                                    ForEach(2..<4, id: \.self) { index in
+                                        if index < card.usedInMeldTypes.count {
+                                            let meldType = Array(card.usedInMeldTypes)[index]
+                                            Text(badgeIcon(for: meldType, card: card))
+                                                .font(.system(size: 12))
+                                                .padding(2)
+                                                .background(Color.white.opacity(0.8))
+                                                .clipShape(Circle())
+                                        } else {
+                                            // Empty cell
+                                            Circle()
+                                                .fill(Color.clear)
+                                                .frame(width: 20, height: 20)
                                         }
                                     }
                                 }
                             }
+                            .padding(.bottom, 0)
+                            
+                            // Row 2: The card
+                            CardView(
+                                card: card,
+                                isSelected: selectedCards.contains(card),
+                                isPlayable: false,
+                                showHint: false,
+                                onTap: { handleCardTap(card) }
+                            )
+                            .frame(width: 85, height: 125)
+                            .padding(6)
+                            .opacity(1.0)
+                            .onTapGesture(count: 2) {
+                                handleCardDoubleTap(card)
+                            }
                         }
+                        .onDrag {
+                            // Create drag item with card ID
+                            NSItemProvider(object: card.id.uuidString as NSString)
+                        }
+                        .onDrop(of: [.text], delegate: MeldedCardDropDelegate(
+                            card: card,
+                            cards: meldedCards,
+                            player: player
+                        ))
                     }
                 }
+                .padding(.horizontal, 4)
             }
         }
+        .padding(.horizontal)
     }
     
     private func actionButtonsView(_ player: Player) -> some View {
@@ -1081,16 +1146,16 @@ struct GameBoardView: View {
                         let possibleMelds = game.getPossibleMelds(for: humanPlayer)
                         print("🔍 ALL POSSIBLE MELDS FOR PLAYER:")
                         for meld in possibleMelds {
-                            print("   \(meld.type.name): \(meld.cards.map { "\($0.displayName) (ID: \($0.id))" })")
+                            print("   \(meld.type.name): \(meld.cardIDs.compactMap { player.cardByID($0)?.displayName })")
                         }
                         
                         // Create a meld with the selected cards (they are already the correct instances)
                         if let meldType = game.getMeldTypeForCards(uniqueSelectedCards, trumpSuit: game.trumpSuit) {
                             let pointValue = game.getPointValueForMeldType(meldType)
-                            let meld = Meld(cards: uniqueSelectedCards, type: meldType, pointValue: pointValue, roundNumber: game.roundNumber)
+                            let meld = Meld(cardIDs: uniqueSelectedCards.map { $0.id }, type: meldType, pointValue: pointValue, roundNumber: game.roundNumber)
                             
                             if game.canDeclareMeld(meld, by: humanPlayer) {
-                                print("   Found meld: \(meld.type.name) with \(meld.cards.count) cards")
+                                print("   Found meld: \(meld.type.name) with \(meld.cardIDs.count) cards")
                                 game.declareMeld(meld, by: humanPlayer)
                                 selectedCards.removeAll()
                             } else {
@@ -1325,7 +1390,7 @@ struct GameBoardView: View {
         let possibleMeldCards: Set<UUID> = {
             if settings.gameLevel == .novice {
                 let melds = game.getPossibleMelds(for: player)
-                return Set(melds.flatMap { $0.cards.map { $0.id } })
+                return Set(melds.flatMap { $0.cardIDs })
             } else {
                 return []
             }
@@ -1358,7 +1423,6 @@ struct GameBoardView: View {
 
     // MARK: - Melded Cards Area (Unique Cards with All Badges)
     private func meldedCardsAreaView(_ player: Player) -> some View {
-        // Get melded cards in user-defined order
         let meldedCards = player.getMeldedCardsInOrder()
         return VStack(alignment: .leading, spacing: 4) {
             Text("Your Melded Cards")
@@ -1367,41 +1431,65 @@ struct GameBoardView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(meldedCards) { card in
-                        CardView(
+                        MeldedCardWithBadgesView(
                             card: card,
                             isSelected: selectedCards.contains(card),
-                            isPlayable: false,
-                            showHint: false,
-                            onTap: { handleCardTap(card) }
+                            isPlayable: game.getPlayableCards().contains { $0.id == card.id },
+                            onTap: { handleCardTap(card) },
+                            onDoubleTap: { handleCardDoubleTap(card) }
                         )
-                        .frame(width: 80, height: 120)
-                        .overlay(
-                            HStack(spacing: 1) {
-                                ForEach(Array(card.usedInMeldTypes), id: \.self) { meldType in
-                                    Text(badgeIcon(for: meldType, card: card))
-                                        .font(.system(size: 10))
-                                        .padding(1)
-                                }
-                            }
-                            .background(Color.white.opacity(0.7))
-                            .clipShape(Capsule())
-                            .offset(x: 2, y: -2)
-                        )
-                        .onDrag {
-                            // Create drag item with card ID
-                            NSItemProvider(object: card.id.uuidString as NSString)
-                        }
-                        .onDrop(of: [.text], delegate: MeldedCardDropDelegate(
-                            card: card,
-                            cards: meldedCards,
-                            player: player
-                        ))
                     }
                 }
-                .padding(.horizontal, 4)
             }
         }
-        .padding(.horizontal)
+    }
+
+    // MARK: - Melded Card With Badges View
+    private struct MeldedCardWithBadgesView: View {
+        let card: PlayerCard
+        let isSelected: Bool
+        let isPlayable: Bool
+        let onTap: () -> Void
+        let onDoubleTap: () -> Void
+
+        private func badgeIcon(for meldType: MeldType) -> String {
+            switch meldType {
+            case .besigue: return "🂡🃏"
+            case .royalMarriage: return "👑"
+            case .commonMarriage: return "💍"
+            case .fourJacks: return "🂫"
+            case .fourQueens: return "🂭"
+            case .fourKings: return "🂮"
+            case .fourAces: return "🂡"
+            case .fourJokers: return "🃏"
+            case .sequence: return "➡️"
+            }
+        }
+
+        var body: some View {
+            VStack(spacing: 2) {
+                HStack(spacing: 2) {
+                    ForEach(Array(card.usedInMeldTypes.prefix(4)), id: \.self) { meldType in
+                        Text(badgeIcon(for: meldType))
+                            .font(.system(size: 22))
+                    }
+                    ForEach(0..<(4 - card.usedInMeldTypes.count), id: \.self) { _ in
+                        Spacer().frame(width: 22, height: 22)
+                    }
+                }
+                CardView(
+                    card: card,
+                    isSelected: isSelected,
+                    isPlayable: isPlayable,
+                    showHint: false,
+                    onTap: onTap
+                )
+                .padding(.vertical, 6)
+                .onTapGesture(count: 2) {
+                    onDoubleTap()
+                }
+            }
+        }
     }
 }
 
@@ -1464,7 +1552,7 @@ struct MeldOptionsView: View {
                         List(possibleMelds) { meld in
                             MeldRowView(meld: meld) {
                                 // When a meld is declared, attach the round number
-                                let meldWithRound = Meld(cards: meld.cards, type: meld.type, pointValue: meld.pointValue, roundNumber: game.roundNumber)
+                                let meldWithRound = Meld(cardIDs: meld.cardIDs, type: meld.type, pointValue: meld.pointValue, roundNumber: game.roundNumber)
                                 game.declareMeld(meldWithRound, by: humanPlayer)
                                 dismiss()
                             }

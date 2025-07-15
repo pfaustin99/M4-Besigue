@@ -61,22 +61,34 @@ class Player: ObservableObject, Identifiable {
             return
         }
         
-        // Remove from melds if present
-        for meldIndex in 0..<meldsDeclared.count {
-            if let cardIndex = meldsDeclared[meldIndex].cardIDs.firstIndex(of: card.id) {
-                meldsDeclared[meldIndex].cardIDs.remove(at: cardIndex)
-                print("🎴 \(name) removed \(card.displayName) from meld \(meldsDeclared[meldIndex].type.name)")
-                
-                // If meld is now empty, remove the entire meld
-                if meldsDeclared[meldIndex].cardIDs.isEmpty {
-                    meldsDeclared.remove(at: meldIndex)
-                    print("🎴 \(name) removed empty meld")
-                }
-                return
+        // Remove from melded array if present
+        if let meldedIndex = melded.firstIndex(where: { $0.id == card.id }) {
+            melded.remove(at: meldedIndex)
+            print("🎴 \(name) removed \(card.displayName) from melded array")
+            
+            // Also remove from meldedOrder
+            if let orderIndex = meldedOrder.firstIndex(of: card.id) {
+                meldedOrder.remove(at: orderIndex)
+                print("🎴 \(name) removed \(card.displayName) from melded order")
             }
+            
+            // Update meldsDeclared to remove this card from all melds
+            for meldIndex in 0..<meldsDeclared.count {
+                if let cardIndex = meldsDeclared[meldIndex].cardIDs.firstIndex(of: card.id) {
+                    meldsDeclared[meldIndex].cardIDs.remove(at: cardIndex)
+                    print("🎴 \(name) removed \(card.displayName) from meld \(meldsDeclared[meldIndex].type.name)")
+                    
+                    // If meld is now empty, remove the entire meld
+                    if meldsDeclared[meldIndex].cardIDs.isEmpty {
+                        meldsDeclared.remove(at: meldIndex)
+                        print("🎴 \(name) removed empty meld")
+                    }
+                }
+            }
+            return
         }
         
-        print("⚠️ \(name) tried to remove \(card.displayName) but card not found in held or melds")
+        print("⚠️ \(name) tried to remove \(card.displayName) but card not found in held or melded")
     }
     
     // Check if player has a specific card (in hand - held or melded)

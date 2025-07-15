@@ -111,6 +111,9 @@ class GameSettings: ObservableObject, Codable, Equatable {
     @Published var trickAreaCardSize: CardSizeMultiplier = .small // 1.5x for trick area
     @Published var playerHandCardSize: CardSizeMultiplier = .medium // 2x for player hand (default)
     
+    // Trick area height as percentage of screen height
+    @Published var trickAreaHeightPercentage: Double = 25.0 // 25% default
+    
     // Trick area size (for backward compatibility - will be removed)
     @Published var trickAreaSize: TrickAreaSize = .medium
 
@@ -157,7 +160,7 @@ class GameSettings: ObservableObject, Codable, Equatable {
 
     // Codable conformance
     enum CodingKeys: String, CodingKey {
-        case besiguePoints, royalMarriagePoints, commonMarriagePoints, fourAcesPoints, fourKingsPoints, fourQueensPoints, fourJacksPoints, fourJokersPoints, sequencePoints, trumpFourAcesMultiplier, trumpFourKingsMultiplier, trumpFourQueensMultiplier, trumpFourJacksMultiplier, trumpSequenceMultiplier, brisqueValue, finalTrickBonus, penalty, brisqueCutoff, minScoreForBrisques, winningScore, trickWithSevenTrumpPoints, finalTrickPoints, penaltyBelow100, penaltyFewBrisques, penaltyOutOfTurn, minBrisques, playerCount, playDirection, gameLevel, handSize, numPlayers, cardSizeMultiplier, drawPilePosition, badgeIcons, cardPlayDelay, cardPlayDuration, dealerDeterminationDelay, trickAreaCardSize, playerHandCardSize, trickAreaSize
+        case besiguePoints, royalMarriagePoints, commonMarriagePoints, fourAcesPoints, fourKingsPoints, fourQueensPoints, fourJacksPoints, fourJokersPoints, sequencePoints, trumpFourAcesMultiplier, trumpFourKingsMultiplier, trumpFourQueensMultiplier, trumpFourJacksMultiplier, trumpSequenceMultiplier, brisqueValue, finalTrickBonus, penalty, brisqueCutoff, minScoreForBrisques, winningScore, trickWithSevenTrumpPoints, finalTrickPoints, penaltyBelow100, penaltyFewBrisques, penaltyOutOfTurn, minBrisques, playerCount, playDirection, gameLevel, handSize, numPlayers, cardSizeMultiplier, drawPilePosition, badgeIcons, cardPlayDelay, cardPlayDuration, dealerDeterminationDelay, trickAreaCardSize, playerHandCardSize, trickAreaHeightPercentage, trickAreaSize
     }
 
     required init(from decoder: Decoder) throws {
@@ -201,6 +204,7 @@ class GameSettings: ObservableObject, Codable, Equatable {
         dealerDeterminationDelay = try container.decode(Double.self, forKey: .dealerDeterminationDelay)
         trickAreaCardSize = try container.decode(CardSizeMultiplier.self, forKey: .trickAreaCardSize)
         playerHandCardSize = try container.decode(CardSizeMultiplier.self, forKey: .playerHandCardSize)
+        trickAreaHeightPercentage = try container.decode(Double.self, forKey: .trickAreaHeightPercentage)
         trickAreaSize = try container.decode(TrickAreaSize.self, forKey: .trickAreaSize)
     }
 
@@ -249,6 +253,7 @@ class GameSettings: ObservableObject, Codable, Equatable {
         try container.encode(dealerDeterminationDelay, forKey: .dealerDeterminationDelay)
         try container.encode(trickAreaCardSize, forKey: .trickAreaCardSize)
         try container.encode(playerHandCardSize, forKey: .playerHandCardSize)
+        try container.encode(trickAreaHeightPercentage, forKey: .trickAreaHeightPercentage)
         try container.encode(trickAreaSize, forKey: .trickAreaSize)
     }
 }
