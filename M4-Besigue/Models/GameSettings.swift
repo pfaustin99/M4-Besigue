@@ -260,13 +260,13 @@ class GameSettings: ObservableObject, Codable, Equatable {
 
 // MARK: - Meld Badge Icons
 struct MeldBadgeIcons: Codable, Equatable {
-    var besigueIcon: String = "♠️♦️"
+    var besigueIcon: String = "B"
     var royalMarriageIcon: String = "👑"
-    var commonMarriageIcon: String = "💕"
-    var fourAcesIcon: String = "🃏"
-    var fourKingsIcon: String = "👑"
-    var fourQueensIcon: String = "👸"
-    var fourJacksIcon: String = "🤴"
-    var fourJokersIcon: String = "🃏"
-    var sequenceIcon: String = "📈"
+    var commonMarriageIcon: String = "M"
+    var fourAcesIcon: String = "A"
+    var fourKingsIcon: String = "K"
+    var fourQueensIcon: String = "Q"
+    var fourJacksIcon: String = "J"
+    var fourJokersIcon: String = "🤡"
+    var sequenceIcon: String = "S"
 } 

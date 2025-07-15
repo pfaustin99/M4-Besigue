@@ -99,7 +99,7 @@ struct GameBoardView: View {
             SettingsView(settings: self.settings)
         }
         .sheet(isPresented: $showingBadgeLegend) {
-            BadgeLegendView(settings: self.settings)
+            BadgeLegendView()
         }
     }
     
@@ -600,10 +600,8 @@ struct GameBoardView: View {
                                     if index < card.usedInMeldTypes.count {
                                         let meldType = Array(card.usedInMeldTypes)[index]
                                         Text(badgeIcon(for: meldType, card: card))
-                                            .font(.system(size: 12))
-                                            .padding(2)
-                                            .background(Color.white.opacity(0.8))
-                                            .clipShape(Circle())
+                                            .font(.system(size: 28, weight: .bold))
+                                            .foregroundColor(.black)
                                     } else {
                                         // Empty cell
                                         Circle()
@@ -618,10 +616,8 @@ struct GameBoardView: View {
                                     if index < card.usedInMeldTypes.count {
                                         let meldType = Array(card.usedInMeldTypes)[index]
                                         Text(badgeIcon(for: meldType, card: card))
-                                            .font(.system(size: 12))
-                                            .padding(2)
-                                            .background(Color.white.opacity(0.8))
-                                            .clipShape(Circle())
+                                            .font(.system(size: 28, weight: .bold))
+                                            .foregroundColor(.black)
                                     } else {
                                         // Empty cell
                                         Circle()
@@ -1021,10 +1017,8 @@ struct GameBoardView: View {
                                         if index < card.usedInMeldTypes.count {
                                             let meldType = Array(card.usedInMeldTypes)[index]
                                             Text(badgeIcon(for: meldType, card: card))
-                                                .font(.system(size: 12))
-                                                .padding(2)
-                                                .background(Color.white.opacity(0.8))
-                                                .clipShape(Circle())
+                                                .font(.system(size: 28, weight: .bold))
+                                                .foregroundColor(.black)
                                         } else {
                                             // Empty cell
                                             Circle()
@@ -1295,7 +1289,7 @@ struct GameBoardView: View {
         case .royalMarriage: return settings.badgeIcons.royalMarriageIcon
         case .commonMarriage: return settings.badgeIcons.commonMarriageIcon
         case .besigue: return settings.badgeIcons.besigueIcon
-        case .sequence: return "🛡️" // Superman badge placeholder
+        case .sequence: return settings.badgeIcons.sequenceIcon
         }
     }
     
@@ -1431,7 +1425,8 @@ struct GameBoardView: View {
                             isSelected: selectedCards.contains(card),
                             isPlayable: game.getPlayableCards().contains { $0.id == card.id },
                             onTap: { handleCardTap(card) },
-                            onDoubleTap: { handleCardDoubleTap(card) }
+                            onDoubleTap: { handleCardDoubleTap(card) },
+                            settings: settings
                         )
                     }
                 }
@@ -1446,18 +1441,19 @@ struct GameBoardView: View {
         let isPlayable: Bool
         let onTap: () -> Void
         let onDoubleTap: () -> Void
+        let settings: GameSettings
 
         private func badgeIcon(for meldType: MeldType) -> String {
             switch meldType {
-            case .besigue: return "🂡🃏"
-            case .royalMarriage: return "👑"
-            case .commonMarriage: return "💍"
-            case .fourJacks: return "🂫"
-            case .fourQueens: return "🂭"
-            case .fourKings: return "🂮"
-            case .fourAces: return "🂡"
-            case .fourJokers: return "🃏"
-            case .sequence: return "➡️"
+            case .fourKings: return settings.badgeIcons.fourKingsIcon
+            case .fourQueens: return settings.badgeIcons.fourQueensIcon
+            case .fourJacks: return settings.badgeIcons.fourJacksIcon
+            case .fourAces: return settings.badgeIcons.fourAcesIcon
+            case .fourJokers: return settings.badgeIcons.fourJokersIcon
+            case .royalMarriage: return settings.badgeIcons.royalMarriageIcon
+            case .commonMarriage: return settings.badgeIcons.commonMarriageIcon
+            case .besigue: return settings.badgeIcons.besigueIcon
+            case .sequence: return settings.badgeIcons.sequenceIcon
             }
         }
 
@@ -1466,7 +1462,8 @@ struct GameBoardView: View {
                 HStack(spacing: 2) {
                     ForEach(Array(card.usedInMeldTypes.prefix(4)), id: \.self) { meldType in
                         Text(badgeIcon(for: meldType))
-                            .font(.system(size: 22))
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(.black)
                     }
                     ForEach(0..<(4 - card.usedInMeldTypes.count), id: \.self) { _ in
                         Spacer().frame(width: 22, height: 22)
@@ -1617,8 +1614,8 @@ struct MeldRowView: View {
 
 // MARK: - Badge Legend View
 struct BadgeLegendView: View {
-    @ObservedObject var settings: GameSettings
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var settings: GameSettings
     
     var body: some View {
         NavigationView {
@@ -1634,11 +1631,10 @@ struct BadgeLegendView: View {
                     BadgeLegendRow(icon: settings.badgeIcons.fourJacksIcon, description: "Four Jacks")
                     BadgeLegendRow(icon: settings.badgeIcons.fourAcesIcon, description: "Four Aces")
                     BadgeLegendRow(icon: settings.badgeIcons.fourJokersIcon, description: "Four Jokers")
-                    BadgeLegendRow(icon: settings.badgeIcons.royalMarriageIcon, description: "Royal Marriage")
-                    BadgeLegendRow(icon: settings.badgeIcons.commonMarriageIcon, description: "Common Marriage")
-                    BadgeLegendRow(icon: settings.badgeIcons.besigueIcon, description: "Bésigue")
-                    BadgeLegendRow(icon: "🛡️", description: "Sequence (Trump Suit)")
-                    BadgeLegendRow(icon: "❌", description: "Meld-Exhausted")
+                    BadgeLegendRow(icon: settings.badgeIcons.royalMarriageIcon, description: "Royal Marriage (Trump King+Queen)")
+                    BadgeLegendRow(icon: settings.badgeIcons.commonMarriageIcon, description: "Marriage (King+Queen, non-trump)")
+                    BadgeLegendRow(icon: settings.badgeIcons.besigueIcon, description: "Bésigue (Q♠+J♦)")
+                    BadgeLegendRow(icon: settings.badgeIcons.sequenceIcon, description: "Sequence (Trump A-K-Q-J-10)")
                 }
                 
                 Spacer()
@@ -1665,12 +1661,11 @@ struct BadgeLegendRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(icon)
-                .font(.title2)
-                .frame(width: 30, alignment: .center)
-            
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.black)
+                .frame(width: 32, alignment: .center)
             Text(description)
                 .font(.body)
-            
             Spacer()
         }
     }
