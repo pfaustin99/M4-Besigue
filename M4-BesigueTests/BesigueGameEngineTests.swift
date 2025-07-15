@@ -272,6 +272,77 @@ final class BesigueGameEngineTests: XCTestCase {
         }
     }
     
+    // MARK: - Endgame Playable Cards Tests
+    func testEndgame_MustFollowSuitAndPlayHigherIfPossible() throws {
+        gameRules.updatePlayerCount(2)
+        game.startNewGame()
+        game.deck.cards.removeAll() // Force endgame
+        game.checkEndgame()
+        game.trumpSuit = .spades
+        let player = game.players[0]
+        // Lead suit is hearts, current winning card is 9 of hearts
+        let nineHearts = PlayerCard(card: Card(suit: .hearts, value: .nine))
+        let jackHearts = PlayerCard(card: Card(suit: .hearts, value: .jack))
+        let sevenHearts = PlayerCard(card: Card(suit: .hearts, value: .seven))
+        player.held = [jackHearts, sevenHearts]
+        game.currentTrick = [nineHearts]
+        game.currentPlayerIndex = 0
+        let playable = game.getEndgamePlayableCards(leadSuit: .hearts, trumpSuit: .spades, allCards: player.held)
+        // Only jackHearts (higher than 9) should be playable
+        XCTAssertEqual(playable, [jackHearts])
+    }
+    func testEndgame_MustFollowSuitButCannotPlayHigher() throws {
+        gameRules.updatePlayerCount(2)
+        game.startNewGame()
+        game.deck.cards.removeAll()
+        game.checkEndgame()
+        game.trumpSuit = .spades
+        let player = game.players[0]
+        // Lead suit is hearts, current winning card is jack of hearts
+        let jackHearts = PlayerCard(card: Card(suit: .hearts, value: .jack))
+        let sevenHearts = PlayerCard(card: Card(suit: .hearts, value: .seven))
+        player.held = [sevenHearts]
+        game.currentTrick = [jackHearts]
+        game.currentPlayerIndex = 0
+        let playable = game.getEndgamePlayableCards(leadSuit: .hearts, trumpSuit: .spades, allCards: player.held)
+        // Only sevenHearts (cannot beat jack) should be playable
+        XCTAssertEqual(playable, [sevenHearts])
+    }
+    func testEndgame_MustTrumpIfCannotFollowSuit() throws {
+        gameRules.updatePlayerCount(2)
+        game.startNewGame()
+        game.deck.cards.removeAll()
+        game.checkEndgame()
+        game.trumpSuit = .spades
+        let player = game.players[0]
+        // Lead suit is hearts, player has only trumps and clubs
+        let sevenSpades = PlayerCard(card: Card(suit: .spades, value: .seven))
+        let aceClubs = PlayerCard(card: Card(suit: .clubs, value: .ace))
+        player.held = [sevenSpades, aceClubs]
+        game.currentTrick = [PlayerCard(card: Card(suit: .hearts, value: .queen))]
+        game.currentPlayerIndex = 0
+        let playable = game.getEndgamePlayableCards(leadSuit: .hearts, trumpSuit: .spades, allCards: player.held)
+        // Only sevenSpades (trump) should be playable
+        XCTAssertEqual(playable, [sevenSpades])
+    }
+    func testEndgame_CanPlayAnyIfCannotFollowSuitOrTrump() throws {
+        gameRules.updatePlayerCount(2)
+        game.startNewGame()
+        game.deck.cards.removeAll()
+        game.checkEndgame()
+        game.trumpSuit = .spades
+        let player = game.players[0]
+        // Lead suit is hearts, player has only clubs and diamonds
+        let aceClubs = PlayerCard(card: Card(suit: .clubs, value: .ace))
+        let kingDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .king))
+        player.held = [aceClubs, kingDiamonds]
+        game.currentTrick = [PlayerCard(card: Card(suit: .hearts, value: .queen))]
+        game.currentPlayerIndex = 0
+        let playable = game.getEndgamePlayableCards(leadSuit: .hearts, trumpSuit: .spades, allCards: player.held)
+        // Both cards should be playable
+        XCTAssertEqual(Set(playable), Set([aceClubs, kingDiamonds]))
+    }
+    
     // MARK: - Performance Tests
     
     func testGameStartupPerformance() throws {

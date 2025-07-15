@@ -1186,7 +1186,7 @@ class Game: ObservableObject {
     }
     
     // Get playable cards with endgame rules
-    private func getEndgamePlayableCards(leadSuit: Suit?, trumpSuit: Suit?, allCards: [PlayerCard]) -> [PlayerCard] {
+    func getEndgamePlayableCards(leadSuit: Suit?, trumpSuit: Suit?, allCards: [PlayerCard]) -> [PlayerCard] {
         guard let leadSuit = leadSuit else {
             return allCards // Leading, can play any card
         }
