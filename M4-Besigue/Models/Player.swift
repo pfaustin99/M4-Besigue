@@ -73,7 +73,7 @@ class Player: ObservableObject, Identifiable {
             }
             
             // Update meldsDeclared to remove this card from all melds
-            for meldIndex in 0..<meldsDeclared.count {
+            for meldIndex in (0..<meldsDeclared.count).reversed() {
                 if let cardIndex = meldsDeclared[meldIndex].cardIDs.firstIndex(of: card.id) {
                     meldsDeclared[meldIndex].cardIDs.remove(at: cardIndex)
                     print("🎴 \(name) removed \(card.displayName) from meld \(meldsDeclared[meldIndex].type.name)")

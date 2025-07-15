@@ -1054,28 +1054,37 @@ class Game: ObservableObject {
             print("❌ No cards in current trick to determine winner")
             return currentTrickLeader
         }
-        
-        print("🎯 Determining trick winner...")
-        print("   Current trick: \(currentTrick.map { "\(String(describing: $0.value)) of \(String(describing: $0.suit))" })")
-        print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
-        
-        var winningCardIndex = 0
-        var winningCard = currentTrick[0]
-        
-        for (index, card) in currentTrick.enumerated() {
-            print("   Comparing card \(index): \(String(describing: card.value)) of \(String(describing: card.suit))")
-            
-            if card.canBeat(winningCard, trumpSuit: trumpSuit) {
-                winningCardIndex = index
-                winningCard = card
-                print("   New winner: \(String(describing: card.value)) of \(String(describing: card.suit))")
-            }
+
+        let leadCard = currentTrick[0]
+        let leadSuit = leadCard.suit
+        let trump = trumpSuit
+
+        // 1. Check for trumps in the trick (exclude jokers)
+        let trumpCards = currentTrick.enumerated().filter { $0.element.suit == trump && !$0.element.isJoker }
+        if !trumpCards.isEmpty {
+            let (winningIndex, _) = trumpCards.max(by: { $0.element.rank < $1.element.rank })!
+            let winnerPlayerIndex = (currentTrickLeader + winningIndex) % players.count
+            print("   Winner: \(players[winnerPlayerIndex].name) with highest trump")
+            return winnerPlayerIndex
         }
-        
-        let winnerPlayerIndex = (currentTrickLeader + winningCardIndex) % players.count
-        print("   Final winner: \(players[winnerPlayerIndex].name) with \(String(describing: winningCard.value)) of \(String(describing: winningCard.suit))")
-        
-        return winnerPlayerIndex
+
+        // 2. No trumps: check if first card is a Joker
+        if leadCard.isJoker {
+            print("   Winner: \(players[currentTrickLeader].name) with led Joker")
+            return currentTrickLeader
+        }
+
+        // 3. No trumps, first not Joker: highest of lead suit wins (exclude jokers)
+        let leadSuitCards = currentTrick.enumerated().filter { $0.element.suit == leadSuit && !$0.element.isJoker }
+        if let (winningIndex, _) = leadSuitCards.max(by: { $0.element.rank < $1.element.rank }) {
+            let winnerPlayerIndex = (currentTrickLeader + winningIndex) % players.count
+            print("   Winner: \(players[winnerPlayerIndex].name) with highest of lead suit")
+            return winnerPlayerIndex
+        } else {
+            // Fallback: if no lead suit cards (all jokers after a non-joker lead), leader wins
+            print("   No lead suit cards found, leader wins by default")
+            return currentTrickLeader
+        }
     }
     
     // Determine trick winner index for UI display
