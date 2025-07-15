@@ -665,10 +665,14 @@ class Game: ObservableObject {
         print("   Trump suit: \(trumpSuit?.rawValue ?? "None")")
         
         // Award 10 points for winning with 7 of trump suit
-        if let trumpSuit = trumpSuit, winningCard.suit == trumpSuit && winningCard.value == .seven {
-            winner.addPoints(10)
-            print("🎉 BONUS: \(winner.name) wins with 7 of \(trumpSuit.rawValue) - awarded 10 points!")
-            print("   New score: \(winner.totalPoints)")
+        if let trumpSuit = trumpSuit {
+            let sevensOfTrump = currentTrick.filter { $0.suit == trumpSuit && $0.value == .seven }
+            let bonusPoints = sevensOfTrump.count * settings.trickWithSevenTrumpPoints
+            if bonusPoints > 0 {
+                winner.addPoints(bonusPoints)
+                print("🎉 BONUS: \(winner.name) wins trick with \(sevensOfTrump.count) 7\(sevensOfTrump.count > 1 ? "s" : "") of \(trumpSuit.rawValue) - awarded \(bonusPoints) points!")
+                print("   New score: \(winner.totalPoints)")
+            }
         }
         
         // Add brisques to winner's count
@@ -1886,6 +1890,12 @@ class Game: ObservableObject {
         if shouldBeEndgame && !isEndgame {
             isEndgame = true
             print("🏁 ENDGAME: No more cards to draw - stricter rules apply")
+            // Move all melded cards back to held for each player
+            for player in players {
+                player.held.append(contentsOf: player.melded)
+                player.melded.removeAll()
+                player.meldedOrder.removeAll()
+            }
         }
     }
     
