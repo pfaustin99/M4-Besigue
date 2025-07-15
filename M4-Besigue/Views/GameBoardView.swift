@@ -637,7 +637,7 @@ struct GameBoardView: View {
                         CardView(
                             card: card,
                             isSelected: selectedCards.contains(card),
-                            isPlayable: false,
+                            isPlayable: true, // All melded cards are playable
                             showHint: false,
                             onTap: { handleCardTap(card) }
                         )
@@ -1063,7 +1063,7 @@ struct GameBoardView: View {
                             CardView(
                                 card: card,
                                 isSelected: selectedCards.contains(card),
-                                isPlayable: false,
+                                isPlayable: true, // All melded cards are playable
                                 showHint: false,
                                 onTap: { handleCardTap(card) }
                             )
@@ -1486,6 +1486,7 @@ struct GameBoardView: View {
                 )
                 .frame(width: 80, height: 112)
                 .padding(12)
+                .opacity(1.0) // Always fully opaque for melded cards
                 .onTapGesture {
                     onTap()
                 }
