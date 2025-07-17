@@ -417,4 +417,45 @@ final class BesigueGameEngineTests: XCTestCase {
         let opponentId = humanPlayer.id
         XCTAssertTrue(inference[opponentId]?.allSatisfy { unaccountedAfterPlay.contains($0) } ?? false)
     }
+    
+    func testAIAdvancedTrickPlayStrategies() throws {
+        gameRules.updatePlayerCount(2)
+        gameRules.updateHumanPlayerCount(1)
+        game.startNewGame()
+        let aiPlayer = game.players.first { $0.type == .ai }!
+        let humanPlayer = game.players.first { $0.type == .human }!
+        let aiService = game.test_aiService
+        let deck = game.deck
+        // Simulate: Opponents are out of trump
+        game.trumpSuit = .spades
+        aiService.cardMemory.test_setPlayedCards([
+            PlayerCard(card: Card(suit: .spades, value: .ace)),
+            PlayerCard(card: Card(suit: .spades, value: .king)),
+            PlayerCard(card: Card(suit: .spades, value: .queen)),
+            PlayerCard(card: Card(suit: .spades, value: .jack)),
+            PlayerCard(card: Card(suit: .spades, value: .ten)),
+            PlayerCard(card: Card(suit: .spades, value: .nine)),
+            PlayerCard(card: Card(suit: .spades, value: .eight)),
+            PlayerCard(card: Card(suit: .spades, value: .seven))
+        ])
+        aiPlayer.held = [PlayerCard(card: Card(suit: .hearts, value: .ace)), PlayerCard(card: Card(suit: .hearts, value: .seven))]
+        let lead = aiService.chooseCardToPlay(for: aiPlayer, in: game)
+        XCTAssertNotNil(lead)
+        XCTAssertEqual(lead?.suit, .hearts)
+        XCTAssertEqual(lead?.value, .ace) // Should lead high when safe
+        // Simulate: Opponents likely have trump, AI should lead low non-trump
+        aiService.cardMemory.test_setPlayedCards([])
+        aiPlayer.held = [PlayerCard(card: Card(suit: .hearts, value: .ace)), PlayerCard(card: Card(suit: .hearts, value: .seven)), PlayerCard(card: Card(suit: .spades, value: .queen))]
+        let lead2 = aiService.chooseCardToPlay(for: aiPlayer, in: game)
+        XCTAssertNotNil(lead2)
+        XCTAssertEqual(lead2?.suit, .hearts)
+        XCTAssertEqual(lead2?.value, .seven) // Should lead low to draw trump
+        // Simulate: AI must follow suit, can't win, should play lowest
+        game.currentTrick = [PlayerCard(card: Card(suit: .hearts, value: .king))]
+        aiPlayer.held = [PlayerCard(card: Card(suit: .hearts, value: .ace)), PlayerCard(card: Card(suit: .hearts, value: .seven))]
+        let follow = aiService.chooseCardToPlay(for: aiPlayer, in: game)
+        XCTAssertNotNil(follow)
+        XCTAssertEqual(follow?.suit, .hearts)
+        XCTAssertEqual(follow?.value, .seven)
+    }
 } 

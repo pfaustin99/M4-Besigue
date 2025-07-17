@@ -88,6 +88,11 @@ class AIService: ObservableObject {
             }
             return result
         }
+        #if DEBUG
+        mutating func test_setPlayedCards(_ cards: [PlayerCard]) {
+            self.playedCards = cards
+        }
+        #endif
     }
     
     var cardMemory = CardMemory()
@@ -235,40 +240,59 @@ class AIService: ObservableObject {
         }
     }
     
-    /// Choose card when leading the trick
-    private func chooseLeadCard(player: Player, game: Game, playableCards: [PlayerCard]) -> PlayerCard {
-        // Sort cards by value (highest first)
-        let sortedCards = playableCards.sorted { card1, card2 in
-            card1.rank > card2.rank
+    /// Helper: Check if all opponents are void in a suit
+    private func opponentsAreVoidInSuit(selfPlayer: Player, suit: Suit, allPlayers: [Player], deck: Deck, cardMemory: CardMemory) -> Bool {
+        let inference = cardMemory.inferOpponentHands(allPlayers: allPlayers, selfPlayer: selfPlayer, deck: deck)
+        for (_, possibleCards) in inference {
+            if possibleCards.contains(where: { $0.suit == suit }) {
+                return false
+            }
         }
-        
-        // Lead with highest card if we have good trump protection
-        if hasStrongTrumpCards(player: player, trumpSuit: game.trumpSuit) {
-            return sortedCards.first ?? playableCards.first!
-        }
-        
-        // Lead with middle-strength card to avoid overcommitting
-        let middleIndex = sortedCards.count / 2
-        return sortedCards[middleIndex]
+        return true
     }
-    
-    /// Choose card when following to a trick
+    /// Helper: Check if all opponents are void in trump
+    private func opponentsAreOutOfTrump(selfPlayer: Player, allPlayers: [Player], deck: Deck, cardMemory: CardMemory, trumpSuit: Suit?) -> Bool {
+        guard let trumpSuit = trumpSuit else { return false }
+        return opponentsAreVoidInSuit(selfPlayer: selfPlayer, suit: trumpSuit, allPlayers: allPlayers, deck: deck, cardMemory: cardMemory)
+    }
+    /// Enhanced lead card selection
+    private func chooseLeadCard(player: Player, game: Game, playableCards: [PlayerCard]) -> PlayerCard {
+        let allPlayers = game.players
+        let deck = game.deck
+        let cardMemory = self.cardMemory
+        let trumpSuit = game.trumpSuit
+        // If opponents are out of trump, lead highest non-trump
+        if opponentsAreOutOfTrump(selfPlayer: player, allPlayers: allPlayers, deck: deck, cardMemory: cardMemory, trumpSuit: trumpSuit) {
+            let nonTrump = playableCards.filter { $0.suit != trumpSuit }
+            if let best = nonTrump.sorted(by: { $0.rank > $1.rank }).first {
+                return best
+            }
+        }
+        // If opponents likely have trump, lead lowest non-trump to draw it out
+        if let trumpSuit = trumpSuit {
+            let nonTrump = playableCards.filter { $0.suit != trumpSuit }
+            if !nonTrump.isEmpty {
+                return nonTrump.sorted(by: { $0.rank < $1.rank }).first!
+            }
+        }
+        // Fallback: lead lowest card
+        return playableCards.sorted(by: { $0.rank < $1.rank }).first!
+    }
+    /// Enhanced follow card selection
     private func chooseFollowCard(player: Player, game: Game, playableCards: [PlayerCard], leadSuit: Suit?, trumpSuit: Suit?) -> PlayerCard {
+        let allPlayers = game.players
+        let deck = game.deck
+        let cardMemory = self.cardMemory
         guard let leadSuit = leadSuit else { return playableCards.first! }
-        
         let currentWinningCard = findCurrentWinningCard(game: game, leadSuit: leadSuit, trumpSuit: trumpSuit)
-        
-        // Try to win the trick if possible
+        // If can win and opponents are out of trump, win with lowest winning card
         if let winningCard = findWinningCard(playableCards: playableCards, currentWinner: currentWinningCard, leadSuit: leadSuit, trumpSuit: trumpSuit) {
-            return winningCard
+            if opponentsAreOutOfTrump(selfPlayer: player, allPlayers: allPlayers, deck: deck, cardMemory: cardMemory, trumpSuit: trumpSuit) {
+                return winningCard
+            }
         }
-        
-        // If we can't win, play lowest card to conserve high cards
-        let sortedCards = playableCards.sorted { card1, card2 in
-            card1.rank < card2.rank
-        }
-        
-        return sortedCards.first ?? playableCards.first!
+        // If can't win or risk being trumped, play lowest card
+        return playableCards.sorted(by: { $0.rank < $1.rank }).first!
     }
     
     /// Find the current winning card in the trick
