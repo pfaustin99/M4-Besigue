@@ -19,7 +19,7 @@ class Deck: ObservableObject {
             for suit in Suit.allCases {
                 for value in CardValue.allCases {
                     // Skip eights and nines for quick testing
-                    if value == .seven || value == .eight || value == .nine { continue }
+                   // if value == .seven || value == .eight || value == .nine { continue }
                     cards.append(Card(suit: suit, value: value))
                 }
             }

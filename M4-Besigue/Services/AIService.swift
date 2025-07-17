@@ -17,6 +17,81 @@ class AIService: ObservableObject {
         self.difficulty = difficulty
     }
     
+    // MARK: - Card Memory
+    struct CardMemory {
+        private(set) var playedCards: [PlayerCard] = []
+        private(set) var meldedCards: [PlayerCard] = []
+
+        mutating func addPlayedCard(_ card: PlayerCard) {
+            if !playedCards.contains(where: { $0.id == card.id }) {
+                playedCards.append(card)
+            }
+        }
+        mutating func addMeldedCards(_ cards: [PlayerCard]) {
+            for card in cards {
+                if !meldedCards.contains(where: { $0.id == card.id }) {
+                    meldedCards.append(card)
+                }
+            }
+        }
+        func isCardPlayed(_ card: PlayerCard) -> Bool {
+            playedCards.contains(where: { $0.id == card.id })
+        }
+        func isCardMelded(_ card: PlayerCard) -> Bool {
+            meldedCards.contains(where: { $0.id == card.id })
+        }
+        func knownCards() -> [PlayerCard] {
+            playedCards + meldedCards
+        }
+        // --- AI Inference additions ---
+        /// Returns all cards not seen in play, melds, or any player's hand
+        func unaccountedForCards(allPlayers: [Player], deck: Deck) -> [PlayerCard] {
+            // Gather all cards that are accounted for: played, melded, in hands
+            var accountedFor = Set<UUID>()
+            for card in playedCards + meldedCards {
+                accountedFor.insert(card.id)
+            }
+            for player in allPlayers {
+                for card in player.hand {
+                    accountedFor.insert(card.id)
+                }
+            }
+            
+            // The full deck (including jokers and discard pile)
+            let allCards = deck.cards + deck.discardPile
+            
+            // Return cards in the full deck that are NOT accounted for
+            return allCards.filter { !accountedFor.contains($0.id) }.map { PlayerCard(card: $0) }
+        }
+        /// Returns a dictionary mapping opponent player IDs to the set of cards that could be in their hand (not seen elsewhere)
+        func inferOpponentHands(allPlayers: [Player], selfPlayer: Player, deck: Deck) -> [UUID: [PlayerCard]] {
+            // For each opponent, return cards not seen in play, melds, or in any hand except possibly theirs
+            var result: [UUID: [PlayerCard]] = [:]
+            
+            // Gather all cards that are accounted for: played, melded, in hands
+            var accountedFor = Set<UUID>()
+            for card in playedCards + meldedCards {
+                accountedFor.insert(card.id)
+            }
+            for player in allPlayers {
+                for card in player.hand {
+                    accountedFor.insert(card.id)
+                }
+            }
+            
+            let allCards = deck.cards + deck.discardPile
+            let unaccounted = allCards.filter { !accountedFor.contains($0.id) }.map { PlayerCard(card: $0) }
+            
+            for player in allPlayers where player.id != selfPlayer.id {
+                // For now, just assign all unaccounted cards as possible for each opponent
+                result[player.id] = unaccounted
+            }
+            return result
+        }
+    }
+    
+    var cardMemory = CardMemory()
+    
     // MARK: - Main AI Decision Methods
     
     /// Determine which melds to declare

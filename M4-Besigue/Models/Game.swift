@@ -596,11 +596,10 @@ class Game: ObservableObject {
         print("🎴 PLAYING CARD (SYNC):")
         print("   Player: \(player.name) (type: \(player.type))")
         print("   Card: \(card.displayName)")
-        
         // Add card to trick immediately
         player.removeCard(card)
         currentTrick.append(card)
-        
+        aiService.cardMemory.addPlayedCard(card) // <-- Ensure AI memory is updated in tests
         print("   Card added to trick. New trick count: \(currentTrick.count)")
         print("   Current trick cards: \(currentTrick.map { $0.displayName })")
     }
@@ -633,6 +632,7 @@ class Game: ObservableObject {
             self.canPlayerMeld = false
             player.removeCard(card)
             self.currentTrick.append(card)
+            self.aiService.cardMemory.addPlayedCard(card)
             
             print("   Card added to trick. New trick count: \(self.currentTrick.count)")
             print("   Current trick cards: \(self.currentTrick.map { $0.displayName })")
@@ -1382,6 +1382,8 @@ class Game: ObservableObject {
                     }
                 }
             }
+            let meldCards = meld.cardIDs.compactMap { player.cardByID($0) }
+            self.aiService.cardMemory.addMeldedCards(meldCards)
         }
     }
     
@@ -1899,4 +1901,7 @@ class Game: ObservableObject {
         }
     }
     
+    #if DEBUG
+        var test_aiService: AIService { aiService }
+    #endif
 }

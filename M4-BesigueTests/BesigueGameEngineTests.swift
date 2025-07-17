@@ -367,4 +367,54 @@ final class BesigueGameEngineTests: XCTestCase {
             }
         }
     }
+    
+    func testAICardMemoryTracksPlayedAndMeldedCards() throws {
+        gameRules.updatePlayerCount(2)
+        gameRules.updateHumanPlayerCount(1)
+        game.startNewGame()
+        let aiService = game.test_aiService
+        let aiPlayer = game.players.first { $0.type == .ai }!
+
+        // Play a card as AI
+        let aiCard = aiPlayer.hand[0]
+        game.playCardSync(aiCard, from: aiPlayer)
+        XCTAssertTrue(aiService.cardMemory.isCardPlayed(aiCard))
+
+        // Simulate a meld for AI
+        let meldCardIDs = aiPlayer.hand.prefix(2).map { $0.id }
+        let meld = Meld(cardIDs: meldCardIDs, type: .besigue, pointValue: 40, roundNumber: 1)
+        game.declareMeld(meld, by: aiPlayer)
+        let meldCards = meldCardIDs.compactMap { aiPlayer.cardByID($0) }
+        for card in meldCards {
+            XCTAssertTrue(aiService.cardMemory.isCardMelded(card))
+        }
+    }
+    
+    func testAICardMemoryInference() throws {
+        gameRules.updatePlayerCount(2)
+        gameRules.updateHumanPlayerCount(1)
+        game.startNewGame()
+        let aiPlayer = game.players.first { $0.type == .ai }!
+        let humanPlayer = game.players.first { $0.type == .human }!
+        let aiService = game.test_aiService
+        let deck = game.deck
+        // At start, all cards in hands are accounted for, so unaccounted should be deck minus hands
+        let unaccounted = aiService.cardMemory.unaccountedForCards(allPlayers: game.players, deck: deck)
+        let allHandIds = Set(game.players.flatMap { $0.hand.map { $0.id } })
+        let allDeckIds = Set(deck.cards.map { $0.id })
+        // All unaccounted cards should be in the deck, not in any hand
+        for card in unaccounted {
+            XCTAssertTrue(allDeckIds.contains(card.id))
+            XCTAssertFalse(allHandIds.contains(card.id))
+        }
+        // Now play a card and check that it is no longer unaccounted
+        let aiCard = aiPlayer.hand[0]
+        game.playCardSync(aiCard, from: aiPlayer)
+        let unaccountedAfterPlay = aiService.cardMemory.unaccountedForCards(allPlayers: game.players, deck: deck)
+        XCTAssertFalse(unaccountedAfterPlay.contains(where: { $0.id == aiCard.id }))
+        // Test inferOpponentHands returns all unaccounted cards for the opponent
+        let inference = aiService.cardMemory.inferOpponentHands(allPlayers: game.players, selfPlayer: aiPlayer, deck: deck)
+        let opponentId = humanPlayer.id
+        XCTAssertTrue(inference[opponentId]?.allSatisfy { unaccountedAfterPlay.contains($0) } ?? false)
+    }
 } 
