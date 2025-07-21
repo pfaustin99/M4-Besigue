@@ -228,6 +228,40 @@ extension Card {
             Card(suit: suit, value: .queen)
         ]
     }
+    
+    /// AI HELPER METHOD - Reference Only
+    /// 
+    /// This static property provides a reference list of all possible card types in Bésigue.
+    /// It is used by the AI for:
+    /// - Card counting and inference (knowing what cards exist in the game)
+    /// - Meld pattern recognition
+    /// - Probability calculations
+    /// 
+    /// ⚠️  IMPORTANT: This is for REFERENCE ONLY
+    /// - These cards have unique UUIDs that are DIFFERENT from actual game cards
+    /// - NEVER use these UUIDs for tracking real cards in play
+    /// - NEVER use this to create cards for actual gameplay
+    /// - For gameplay, always use cards from the actual Deck instance
+    /// 
+    /// The AI should only use the suit, value, and jokerType properties from these cards.
+    /// For tracking specific cards in play, use the UUIDs from the actual Deck cards.
+    static var allCards: [Card] {
+        // Use the same logic as Deck.createBesigueDeck()
+        var cards: [Card] = []
+        let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades]
+        let values: [CardValue] = [.ace, .ten, .king, .queen, .jack, .nine, .eight, .seven]
+        for suit in suits {
+            for value in values {
+                cards.append(Card(suit: suit, value: value))
+            }
+        }
+        // Add jokers (4 in total for Besigue, matching Deck)
+        cards.append(Card(jokerType: .redOne))
+        cards.append(Card(jokerType: .redTwo))
+        cards.append(Card(jokerType: .blackOne))
+        cards.append(Card(jokerType: .blackTwo))
+        return cards
+    }
 }
 
 // MARK: - PlayerCard: Card + Meld Usage
