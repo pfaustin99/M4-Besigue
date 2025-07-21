@@ -623,4 +623,44 @@ final class BesigueGameEngineTests: XCTestCase {
         let prob = aiService.probabilityAnyCardOfTypeInDrawPile(suit: .hearts, value: .queen, game: game, allPlayers: [aiPlayer, humanPlayer])
         XCTAssertEqual(prob, 0.6, accuracy: 0.0001)
     }
+
+    func testAI_ProbabilityAIDrawsSpecificCardAndAnyCardOfType() throws {
+        gameRules.updatePlayerCount(4)
+        gameRules.updateHumanPlayerCount(1)
+        game.startNewGame()
+        let aiPlayer = game.players.first(where: { $0.type == .ai })!
+        let aiService = game.test_aiService
+        // Set up: 4 King of Spades in the game
+        let ks1 = Card(suit: .spades, value: .king)
+        let ks2 = Card(suit: .spades, value: .king)
+        let ks3 = Card(suit: .spades, value: .king)
+        let ks4 = Card(suit: .spades, value: .king)
+        // AI has one King of Spades
+        aiPlayer.held = [PlayerCard(card: ks1)]
+        // One King of Spades has been played
+        aiService.cardMemory.test_setPlayedCards([PlayerCard(card: ks2)])
+        // One King of Spades has been melded
+        aiService.cardMemory.addMeldedCards([PlayerCard(card: ks3)])
+        // The last King of Spades is unaccounted for, and is in the draw pile
+        let drawPileKS = PlayerCard(card: ks4)
+        // Set up draw pile and opponent hands
+        game.deck.cards = [drawPileKS.card] + [Card(suit: .hearts, value: .ace), Card(suit: .clubs, value: .seven), Card(suit: .diamonds, value: .ten)]
+        // Each opponent has 2 cards
+        for player in game.players where player.id != aiPlayer.id {
+            player.held = [PlayerCard(card: Card(suit: .hearts, value: .queen)), PlayerCard(card: Card(suit: .spades, value: .ten))]
+        }
+        // There are 4 cards in the draw pile, 3 opponents with 2 cards each = 6 in hands
+        // Probability the King of Spades is in the draw pile: 4/(4+6) = 0.4
+        let probSpecific = aiService.probabilityAIDrawsSpecificCard(cardID: ks4.id, game: game, allPlayers: game.players, aiPlayer: aiPlayer)
+        XCTAssertEqual(probSpecific, 0.25, accuracy: 0.0001) // 1/4 chance to draw specific card
+        // Probability the AI draws any King of Spades: 1/4 (since only one left)
+        let probAny = aiService.probabilityAIDrawsAnyCardOfType(suit: .spades, value: .king, game: game, allPlayers: game.players, aiPlayer: aiPlayer)
+        XCTAssertEqual(probAny, 0.25, accuracy: 0.0001)
+        // Add another King of Spades to the draw pile
+        let ks5 = Card(suit: .spades, value: .king)
+        game.deck.cards.append(ks5)
+        // Now 5 cards in draw pile, 2 are King of Spades
+        let probAny2 = aiService.probabilityAIDrawsAnyCardOfType(suit: .spades, value: .king, game: game, allPlayers: game.players, aiPlayer: aiPlayer)
+        XCTAssertEqual(probAny2, 0.4, accuracy: 0.0001) // 2/5
+    }
 } 

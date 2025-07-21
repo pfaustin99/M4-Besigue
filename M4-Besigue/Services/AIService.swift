@@ -268,6 +268,8 @@ class AIService: ObservableObject {
     private func chooseLeadCard(player: Player, game: Game, playableCards: [PlayerCard], meldCardIDs: Set<UUID>) -> PlayerCard {
         let allPlayers = game.players
         let trumpSuit = game.trumpSuit
+        let aiService = self
+        let probabilityThreshold = 0.3 // Risk threshold for breaking up melds/brisques
         // Endgame: use void and trump inference
         if game.isEndgame {
             // If any opponent is void in a suit, lead that suit to force trump or win
@@ -288,15 +290,21 @@ class AIService: ObservableObject {
                 }
             }
         } else {
-            // Draw phase: do NOT assume opponents are out of trump
-            // Optionally, use probabilistic reasoning here (future enhancement)
-            // For now, lead low non-trump to draw out trumps
-            if let trumpSuit = trumpSuit {
-                let nonTrump = playableCards.filter { $0.suit != trumpSuit }
-                if !nonTrump.isEmpty {
-                    return nonTrump.sorted(by: { $0.rank < $1.rank }).first!
+            // Draw phase: use probability to decide if it's safe to play meld/brisque
+            let safeNonTrump = playableCards.filter { $0.suit != trumpSuit && !meldCardIDs.contains($0.id) && !$0.isBrisque }
+            if !safeNonTrump.isEmpty {
+                return safeNonTrump.sorted(by: { $0.rank < $1.rank }).first!
+            }
+            // If only meld/brisque cards are left, check probability of drawing a replacement
+            let riskyCards = playableCards.filter { meldCardIDs.contains($0.id) || $0.isBrisque }
+            for card in riskyCards {
+                let prob = aiService.probabilityAIDrawsAnyCardOfType(suit: card.suit ?? .hearts, value: card.value ?? .ace, game: game, allPlayers: allPlayers, aiPlayer: player)
+                if prob > probabilityThreshold {
+                    return card
                 }
             }
+            // Otherwise, play the lowest card
+            return playableCards.sorted(by: { $0.rank < $1.rank }).first!
         }
         // Fallback: lead lowest card
         return playableCards.sorted(by: { $0.rank < $1.rank }).first!
@@ -304,8 +312,8 @@ class AIService: ObservableObject {
     /// Enhanced follow card selection
     private func chooseFollowCard(player: Player, game: Game, playableCards: [PlayerCard], leadSuit: Suit?, trumpSuit: Suit?, meldCardIDs: Set<UUID>) -> PlayerCard {
         let allPlayers = game.players
-        let deck = game.deck
-        let cardMemory = self.cardMemory
+        let aiService = self
+        let probabilityThreshold = 0.3
         guard let leadSuit = leadSuit else { return playableCards.first! }
         let currentWinningCard = findCurrentWinningCard(game: game, leadSuit: leadSuit, trumpSuit: trumpSuit)
         // If can win and (in endgame) opponents are out of trump, win with lowest winning card
@@ -331,6 +339,14 @@ class AIService: ObservableObject {
         let notBrisque = playableCards.filter { !$0.isBrisque }
         if !notBrisque.isEmpty {
             return notBrisque.sorted(by: { $0.rank < $1.rank }).first!
+        }
+        // If only meld/brisque cards are left, check probability of drawing a replacement
+        let riskyCards = playableCards.filter { meldCardIDs.contains($0.id) || $0.isBrisque }
+        for card in riskyCards {
+            let prob = aiService.probabilityAIDrawsAnyCardOfType(suit: card.suit ?? .hearts, value: card.value ?? .ace, game: game, allPlayers: allPlayers, aiPlayer: player)
+            if prob > probabilityThreshold {
+                return card
+            }
         }
         // Otherwise, play the lowest card
         return playableCards.sorted(by: { $0.rank < $1.rank }).first!
@@ -458,6 +474,15 @@ class AIService: ObservableObject {
             if hasStrongTrumpCards(player: player, trumpSuit: game.trumpSuit) {
                 meldsToDeclare.append(contentsOf: commonMarriages)
             }
+            // Probability-based meld management: if a higher-value meld is possible by waiting, estimate probability
+            let meldTypes = possibleMelds.map { $0.type }
+            if meldTypes.contains(.besigue) == false && meldTypes.contains(.royalMarriage) == false {
+                // If only low-value melds are available, check if waiting for a higher meld is worthwhile
+                // Example: if missing a card for Bésigue, estimate probability of drawing it
+                // (This can be expanded for more meld types)
+                // For now, if probability is low, declare current melds
+                // (Future: add more nuanced logic)
+            }
         }
         return meldsToDeclare
     }
@@ -506,6 +531,62 @@ class AIService: ObservableObject {
         // Probability at least one is in draw pile (using complement rule)
         let pNone = pow(1.0 - Double(D) / Double(totalUnknown), Double(matchingUnaccounted.count))
         return 1.0 - pNone
+    }
+
+    /// Probability that the AI will draw a specific unaccounted-for card from the draw pile (in the next draw round)
+    /// - Parameters:
+    ///   - cardID: The UUID of the card in question
+    ///   - game: The current game state
+    ///   - allPlayers: All players in the game
+    ///   - aiPlayer: The AI player (for hand exclusion)
+    /// - Returns: Probability (0.0 to 1.0)
+    func probabilityAIDrawsSpecificCard(cardID: UUID, game: Game, allPlayers: [Player], aiPlayer: Player) -> Double {
+        // Find all unaccounted-for cards (not in any hand, played, or melded)
+        var accountedFor = Set<UUID>()
+        for player in allPlayers {
+            for card in player.hand {
+                accountedFor.insert(card.id)
+            }
+        }
+        accountedFor.formUnion(cardMemory.playedCards.map { $0.id })
+        accountedFor.formUnion(cardMemory.meldedCards.map { $0.id })
+        let unaccounted = game.deck.cards.filter { !accountedFor.contains($0.id) }
+        let D = game.deck.cards.count
+        // If the card is not unaccounted for, probability is 0
+        guard unaccounted.contains(where: { $0.id == cardID }) else { return 0.0 }
+        // Probability the AI draws the card in the next draw round
+        // Each player draws one card; if there are N players, each has 1/D chance
+        // (Assuming fair shuffle, draw order does not matter)
+        let N = allPlayers.count
+        guard D > 0 else { return 0.0 }
+        return 1.0 / Double(D)
+    }
+
+    /// Probability that the AI will draw any card of a given suit/value from the draw pile (in the next draw round)
+    /// - Parameters:
+    ///   - suit: The suit of the card
+    ///   - value: The value of the card
+    ///   - game: The current game state
+    ///   - allPlayers: All players in the game
+    ///   - aiPlayer: The AI player (for hand exclusion)
+    /// - Returns: Probability (0.0 to 1.0)
+    func probabilityAIDrawsAnyCardOfType(suit: Suit, value: CardValue, game: Game, allPlayers: [Player], aiPlayer: Player) -> Double {
+        // Find all unaccounted-for cards (not in any hand, played, or melded)
+        var accountedFor = Set<UUID>()
+        for player in allPlayers {
+            for card in player.hand {
+                accountedFor.insert(card.id)
+            }
+        }
+        accountedFor.formUnion(cardMemory.playedCards.map { $0.id })
+        accountedFor.formUnion(cardMemory.meldedCards.map { $0.id })
+        let unaccounted = game.deck.cards.filter { !accountedFor.contains($0.id) }
+        let matchingUnaccounted = unaccounted.filter { $0.suit == suit && $0.value == value }
+        let D = game.deck.cards.count
+        guard D > 0 else { return 0.0 }
+        // Probability the AI draws any one of the matching cards in the next draw round
+        // For k matching cards, probability = k / D
+        return Double(matchingUnaccounted.count) / Double(D)
     }
 }
 
