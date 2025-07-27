@@ -546,19 +546,93 @@ final class BesigueGameEngineTests: XCTestCase {
         let eightClubs = PlayerCard(card: Card(suit: .clubs, value: .eight))
         let nineClubs = PlayerCard(card: Card(suit: .clubs, value: .nine))
         aiPlayer.held = [aceHearts, kingSpades, queenSpades, tenSpades, sevenClubs, eightDiamonds, nineDiamonds, eightClubs, nineClubs]
+        
+        // Set human player's hand (no spades - so AI can infer they're out of trump)
+        let humanIndex = game.players.firstIndex(where: { $0.type == .human })!
+        let humanPlayer = game.players[humanIndex]
+        humanPlayer.held = [
+            PlayerCard(card: Card(suit: .hearts, value: .seven)),
+            PlayerCard(card: Card(suit: .hearts, value: .eight)),
+            PlayerCard(card: Card(suit: .diamonds, value: .ten)),
+            PlayerCard(card: Card(suit: .clubs, value: .nine)),
+            PlayerCard(card: Card(suit: .clubs, value: .eight)),
+            PlayerCard(card: Card(suit: .diamonds, value: .nine)),
+            PlayerCard(card: Card(suit: .hearts, value: .nine)),
+            PlayerCard(card: Card(suit: .clubs, value: .seven)),
+            PlayerCard(card: Card(suit: .diamonds, value: .eight))
+        ]
+        
         // Simulate all other trumps are played or melded
-        let playedTrumps = [PlayerCard(card: Card(suit: .spades, value: .ace)), PlayerCard(card: Card(suit: .spades, value: .jack))]
-        aiService.cardMemory.test_setPlayedCards(playedTrumps)
+        // We need to account for ALL remaining trump cards (4 copies of each)
+        // AI has: King, Queen, Ten (3 cards)
+        // So we need to mark ALL other spades as played: 4 Aces, 4 Jacks, 3 Kings, 3 Queens, 3 Tens, 4 Nines, 4 Eights, 4 Sevens
+        let additionalPlayedTrumps = [
+            PlayerCard(card: Card(suit: .spades, value: .ace)), // All 4 aces
+            PlayerCard(card: Card(suit: .spades, value: .ace)),
+            PlayerCard(card: Card(suit: .spades, value: .ace)),
+            PlayerCard(card: Card(suit: .spades, value: .ace)),
+            PlayerCard(card: Card(suit: .spades, value: .jack)), // All 4 jacks
+            PlayerCard(card: Card(suit: .spades, value: .jack)),
+            PlayerCard(card: Card(suit: .spades, value: .jack)),
+            PlayerCard(card: Card(suit: .spades, value: .jack)),
+            PlayerCard(card: Card(suit: .spades, value: .king)), // 3 kings (AI has 1)
+            PlayerCard(card: Card(suit: .spades, value: .king)),
+            PlayerCard(card: Card(suit: .spades, value: .king)),
+            PlayerCard(card: Card(suit: .spades, value: .queen)), // 3 queens (AI has 1)
+            PlayerCard(card: Card(suit: .spades, value: .queen)),
+            PlayerCard(card: Card(suit: .spades, value: .queen)),
+            PlayerCard(card: Card(suit: .spades, value: .ten)), // 3 tens (AI has 1)
+            PlayerCard(card: Card(suit: .spades, value: .ten)),
+            PlayerCard(card: Card(suit: .spades, value: .ten)),
+            PlayerCard(card: Card(suit: .spades, value: .nine)), // All 4 nines
+            PlayerCard(card: Card(suit: .spades, value: .nine)),
+            PlayerCard(card: Card(suit: .spades, value: .nine)),
+            PlayerCard(card: Card(suit: .spades, value: .nine)),
+            PlayerCard(card: Card(suit: .spades, value: .eight)), // All 4 eights
+            PlayerCard(card: Card(suit: .spades, value: .eight)),
+            PlayerCard(card: Card(suit: .spades, value: .eight)),
+            PlayerCard(card: Card(suit: .spades, value: .eight)),
+            PlayerCard(card: Card(suit: .spades, value: .seven)), // All 4 sevens
+            PlayerCard(card: Card(suit: .spades, value: .seven)),
+            PlayerCard(card: Card(suit: .spades, value: .seven)),
+            PlayerCard(card: Card(suit: .spades, value: .seven))
+        ]
+        aiService.cardMemory.test_setPlayedCards(additionalPlayedTrumps)
+        
         // Endgame: draw pile is empty
         game.deck.cards = []
+        game.checkEndgame() // This sets isEndgame = true
+        // Force endgame state for testing
+        game.isEndgame = true
         game.currentTrick = [] // AI is leading
+        
+        // Debug: Check what cards are actually in hands
+        print("🔍 TEST DEBUG: AI player held cards: \(aiPlayer.held.map { $0.displayName })")
+        print("🔍 TEST DEBUG: AI player hand cards: \(aiPlayer.hand.map { $0.displayName })")
+        print("🔍 TEST DEBUG: Human player held cards: \(humanPlayer.held.map { $0.displayName })")
+        print("🔍 TEST DEBUG: Human player hand cards: \(humanPlayer.hand.map { $0.displayName })")
+        print("🔍 TEST DEBUG: Played trump cards: \(aiService.cardMemory.playedCards.map { $0.displayName })")
+        print("🔍 TEST DEBUG: Melded trump cards: \(aiService.cardMemory.meldedCards.map { $0.displayName })")
+        
+        // First, test if the AI correctly infers opponents are out of trump
+        let opponentsOutOfTrump = aiService.opponentsLikelyOutOfTrump(trumpSuit: game.trumpSuit, allPlayers: game.players, selfPlayer: aiPlayer)
+        XCTAssertTrue(opponentsOutOfTrump, "AI should infer that opponents are out of trump")
+        
+        // Debug: Let's see what the AI is actually inferring
+        print("🔍 TEST DEBUG: AI infers opponents out of trump: \(opponentsOutOfTrump)")
+        
         // AI should infer opponents are out of trump and lead high non-trump (aceHearts)
         let chosenCard = aiService.chooseCardToPlay(for: aiPlayer, in: game)
-        print("AI chose to play: \(chosenCard?.displayName ?? "nil")")
         XCTAssertNotNil(chosenCard, "AI should select a card to play")
-        XCTAssertEqual(chosenCard?.suit, .hearts)
-        XCTAssertEqual(chosenCard?.value, .ace)
+        
+        // Debug: Let's see what card the AI actually chose
+        print("🔍 TEST DEBUG: AI chose card: \(chosenCard?.displayName ?? "nil")")
+        
+        // The AI should choose the Ace of Hearts because it's a high non-trump card and opponents are out of trump
+        XCTAssertEqual(chosenCard?.displayName, "Ace of Hearts", "AI should lead with Ace of Hearts when opponents are out of trump")
     }
+    
+
 
     func testAI_LeadsWithJokerAfterMeld() throws {
         gameRules.updatePlayerCount(2)
@@ -662,5 +736,285 @@ final class BesigueGameEngineTests: XCTestCase {
         // Now 5 cards in draw pile, 2 are King of Spades
         let probAny2 = aiService.probabilityAIDrawsAnyCardOfType(suit: .spades, value: .king, game: game, allPlayers: game.players, aiPlayer: aiPlayer)
         XCTAssertEqual(probAny2, 0.4, accuracy: 0.0001) // 2/5
+    }
+    
+    // MARK: - Endgame Rules Tests
+    
+    func testAI_EndgameJokerLeadStrategic() throws {
+        // Test AI leading with Joker strategically in endgame to force trumps
+        gameRules.updatePlayerCount(2)
+        gameRules.updateHumanPlayerCount(1)
+        game.startNewGame()
+        let aiIndex = game.players.firstIndex(where: { $0.type == .ai })!
+        game.currentPlayerIndex = aiIndex
+        game.currentPhase = .endgame
+        let aiPlayer = game.players[aiIndex]
+        let aiService = game.test_aiService
+        
+        // Set trump suit
+        game.trumpSuit = .spades
+        
+        // Give AI a hand with Joker and high brisques (strategic reason to lead Joker)
+        let joker = PlayerCard(card: Card(jokerType: .redOne))
+        let aceHearts = PlayerCard(card: Card(suit: .hearts, value: .ace))
+        let tenDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .ten))
+        let kingClubs = PlayerCard(card: Card(suit: .clubs, value: .king))
+        let sevenHearts = PlayerCard(card: Card(suit: .hearts, value: .seven))
+        let eightClubs = PlayerCard(card: Card(suit: .clubs, value: .eight))
+        let nineDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .nine))
+        let queenHearts = PlayerCard(card: Card(suit: .hearts, value: .queen))
+        let jackClubs = PlayerCard(card: Card(suit: .clubs, value: .jack))
+        aiPlayer.held = [joker, aceHearts, tenDiamonds, kingClubs, sevenHearts, eightClubs, nineDiamonds, queenHearts, jackClubs]
+        
+        // Set human player's hand (no spades)
+        let humanIndex = game.players.firstIndex(where: { $0.type == .human })!
+        let humanPlayer = game.players[humanIndex]
+        humanPlayer.held = [
+            PlayerCard(card: Card(suit: .hearts, value: .eight)),
+            PlayerCard(card: Card(suit: .diamonds, value: .seven)),
+            PlayerCard(card: Card(suit: .clubs, value: .ten)),
+            PlayerCard(card: Card(suit: .hearts, value: .nine)),
+            PlayerCard(card: Card(suit: .diamonds, value: .eight)),
+            PlayerCard(card: Card(suit: .clubs, value: .nine)),
+            PlayerCard(card: Card(suit: .hearts, value: .jack)),
+            PlayerCard(card: Card(suit: .diamonds, value: .nine)),
+            PlayerCard(card: Card(suit: .clubs, value: .seven))
+        ]
+        
+        // Mark all trumps as played except what AI has
+        let allPlayedTrumps = [
+            PlayerCard(card: Card(suit: .spades, value: .ace)),
+            PlayerCard(card: Card(suit: .spades, value: .ace)),
+            PlayerCard(card: Card(suit: .spades, value: .ace)),
+            PlayerCard(card: Card(suit: .spades, value: .ace)),
+            PlayerCard(card: Card(suit: .spades, value: .jack)),
+            PlayerCard(card: Card(suit: .spades, value: .jack)),
+            PlayerCard(card: Card(suit: .spades, value: .jack)),
+            PlayerCard(card: Card(suit: .spades, value: .jack)),
+            PlayerCard(card: Card(suit: .spades, value: .ten)),
+            PlayerCard(card: Card(suit: .spades, value: .ten)),
+            PlayerCard(card: Card(suit: .spades, value: .ten)),
+            PlayerCard(card: Card(suit: .spades, value: .queen)),
+            PlayerCard(card: Card(suit: .spades, value: .queen)),
+            PlayerCard(card: Card(suit: .spades, value: .queen)),
+            PlayerCard(card: Card(suit: .spades, value: .nine)),
+            PlayerCard(card: Card(suit: .spades, value: .nine)),
+            PlayerCard(card: Card(suit: .spades, value: .nine)),
+            PlayerCard(card: Card(suit: .spades, value: .nine)),
+            PlayerCard(card: Card(suit: .spades, value: .eight)),
+            PlayerCard(card: Card(suit: .spades, value: .eight)),
+            PlayerCard(card: Card(suit: .spades, value: .eight)),
+            PlayerCard(card: Card(suit: .spades, value: .eight)),
+            PlayerCard(card: Card(suit: .spades, value: .seven)),
+            PlayerCard(card: Card(suit: .spades, value: .seven)),
+            PlayerCard(card: Card(suit: .spades, value: .seven)),
+            PlayerCard(card: Card(suit: .spades, value: .seven))
+        ]
+        aiService.cardMemory.test_setPlayedCards(allPlayedTrumps)
+        
+        // Endgame: draw pile is empty
+        game.deck.cards = []
+        game.checkEndgame()
+        game.isEndgame = true
+        game.currentTrick = [] // AI is leading
+        
+        // AI should lead with Joker strategically (has high brisques to protect)
+        let chosenCard = aiService.chooseCardToPlay(for: aiPlayer, in: game)
+        XCTAssertNotNil(chosenCard, "AI should select a card to play")
+        XCTAssertTrue(chosenCard?.isJoker == true, "AI should lead with Joker strategically in endgame")
+    }
+    
+    func testAI_EndgameJokerFollow() throws {
+        // Test AI following Joker lead in endgame
+        gameRules.updatePlayerCount(2)
+        gameRules.updateHumanPlayerCount(1)
+        game.startNewGame()
+        let aiIndex = game.players.firstIndex(where: { $0.type == .ai })!
+        game.currentPlayerIndex = aiIndex
+        game.currentPhase = .endgame
+        let aiPlayer = game.players[aiIndex]
+        let aiService = game.test_aiService
+        
+        // Set trump suit
+        game.trumpSuit = .spades
+        
+        // Give AI a hand with trumps and non-trumps
+        let kingSpades = PlayerCard(card: Card(suit: .spades, value: .king))
+        let queenSpades = PlayerCard(card: Card(suit: .spades, value: .queen))
+        let aceHearts = PlayerCard(card: Card(suit: .hearts, value: .ace))
+        let tenDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .ten))
+        let sevenClubs = PlayerCard(card: Card(suit: .clubs, value: .seven))
+        let eightHearts = PlayerCard(card: Card(suit: .hearts, value: .eight))
+        let nineDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .nine))
+        let jackClubs = PlayerCard(card: Card(suit: .clubs, value: .jack))
+        let queenHearts = PlayerCard(card: Card(suit: .hearts, value: .queen))
+        aiPlayer.held = [kingSpades, queenSpades, aceHearts, tenDiamonds, sevenClubs, eightHearts, nineDiamonds, jackClubs, queenHearts]
+        
+        // Endgame: draw pile is empty
+        game.deck.cards = []
+        game.checkEndgame()
+        game.isEndgame = true
+        
+        // Human leads with a Joker
+        let joker = PlayerCard(card: Card(jokerType: .redOne))
+        game.currentTrick = [joker]
+        
+        // AI should play lowest trump (Queen of Spades)
+        let chosenCard = aiService.chooseCardToPlay(for: aiPlayer, in: game)
+        XCTAssertNotNil(chosenCard, "AI should select a card to play")
+        XCTAssertEqual(chosenCard?.displayName, "Queen of Spades", "AI should play lowest trump when following Joker lead")
+    }
+    
+    func testAI_EndgameJokerFollowNoTrump() throws {
+        // Test AI following Joker lead when it has no trumps
+        gameRules.updatePlayerCount(2)
+        gameRules.updateHumanPlayerCount(1)
+        game.startNewGame()
+        let aiIndex = game.players.firstIndex(where: { $0.type == .ai })!
+        game.currentPlayerIndex = aiIndex
+        game.currentPhase = .endgame
+        let aiPlayer = game.players[aiIndex]
+        let aiService = game.test_aiService
+        
+        // Set trump suit
+        game.trumpSuit = .spades
+        
+        // Give AI a hand with no trumps
+        let aceHearts = PlayerCard(card: Card(suit: .hearts, value: .ace))
+        let tenDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .ten))
+        let sevenClubs = PlayerCard(card: Card(suit: .clubs, value: .seven))
+        let eightHearts = PlayerCard(card: Card(suit: .hearts, value: .eight))
+        let nineDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .nine))
+        let jackClubs = PlayerCard(card: Card(suit: .clubs, value: .jack))
+        let queenHearts = PlayerCard(card: Card(suit: .hearts, value: .queen))
+        let kingDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .king))
+        let joker = PlayerCard(card: Card(jokerType: .redOne))
+        aiPlayer.held = [aceHearts, tenDiamonds, sevenClubs, eightHearts, nineDiamonds, jackClubs, queenHearts, kingDiamonds, joker]
+        
+        // Endgame: draw pile is empty
+        game.deck.cards = []
+        game.checkEndgame()
+        game.isEndgame = true
+        
+        // Human leads with a Joker
+        let leadJoker = PlayerCard(card: Card(jokerType: .redTwo))
+        game.currentTrick = [leadJoker]
+        
+        // AI should play its Joker (to avoid revealing it has no trumps)
+        let chosenCard = aiService.chooseCardToPlay(for: aiPlayer, in: game)
+        XCTAssertNotNil(chosenCard, "AI should select a card to play")
+        XCTAssertTrue(chosenCard?.isJoker == true, "AI should play Joker when following Joker lead and has no trumps")
+    }
+    
+    func testAI_EndgameBrisquePriority() throws {
+        // Test AI prioritizing brisques in endgame to reach 5
+        gameRules.updatePlayerCount(2)
+        gameRules.updateHumanPlayerCount(1)
+        game.startNewGame()
+        let aiIndex = game.players.firstIndex(where: { $0.type == .ai })!
+        game.currentPlayerIndex = aiIndex
+        game.currentPhase = .endgame
+        let aiPlayer = game.players[aiIndex]
+        let aiService = game.test_aiService
+        
+        // Set AI's brisques won to 3 (needs 2 more to reach 5)
+        game.brisques[aiPlayer.id] = 3
+        
+        // Give AI a hand with brisques and non-brisques
+        let aceHearts = PlayerCard(card: Card(suit: .hearts, value: .ace))
+        let tenDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .ten))
+        let sevenClubs = PlayerCard(card: Card(suit: .clubs, value: .seven))
+        let eightHearts = PlayerCard(card: Card(suit: .hearts, value: .eight))
+        let nineDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .nine))
+        let jackClubs = PlayerCard(card: Card(suit: .clubs, value: .jack))
+        let queenHearts = PlayerCard(card: Card(suit: .hearts, value: .queen))
+        let kingDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .king))
+        let aceClubs = PlayerCard(card: Card(suit: .clubs, value: .ace))
+        aiPlayer.held = [aceHearts, tenDiamonds, sevenClubs, eightHearts, nineDiamonds, jackClubs, queenHearts, kingDiamonds, aceClubs]
+        
+        // Endgame: draw pile is empty
+        game.deck.cards = []
+        game.checkEndgame()
+        game.isEndgame = true
+        game.currentTrick = [] // AI is leading
+        
+        // AI should lead with highest brisque (Ace of Hearts)
+        let chosenCard = aiService.chooseCardToPlay(for: aiPlayer, in: game)
+        XCTAssertNotNil(chosenCard, "AI should select a card to play")
+        XCTAssertEqual(chosenCard?.displayName, "Ace of Hearts", "AI should prioritize brisques in endgame to reach 5")
+    }
+    
+    func testAI_EndgameStrictTrickTaking() throws {
+        // Test AI following strict trick-taking rules in endgame
+        gameRules.updatePlayerCount(2)
+        gameRules.updateHumanPlayerCount(1)
+        game.startNewGame()
+        let aiIndex = game.players.firstIndex(where: { $0.type == .ai })!
+        game.currentPlayerIndex = aiIndex
+        game.currentPhase = .endgame
+        let aiPlayer = game.players[aiIndex]
+        let aiService = game.test_aiService
+        
+        // Set trump suit
+        game.trumpSuit = .spades
+        
+        // Give AI a hand with cards in lead suit and trumps
+        let aceHearts = PlayerCard(card: Card(suit: .hearts, value: .ace))
+        let kingHearts = PlayerCard(card: Card(suit: .hearts, value: .king))
+        let sevenHearts = PlayerCard(card: Card(suit: .hearts, value: .seven))
+        let queenSpades = PlayerCard(card: Card(suit: .spades, value: .queen))
+        let tenSpades = PlayerCard(card: Card(suit: .spades, value: .ten))
+        let eightDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .eight))
+        let nineClubs = PlayerCard(card: Card(suit: .clubs, value: .nine))
+        let jackDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .jack))
+        let queenClubs = PlayerCard(card: Card(suit: .clubs, value: .queen))
+        aiPlayer.held = [aceHearts, kingHearts, sevenHearts, queenSpades, tenSpades, eightDiamonds, nineClubs, jackDiamonds, queenClubs]
+        
+        // Endgame: draw pile is empty
+        game.deck.cards = []
+        game.checkEndgame()
+        game.isEndgame = true
+        
+        // Human leads with Queen of Hearts
+        let queenHearts = PlayerCard(card: Card(suit: .hearts, value: .queen))
+        game.currentTrick = [queenHearts]
+        
+        // AI must follow suit and play lowest card that can win (King of Hearts)
+        let chosenCard = aiService.chooseCardToPlay(for: aiPlayer, in: game)
+        XCTAssertNotNil(chosenCard, "AI should select a card to play")
+        XCTAssertEqual(chosenCard?.displayName, "King of Hearts", "AI must follow suit and play lowest winning card in endgame")
+    }
+    
+    func testAI_EndgameNoMelds() throws {
+        // Test that AI does not declare melds in endgame
+        gameRules.updatePlayerCount(2)
+        gameRules.updateHumanPlayerCount(1)
+        game.startNewGame()
+        let aiIndex = game.players.firstIndex(where: { $0.type == .ai })!
+        game.currentPlayerIndex = aiIndex
+        game.currentPhase = .endgame
+        let aiPlayer = game.players[aiIndex]
+        let aiService = game.test_aiService
+        
+        // Give AI a hand that could form a meld
+        let aceHearts = PlayerCard(card: Card(suit: .hearts, value: .ace))
+        let aceDiamonds = PlayerCard(card: Card(suit: .diamonds, value: .ace))
+        let aceClubs = PlayerCard(card: Card(suit: .clubs, value: .ace))
+        let aceSpades = PlayerCard(card: Card(suit: .spades, value: .ace))
+        let kingHearts = PlayerCard(card: Card(suit: .hearts, value: .king))
+        let queenHearts = PlayerCard(card: Card(suit: .hearts, value: .queen))
+        let jackHearts = PlayerCard(card: Card(suit: .hearts, value: .jack))
+        let tenHearts = PlayerCard(card: Card(suit: .hearts, value: .ten))
+        let nineHearts = PlayerCard(card: Card(suit: .hearts, value: .nine))
+        aiPlayer.held = [aceHearts, aceDiamonds, aceClubs, aceSpades, kingHearts, queenHearts, jackHearts, tenHearts, nineHearts]
+        
+        // Endgame: draw pile is empty
+        game.deck.cards = []
+        game.checkEndgame()
+        game.isEndgame = true
+        
+        // AI should not declare any melds in endgame
+        let meldsToDeclare = aiService.decideMeldsToDeclare(for: aiPlayer, in: game)
+        XCTAssertTrue(meldsToDeclare.isEmpty, "AI should not declare melds in endgame")
     }
 } 
