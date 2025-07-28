@@ -57,9 +57,8 @@ struct ContentView: View {
             })
         }
         .onAppear {
-            // Auto-start the game for testing
-            print("ContentView appeared - auto-starting game")
-            startNewGameWithRules()
+            // Don't auto-start - let user choose settings first
+            print("ContentView appeared - waiting for user to start game")
         }
     }
     
