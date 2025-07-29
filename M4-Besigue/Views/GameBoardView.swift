@@ -19,76 +19,40 @@ struct GameBoardView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            VStack(spacing: 0) {
-                // Menu area with Single Player Mode badge
-                menuAreaView
-                    .padding(.horizontal)
+            ZStack {
+                // Enhanced table background
+                TableBackgroundView()
                 
-                // Player Scores with triple tap detection
-                scoreboardView
-                    .onTapGesture(count: 1) {
-                        handleScoreTap()
-                    }
-                    .padding(.bottom, 32) // Increased space between scores and game messages
-                
-                // Global Messages Area (Dynamic Single Message)
-                globalMessagesView
-                    .frame(height: 50)
-                    .padding(.horizontal)
-                    .padding(.bottom, 32) // Increased space between game messages and player's back card hands
-                
-                // Other Player's Hand (moved here)
-                otherPlayerHandView
-                    .frame(height: 80)
-                    .padding(.horizontal)
-                    .padding(.bottom, 36) // Increased space between other player's hand and trick area
-                
-                // Trick Area (increased height)
-                TrickView(
-                    cards: self.game.currentTrick,
-                    game: self.game,
-                    settings: self.settings,
-                    gameRules: self.gameRules
-                )
-                .frame(height: geometry.size.height * (self.settings.trickAreaHeightPercentage / 100.0))
-                .padding(.bottom, 8)
-                
-                // Player-Specific Messages Area
-                playerSpecificMessagesView
-                    .frame(height: 40)
-                    .padding(.horizontal)
-                
-                // Main game content
-                if self.game.players.count == 2 {
-                    twoPlayerMainArea()
-                } else {
-                    // 3/4 player layout: current player at bottom, others at top/left/right
-                    let currentPlayer = self.game.players[self.game.currentPlayerIndex]
-                    VStack(spacing: 0) {
-                        // Top: all other players' hands (card backs)
-                        HStack(spacing: 16) {
-                            ForEach(self.game.players.indices.filter { $0 != self.game.currentPlayerIndex }, id: \.self) { idx in
-                                VStack {
-                                    Text(self.game.players[idx].name)
-                                        .font(.caption)
-                                    HStack {
-                                        ForEach(self.game.players[idx].hand) { _ in
-                                            CardBackView { }
-                                                .frame(width: 32, height: 48)
-                                        }
-                                    }
-                                }
-                            }
+                VStack(spacing: 0) {
+                    // Menu area with Single Player Mode badge
+                    menuAreaView
+                        .padding(.horizontal)
+                    
+                    // Player Scores with triple tap detection
+                    scoreboardView
+                        .onTapGesture(count: 1) {
+                            handleScoreTap()
                         }
-                        .padding(.top, 16)
-                        .padding(.bottom, 32)
-                        // Bottom: current player's hand (face up, interactive)
-                        playerMainArea(for: currentPlayer)
-                    }
+                        .padding(.bottom, 16)
+                    
+                    // Global Messages Area
+                    globalMessagesView
+                        .frame(height: 40)
+                        .padding(.horizontal)
+                        .padding(.bottom, 16)
+                    
+                    // Main game table area
+                    squareTableLayout(geometry: geometry)
+                        .padding(.horizontal, 16)
+                    
+                    // Player-Specific Messages Area
+                    playerSpecificMessagesView
+                        .frame(height: 40)
+                        .padding(.horizontal)
+                        .padding(.bottom, 16)
                 }
             }
         }
-        .background(Color.green.opacity(0.3))
         .onAppear {
             print("🎮 GameBoardView appeared - Players: \(self.game.players.count), Current: \(self.game.currentPlayerIndex)")
         }
@@ -101,6 +65,204 @@ struct GameBoardView: View {
         .sheet(isPresented: $showingBadgeLegend) {
             BadgeLegendView()
         }
+    }
+    
+    // MARK: - Square Table Layout
+    private func squareTableLayout(geometry: GeometryProxy) -> some View {
+        let tableSize = min(geometry.size.width - 32, geometry.size.height * 0.6)
+        
+        return ZStack {
+            // Central trick area
+            TrickView(
+                cards: self.game.currentTrick,
+                game: self.game,
+                settings: self.settings,
+                gameRules: self.gameRules
+            )
+            .frame(width: tableSize * 0.4, height: tableSize * 0.3)
+            .background(Color.white.opacity(0.1))
+            .cornerRadius(12)
+            
+            // Player zones positioned around the table
+            ForEach(0..<self.game.players.count, id: \.self) { playerIndex in
+                playerZoneView(for: playerIndex, tableSize: tableSize)
+            }
+            
+            // Draw pile positioned based on player count and dealer
+            drawPileView(tableSize: tableSize)
+        }
+        .frame(width: tableSize, height: tableSize)
+    }
+    
+    // MARK: - Player Zone View
+    private func playerZoneView(for playerIndex: Int, tableSize: CGFloat) -> some View {
+        let player = self.game.players[playerIndex]
+        let isCurrentPlayer = playerIndex == self.game.currentPlayerIndex
+        let position = getPlayerPosition(playerIndex: playerIndex, playerCount: self.game.players.count)
+        
+        return VStack(spacing: 8) {
+            // Player name and status
+            HStack {
+                Text(player.name)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(isCurrentPlayer ? .white : .secondary)
+                
+                if isCurrentPlayer {
+                    Image(systemName: "person.fill")
+                        .foregroundColor(.yellow)
+                        .font(.caption2)
+                }
+                
+                if player.type == .ai {
+                    Image(systemName: "cpu")
+                        .foregroundColor(.blue)
+                        .font(.caption2)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(isCurrentPlayer ? Color.blue.opacity(0.3) : Color.black.opacity(0.2))
+            .cornerRadius(8)
+            
+            // Player's hand
+            if isCurrentPlayer {
+                // Current player: show face-up cards
+                HandView(
+                    cards: player.held,
+                    playableCards: player.held,
+                    selectedCards: selectedCards,
+                    onCardTap: { card in
+                        handleCardSelection(card)
+                    },
+                    onDoubleTap: { card in
+                        handleCardPlayed(card)
+                    }
+                )
+                .frame(height: 80)
+            } else {
+                // Other players: show card backs
+                HStack(spacing: 4) {
+                    ForEach(player.hand, id: \.id) { _ in
+                        CardBackView { }
+                            .frame(width: 32, height: 48)
+                    }
+                }
+            }
+        }
+        .position(position)
+    }
+    
+    // MARK: - Player Position Calculation
+    private func getPlayerPosition(playerIndex: Int, playerCount: Int) -> CGPoint {
+        let tableSize = 300.0 // Base table size for calculations
+        let center = CGPoint(x: tableSize / 2, y: tableSize / 2)
+        let radius = tableSize * 0.35
+        
+        switch playerCount {
+        case 2:
+            // 2 players: across from each other
+            switch playerIndex {
+            case 0: return CGPoint(x: center.x, y: center.y + radius) // Bottom
+            case 1: return CGPoint(x: center.x, y: center.y - radius) // Top
+            default: return center
+            }
+        case 3:
+            // 3 players: 2 across, 1 on side
+            switch playerIndex {
+            case 0: return CGPoint(x: center.x, y: center.y + radius) // Bottom
+            case 1: return CGPoint(x: center.x, y: center.y - radius) // Top
+            case 2: return CGPoint(x: center.x - radius, y: center.y) // Left
+            default: return center
+            }
+        case 4:
+            // 4 players: one on each side
+            switch playerIndex {
+            case 0: return CGPoint(x: center.x, y: center.y + radius) // Bottom
+            case 1: return CGPoint(x: center.x, y: center.y - radius) // Top
+            case 2: return CGPoint(x: center.x - radius, y: center.y) // Left
+            case 3: return CGPoint(x: center.x + radius, y: center.y) // Right
+            default: return center
+            }
+        default:
+            return center
+        }
+    }
+    
+    // MARK: - Draw Pile View
+    private func drawPileView(tableSize: CGFloat) -> some View {
+        let center = CGPoint(x: tableSize / 2, y: tableSize / 2)
+        let dealerIndex = self.game.players.firstIndex(where: { $0.isDealer }) ?? 0
+        let drawPilePosition = getDrawPilePosition(playerCount: self.game.players.count, dealerIndex: dealerIndex)
+        
+        return VStack(spacing: 4) {
+            // Draw pile cards
+            ZStack {
+                ForEach(0..<min(3, self.game.deck.cards.count), id: \.self) { index in
+                    CardBackView { }
+                        .frame(width: 40, height: 60)
+                        .offset(x: CGFloat(index) * 2, y: CGFloat(index) * 2)
+                }
+            }
+            
+            // Draw pile count
+            Text("\(self.game.deck.cards.count)")
+                .font(.caption2)
+                .foregroundColor(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.black.opacity(0.6))
+                .cornerRadius(4)
+        }
+        .position(drawPilePosition)
+        .onTapGesture {
+            handleDrawPileTap()
+        }
+    }
+    
+    // MARK: - Draw Pile Position Calculation
+    private func getDrawPilePosition(playerCount: Int, dealerIndex: Int) -> CGPoint {
+        let tableSize = 300.0
+        let center = CGPoint(x: tableSize / 2, y: tableSize / 2)
+        let radius = tableSize * 0.25
+        
+        switch playerCount {
+        case 2:
+            // Draw pile on left or right side
+            return CGPoint(x: center.x - radius, y: center.y)
+        case 3:
+            // Draw pile on the open side (right)
+            return CGPoint(x: center.x + radius, y: center.y)
+        case 4:
+            // Draw pile diagonal to dealer
+            let dealerPosition = getPlayerPosition(playerIndex: dealerIndex, playerCount: playerCount)
+            let diagonalOffset = CGPoint(x: radius * 0.7, y: radius * 0.7)
+            return CGPoint(
+                x: center.x + (dealerPosition.x > center.x ? -diagonalOffset.x : diagonalOffset.x),
+                y: center.y + (dealerPosition.y > center.y ? -diagonalOffset.y : diagonalOffset.y)
+            )
+        default:
+            return center
+        }
+    }
+    
+    // MARK: - Helper Methods
+    private func handleDrawPileTap() {
+        // Handle draw pile tap - this will be implemented based on game state
+        print("Draw pile tapped")
+    }
+    
+    private func handleCardSelection(_ card: PlayerCard) {
+        if selectedCards.contains(card) {
+            selectedCards.removeAll { $0.id == card.id }
+        } else {
+            selectedCards.append(card)
+        }
+    }
+    
+    private func handleCardPlayed(_ card: PlayerCard) {
+        // Handle card being played
+        print("Card played: \(card)")
     }
     
     // MARK: - Menu Area with Single Player Mode Badge

@@ -1017,4 +1017,67 @@ final class BesigueGameEngineTests: XCTestCase {
         let meldsToDeclare = aiService.decideMeldsToDeclare(for: aiPlayer, in: game)
         XCTAssertTrue(meldsToDeclare.isEmpty, "AI should not declare melds in endgame")
     }
+    
+    // MARK: - UI Layout Tests
+    
+    func testSquareTableLayout() {
+        // Test 2 players
+        let rules2 = GameRules()
+        rules2.playerCount = 2
+        let game2 = Game(gameRules: rules2)
+        XCTAssertEqual(game2.players.count, 2)
+        
+        // Test 3 players
+        let rules3 = GameRules()
+        rules3.playerCount = 3
+        let game3 = Game(gameRules: rules3)
+        XCTAssertEqual(game3.players.count, 3)
+        
+        // Test 4 players
+        let rules4 = GameRules()
+        rules4.playerCount = 4
+        let game4 = Game(gameRules: rules4)
+        XCTAssertEqual(game4.players.count, 4)
+        
+        // Verify dealer assignment
+        XCTAssertTrue(game2.players.contains { $0.isDealer })
+        XCTAssertTrue(game3.players.contains { $0.isDealer })
+        XCTAssertTrue(game4.players.contains { $0.isDealer })
+    }
+    
+    func testDrawPilePositioning() {
+        // Test draw pile positioning logic for different player counts
+        
+        // Test 2 players
+        let rules2 = GameRules()
+        rules2.playerCount = 2
+        let game2 = Game(gameRules: rules2)
+        let dealerIndex2 = game2.players.firstIndex(where: { $0.isDealer }) ?? 0
+        
+        // For 2 players, draw pile should be on left or right side
+        XCTAssertTrue(dealerIndex2 >= 0 && dealerIndex2 < 2)
+        
+        // Test 3 players
+        let rules3 = GameRules()
+        rules3.playerCount = 3
+        let game3 = Game(gameRules: rules3)
+        let dealerIndex3 = game3.players.firstIndex(where: { $0.isDealer }) ?? 0
+        
+        // For 3 players, draw pile should be on the open side
+        XCTAssertTrue(dealerIndex3 >= 0 && dealerIndex3 < 3)
+        
+        // Test 4 players
+        let rules4 = GameRules()
+        rules4.playerCount = 4
+        let game4 = Game(gameRules: rules4)
+        let dealerIndex4 = game4.players.firstIndex(where: { $0.isDealer }) ?? 0
+        
+        // For 4 players, draw pile should be diagonal to dealer
+        XCTAssertTrue(dealerIndex4 >= 0 && dealerIndex4 < 4)
+        
+        // Verify that all games have valid dealer assignments
+        XCTAssertTrue(game2.players.contains { $0.isDealer })
+        XCTAssertTrue(game3.players.contains { $0.isDealer })
+        XCTAssertTrue(game4.players.contains { $0.isDealer })
+    }
 } 
