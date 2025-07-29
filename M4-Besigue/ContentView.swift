@@ -3,25 +3,27 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var settings = GameSettings()
     @StateObject private var gameRules = GameRules()
-    @State private var game: Game
+    @State private var game: Game?
     @State private var showingGameSettings = false
     
     init() {
-        // Initialize with error handling
+        // Initialize with error handling - NO GAME CREATION HERE
         let tempSettings = GameSettings()
         let tempGameRules = GameRules()
-        let tempGame = Game(gameRules: tempGameRules)
         
         self._settings = StateObject(wrappedValue: tempSettings)
         self._gameRules = StateObject(wrappedValue: tempGameRules)
-        self._game = State(initialValue: tempGame)
+        // Game will be created only when user starts a game
     }
     
     var body: some View {
         NavigationStack {
             VStack {
-                if game.currentPhase == .setup {
-                    // Show a simple start screen first
+                if let game = game {
+                    // Game exists - show the main game board
+                    GameBoardView(game: game, settings: settings, gameRules: gameRules)
+                } else {
+                    // No game yet - show start screen
                     VStack(spacing: 20) {
                         Text("M4-Bésigue")
                             .font(.largeTitle)
@@ -38,9 +40,6 @@ struct ContentView: View {
                         .font(.headline)
                     }
                     .padding()
-                } else {
-                    // Show the main game board
-                    GameBoardView(game: game, settings: settings, gameRules: gameRules)
                 }
             }
             .navigationTitle("Your Title")
@@ -113,7 +112,7 @@ struct ContentView: View {
         self.game = newGame
         
         // Start the new game
-        game.startNewGame()
+        newGame.startNewGame()
     }
 }
 
