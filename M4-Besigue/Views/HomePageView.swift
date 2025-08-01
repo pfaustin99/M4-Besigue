@@ -8,109 +8,135 @@ struct HomePageView: View {
     @State private var showingHowToPlay = false
     @State private var showingAbout = false
     @State private var isGameActive = false
+    @State private var showingPrivacyPolicy = false
     
     var body: some View {
         GeometryReader { geometry in
+            // TODO: Portrait support will be removed and landscape enforced once image assets are updated.
+            let isLandscape = geometry.size.width > geometry.size.height
             ZStack {
-                // Card back background
-                Image("card_back")
+                // Card back background (responsive to orientation)
+                Image(isLandscape ? "card_back_landscape" : "card_back_portrait")
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .aspectRatio(contentMode: .fill)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .opacity(0.1)
+                    .clipped()
+                    .ignoresSafeArea(.all)
+                // Black overlay for better readability
+                Color.black.opacity(0.25)
                     .ignoresSafeArea(.all, edges: .all)
-                
-                            // Black overlay for better readability
-            Color.black.opacity(0.05)
-                .ignoresSafeArea(.all, edges: .all)
-                
-                VStack(spacing: 40) {
-                    Spacer()
-                        .frame(height: geometry.size.height * 0.1)
-                // BÉSIGUE Title - Movie Style
-                Text("BÉSIGUE")
-                    .font(.custom("Copperplate", size: 120))
-                    .fontWeight(.bold)
-                    .foregroundColor(.red)
-                    .overlay(
-                        Text("BÉSIGUE")
-                            .font(.custom("Copperplate", size: 120))
-                            .fontWeight(.bold)
-                            .foregroundColor(.yellow)
-                            .offset(x: 5, y: 5)
-                    )
-                    .shadow(color: .black.opacity(0.3), radius: 8, x: 3, y: 3)
-                    .padding(.top, 40)
-                
-                // 4 Marriages
-                HStack(spacing: 40) {
-                    // Hearts Marriage (15°)
-                    MarriageCardView(suit: .hearts, angle: 15)
-                    
-                    // Clubs Marriage (30°)
-                    MarriageCardView(suit: .clubs, angle: 30)
-                    
-                    // Diamonds Marriage (-15°)
-                    MarriageCardView(suit: .diamonds, angle: -15)
-                    
-                    // Spades Marriage (0°)
-                    MarriageCardView(suit: .spades, angle: 0)
-                }
-                .padding(.horizontal, 60)
-                
-                // 4 Circular Button Tokens
-                HStack(spacing: 50) {
-                    // Play Button
-                    CircularButtonView(
-                        icon: "play.fill",
-                        outlineColor: .black,
-                        action: { startGame() }
-                    )
-                    
-                    // Configuration Button
-                    CircularButtonView(
-                        icon: "gearshape.fill",
-                        outlineColor: .red,
-                        action: { showingConfiguration = true }
-                    )
-                    
-                    // How to Play Button
-                    CircularButtonView(
-                        icon: "questionmark",
-                        outlineColor: .black,
-                        action: { showingHowToPlay = true }
-                    )
-                    
-                    // About Button
-                    CircularButtonView(
-                        icon: "info.circle.fill",
-                        outlineColor: .red,
-                        action: { showingAbout = true }
-                    )
-                }
-                .padding(.horizontal, 60)
-                
-                Spacer()
-                
-                // Bottom Zone: Privacy Policy
-                VStack(spacing: 15) {
-                    Divider()
-                        .background(Color.gray.opacity(0.3))
-                        .padding(.horizontal, 60)
-                    
-                    Button("Privacy Policy") {
-                        // Open privacy policy (could be a sheet or web view)
-                        print("Privacy Policy tapped")
+                // Main scrollable content
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .center, spacing: geometry.size.height * 0.05) {
+                        Spacer()
+                            .frame(height: geometry.size.height * 0.1)
+                        // Title and tagline, centered in VStack
+                        VStack(alignment: .center) {
+                            // BÉSIGUE Title - Gold with red shadow, Copperplate font (simplified)
+                            // NOTE: Portrait support will be removed and landscape enforced once image assets are updated.
+                            Text("BÉSIGUE")
+                                .font(.system(size: min(geometry.size.width * (isLandscape ? 0.42 : 0.32), isLandscape ? 140 : 110), weight: .black, design: .serif))
+                                .fontWeight(.bold)
+                                .foregroundColor(Color(red: 241/255, green: 181/255, blue: 23/255)) // Gold
+                                .shadow(color: Color(red: 210/255, green: 16/255, blue: 52/255), radius: 2, x: 2, y: 2) // Red
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.horizontal, isLandscape ? geometry.size.width * 0.05 : 0)
+                                .padding(.top, geometry.size.height * 0.05)
+                                .multilineTextAlignment(.center)
+
+                            Text("A Strategic Classic Card Game")
+                                .font(.custom("Cinzel Decorative", size: min(geometry.size.width * 0.05, 28)))
+                                .foregroundColor(.white)
+                                .shadow(color: Color(red: 0/255, green: 32/255, blue: 159/255), radius: 2, x: 1, y: 1)
+                                .padding(.bottom, geometry.size.height * 0.01)
+                                .minimumScaleFactor(0.5)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .multilineTextAlignment(.center)
+                        }
+                        // 4 Marriages - Centered using GeometryReader and frame
+                        GeometryReader { innerGeo in
+                            HStack(spacing: geometry.size.width * 0.05) {
+                                // Hearts Marriage (10°)
+                                MarriageCardView(suit: .hearts, angle: 10)
+                                // Clubs Marriage (20°)
+                                MarriageCardView(suit: .clubs, angle: 20)
+                                // Diamonds Marriage (-10°)
+                                MarriageCardView(suit: .diamonds, angle: -10)
+                                // Spades Marriage (0°)
+                                MarriageCardView(suit: .spades, angle: 0)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.horizontal, geometry.size.width * 0.05)
+                        }
+                        .frame(height: 200) // Enough for cards
+                        // 4 Circular Button Tokens - Centered using GeometryReader and frame
+                        GeometryReader { innerGeo in
+                            HStack(spacing: geometry.size.width * 0.07) {
+                                // Play Button
+                                CircularButtonView(
+                                    icon: "play.fill",
+                                    outlineColor: .black,
+                                    action: { startGame() },
+                                    iconFontSize: min(geometry.size.width * 0.10, 40)
+                                )
+                                // Configuration Button
+                                CircularButtonView(
+                                    icon: "gearshape.fill",
+                                    outlineColor: .red,
+                                    action: { showingConfiguration = true },
+                                    iconFontSize: min(geometry.size.width * 0.10, 40)
+                                )
+                                // How to Play Button
+                                CircularButtonView(
+                                    icon: "questionmark",
+                                    outlineColor: .black,
+                                    action: { showingHowToPlay = true },
+                                    iconFontSize: min(geometry.size.width * 0.10, 40)
+                                )
+                                // About Button
+                                CircularButtonView(
+                                    icon: "info.circle.fill",
+                                    outlineColor: .red,
+                                    action: { showingAbout = true },
+                                    iconFontSize: min(geometry.size.width * 0.10, 40)
+                                )
+                            }
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.horizontal, geometry.size.width * 0.05)
+                        }
+                        .frame(height: 100)
+                        // Remove bottom spacers since footer is positioned as overlay
                     }
-                    .font(.body)
-                    .foregroundColor(.gray)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, geometry.size.width * 0.05)
+                }
+                // Footer: Privacy Policy and Restore Purchase anchored to bottom
+            }
+            .overlay(
+                HStack(spacing: geometry.size.width * 0.1) {
+                    Button("Privacy Policy") {
+                        showingPrivacyPolicy = true
+                    }
+                    .font(.footnote.bold())
+                    .foregroundColor(.white)
+                    .underline()
+                    Button("Restore Purchase") {
+                        restorePurchase()
+                    }
+                    .font(.footnote.bold())
+                    .foregroundColor(.white)
                     .underline()
                 }
-                .padding(.bottom, 20)
-                
-                Spacer()
-                    .frame(height: geometry.size.height * 0.15)
-            }
+                .padding(.horizontal, geometry.size.width * 0.05)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(Color.black.opacity(0.6))
+                .padding(.bottom, geometry.safeAreaInsets.bottom + 5),
+                alignment: .bottom
+            )
         }
         .sheet(isPresented: $showingConfiguration) {
             GameSettingsView(gameRules: gameRules) {
@@ -124,11 +150,14 @@ struct HomePageView: View {
         .sheet(isPresented: $showingAbout) {
             AboutView()
         }
+        .sheet(isPresented: $showingPrivacyPolicy) {
+            PrivacyPolicyView()
+        }
         .fullScreenCover(isPresented: $isGameActive) {
             if let game = game {
                 GameBoardView(
-                    game: game, 
-                    settings: settings, 
+                    game: game,
+                    settings: settings,
                     gameRules: gameRules,
                     onEndGame: { isGameActive = false }
                 )
@@ -136,7 +165,6 @@ struct HomePageView: View {
         }
         .onAppear {
             setupDefaultConfiguration()
-        }
         }
     }
     
@@ -157,6 +185,30 @@ struct HomePageView: View {
             game.startNewGame()
         }
         isGameActive = true
+    }
+    
+    private func restorePurchase() {
+        // Stub for restore purchase functionality
+        print("Restore Purchase tapped")
+    }
+}
+
+
+// MARK: - Privacy Policy View (stub)
+struct PrivacyPolicyView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                Text("Privacy Policy content goes here.")
+                    .padding()
+            }
+            .navigationBarTitle("Privacy Policy", displayMode: .inline)
+            .navigationBarItems(trailing: Button("Close") {
+                dismiss()
+            })
+        }
     }
 }
 
@@ -231,6 +283,7 @@ struct CircularButtonView: View {
     let icon: String
     let outlineColor: Color
     let action: () -> Void
+    var iconFontSize: CGFloat = 40
     @State private var isPressed = false
     
     var body: some View {
@@ -243,13 +296,13 @@ struct CircularButtonView: View {
         }) {
             ZStack {
                 Circle()
-                    .fill(isPressed ? outlineColor : Color.clear)
-                    .stroke(outlineColor, lineWidth: 8)
+                    .fill(Color.white)
+                    .shadow(radius: 4)
                     .frame(width: 100, height: 100)
-                
+
                 Image(systemName: icon)
-                    .font(.system(size: 40, weight: .heavy))
-                    .foregroundColor(isPressed ? .white : outlineColor)
+                    .font(.system(size: iconFontSize, weight: .heavy))
+                    .foregroundColor(outlineColor)
             }
         }
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
@@ -270,6 +323,8 @@ struct HowToPlayView: View {
                         .font(.title)
                         .fontWeight(.bold)
                         .padding(.bottom, 10)
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
                     
                     Text("Bésigue is a trick-taking card game for 2-4 players. The goal is to score points by winning tricks and forming melds.")
                         .font(.body)
@@ -316,10 +371,14 @@ struct AboutView: View {
                 Text("About Bésigue")
                     .font(.title)
                     .fontWeight(.bold)
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
                 
                 VStack(spacing: 15) {
                     Text("Version 1.0")
                         .font(.headline)
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
                     
                     Text("A modern implementation of the classic French card game Bésigue.")
                         .font(.body)
@@ -370,4 +429,4 @@ enum CardSuit {
 
 #Preview {
     HomePageView()
-} 
+}
