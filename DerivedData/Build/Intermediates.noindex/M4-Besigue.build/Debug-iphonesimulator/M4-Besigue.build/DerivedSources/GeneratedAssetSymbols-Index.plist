@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>colors</key>
+	<array/>
+	<key>images</key>
+	<array>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameCardBack</string>
+			<key>relativePath</key>
+			<string>./card_back.imageset</string>
+			<key>swiftSymbol</key>
+			<string>cardBack</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameClubs10</string>
+			<key>relativePath</key>
+			<string>./clubs_10.imageset</string>
+			<key>swiftSymbol</key>
+			<string>clubs10</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameClubs7</string>
+			<key>relativePath</key>
+			<string>./clubs_7.imageset</string>
+			<key>swiftSymbol</key>
+			<string>clubs7</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameClubs8</string>
+			<key>relativePath</key>
+			<string>./clubs_8.imageset</string>
+			<key>swiftSymbol</key>
+			<string>clubs8</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameClubs9</string>
+			<key>relativePath</key>
+			<string>./clubs_9.imageset</string>
+			<key>swiftSymbol</key>
+			<string>clubs9</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameClubsAce</string>
+			<key>relativePath</key>
+			<string>./clubs_ace.imageset</string>
+			<key>swiftSymbol</key>
+			<string>clubsAce</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameClubsJack</string>
+			<key>relativePath</key>
+			<string>./clubs_jack.imageset</string>
+			<key>swiftSymbol</key>
+			<string>clubsJack</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameClubsKing</string>
+			<key>relativePath</key>
+			<string>./clubs_king.imageset</string>
+			<key>swiftSymbol</key>
+			<string>clubsKing</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameClubsQueen</string>
+			<key>relativePath</key>
+			<string>./clubs_queen.imageset</string>
+			<key>swiftSymbol</key>
+			<string>clubsQueen</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameDiamonds10</string>
+			<key>relativePath</key>
+			<string>./diamonds_10.imageset</string>
+			<key>swiftSymbol</key>
+			<string>diamonds10</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameDiamonds7</string>
+			<key>relativePath</key>
+			<string>./diamonds_7.imageset</string>
+			<key>swiftSymbol</key>
+			<string>diamonds7</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameDiamonds8</string>
+			<key>relativePath</key>
+			<string>./diamonds_8.imageset</string>
+			<key>swiftSymbol</key>
+			<string>diamonds8</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameDiamonds9</string>
+			<key>relativePath</key>
+			<string>./diamonds_9.imageset</string>
+			<key>swiftSymbol</key>
+			<string>diamonds9</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameDiamondsAce</string>
+			<key>relativePath</key>
+			<string>./diamonds_ace.imageset</string>
+			<key>swiftSymbol</key>
+			<string>diamondsAce</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameDiamondsJack</string>
+			<key>relativePath</key>
+			<string>./diamonds_jack.imageset</string>
+			<key>swiftSymbol</key>
+			<string>diamondsJack</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameDiamondsKing</string>
+			<key>relativePath</key>
+			<string>./diamonds_king.imageset</string>
+			<key>swiftSymbol</key>
+			<string>diamondsKing</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameDiamondsQueen</string>
+			<key>relativePath</key>
+			<string>./diamonds_queen.imageset</string>
+			<key>swiftSymbol</key>
+			<string>diamondsQueen</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameHearts10</string>
+			<key>relativePath</key>
+			<string>./hearts_10.imageset</string>
+			<key>swiftSymbol</key>
+			<string>hearts10</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameHearts7</string>
+			<key>relativePath</key>
+			<string>./hearts_7.imageset</string>
+			<key>swiftSymbol</key>
+			<string>hearts7</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameHearts8</string>
+			<key>relativePath</key>
+			<string>./hearts_8.imageset</string>
+			<key>swiftSymbol</key>
+			<string>hearts8</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameHearts9</string>
+			<key>relativePath</key>
+			<string>./hearts_9.imageset</string>
+			<key>swiftSymbol</key>
+			<string>hearts9</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameHeartsAce</string>
+			<key>relativePath</key>
+			<string>./hearts_ace.imageset</string>
+			<key>swiftSymbol</key>
+			<string>heartsAce</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameHeartsJack</string>
+			<key>relativePath</key>
+			<string>./hearts_jack.imageset</string>
+			<key>swiftSymbol</key>
+			<string>heartsJack</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameHeartsKing</string>
+			<key>relativePath</key>
+			<string>./hearts_king.imageset</string>
+			<key>swiftSymbol</key>
+			<string>heartsKing</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameHeartsQueen</string>
+			<key>relativePath</key>
+			<string>./hearts_queen.imageset</string>
+			<key>swiftSymbol</key>
+			<string>heartsQueen</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameJokerBlack1</string>
+			<key>relativePath</key>
+			<string>./joker_black_1.imageset</string>
+			<key>swiftSymbol</key>
+			<string>jokerBlack1</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameJokerBlack2</string>
+			<key>relativePath</key>
+			<string>./joker_black_2.imageset</string>
+			<key>swiftSymbol</key>
+			<string>jokerBlack2</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameJokerRed1</string>
+			<key>relativePath</key>
+			<string>./joker_red_1.imageset</string>
+			<key>swiftSymbol</key>
+			<string>jokerRed1</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameJokerRed2</string>
+			<key>relativePath</key>
+			<string>./joker_red_2.imageset</string>
+			<key>swiftSymbol</key>
+			<string>jokerRed2</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameSpades10</string>
+			<key>relativePath</key>
+			<string>./spades_10.imageset</string>
+			<key>swiftSymbol</key>
+			<string>spades10</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameSpades7</string>
+			<key>relativePath</key>
+			<string>./spades_7.imageset</string>
+			<key>swiftSymbol</key>
+			<string>spades7</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameSpades8</string>
+			<key>relativePath</key>
+			<string>./spades_8.imageset</string>
+			<key>swiftSymbol</key>
+			<string>spades8</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameSpades9</string>
+			<key>relativePath</key>
+			<string>./spades_9.imageset</string>
+			<key>swiftSymbol</key>
+			<string>spades9</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameSpadesAce</string>
+			<key>relativePath</key>
+			<string>./spades_ace.imageset</string>
+			<key>swiftSymbol</key>
+			<string>spadesAce</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameSpadesJack</string>
+			<key>relativePath</key>
+			<string>./spades_jack.imageset</string>
+			<key>swiftSymbol</key>
+			<string>spadesJack</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameSpadesKing</string>
+			<key>relativePath</key>
+			<string>./spades_king.imageset</string>
+			<key>swiftSymbol</key>
+			<string>spadesKing</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameSpadesQueen</string>
+			<key>relativePath</key>
+			<string>./spades_queen.imageset</string>
+			<key>swiftSymbol</key>
+			<string>spadesQueen</string>
+		</dict>
+	</array>
+	<key>symbols</key>
+	<array/>
+</dict>
+</plist>

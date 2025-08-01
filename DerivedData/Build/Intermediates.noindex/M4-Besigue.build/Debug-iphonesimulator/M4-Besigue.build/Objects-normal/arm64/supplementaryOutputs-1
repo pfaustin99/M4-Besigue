@@ -1,0 +1,24 @@
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/SettingsView.swift":
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/SettingsView.o"
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/SettingsView.d"
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/SettingsView.swiftdeps"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/SettingsView.swiftconstvalues"
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/SettingsView.dia"
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Models/Deck.swift":
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Deck.o"
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Deck.d"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Deck.swiftconstvalues"
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Deck.swiftdeps"
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Deck.dia"
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Services/AIService.swift":
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/AIService.swiftdeps"
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/AIService.o"
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/AIService.dia"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/AIService.swiftconstvalues"
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/AIService.d"
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/SharedSettingsComponents.swift":
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/SharedSettingsComponents.d"
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/SharedSettingsComponents.dia"
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/SharedSettingsComponents.o"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/SharedSettingsComponents.swiftconstvalues"
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/SharedSettingsComponents.swiftdeps"

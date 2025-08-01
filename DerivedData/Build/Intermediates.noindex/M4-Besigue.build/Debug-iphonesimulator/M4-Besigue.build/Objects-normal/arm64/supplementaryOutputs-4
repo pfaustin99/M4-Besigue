@@ -1,0 +1,24 @@
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Models/Card.swift":
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Card.o"
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Card.swiftdeps"
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Card.d"
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Card.dia"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Card.swiftconstvalues"
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/ContentView.swift":
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/ContentView.o"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/ContentView.swiftconstvalues"
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/ContentView.swiftdeps"
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/ContentView.d"
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/ContentView.dia"
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/CardView.swift":
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/CardView.dia"
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/CardView.o"
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/CardView.swiftdeps"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/CardView.swiftconstvalues"
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/CardView.d"
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Models/Player.swift":
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Player.dia"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Player.swiftconstvalues"
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Player.o"
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Player.d"
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Player.swiftdeps"

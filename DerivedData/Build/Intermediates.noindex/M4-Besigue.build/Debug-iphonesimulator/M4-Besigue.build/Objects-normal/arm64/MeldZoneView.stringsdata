@@ -1,0 +1,16 @@
+{
+  "source": "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/MeldZoneView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Melds go here",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 5
+        }
+      }
+    ]
+  },
+  "version": 1
+}

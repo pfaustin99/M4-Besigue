@@ -1,0 +1,736 @@
+{
+  "source": "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/GameSettingsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Start New Game",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 359
+        }
+      },
+      {
+        "comment": "",
+        "key": "Game Settings",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 19
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 13
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 24
+        }
+      },
+      {
+        "comment": "",
+        "key": "Game Rules",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "Play Direction",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 53
+        }
+      },
+      {
+        "comment": "",
+        "key": "Game Level",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 59
+        }
+      },
+      {
+        "comment": "",
+        "key": "Number of Players",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 47
+        }
+      },
+      {
+        "comment": "",
+        "key": "Right (Counterclockwise)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 54
+        }
+      },
+      {
+        "comment": "",
+        "key": "Left (Clockwise)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "Novice (Hints Enabled)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 60
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pro (No Hints)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dealer Determination",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dealer Determination Method",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Player Configuration",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "Human Players",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 95
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 96
+        }
+      },
+      {
+        "comment": "",
+        "key": "AI Players",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 103
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 105
+        }
+      },
+      {
+        "comment": "",
+        "key": "Player Seating",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 111
+        }
+      },
+      {
+        "comment": "",
+        "key": "Position %lld:",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 117
+        }
+      },
+      {
+        "comment": "",
+        "key": "Player name",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Human",
+        "location": {
+          "startingColumn": 70,
+          "startingLine": 137
+        }
+      },
+      {
+        "comment": "",
+        "key": "AI",
+        "location": {
+          "startingColumn": 80,
+          "startingLine": 137
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scoring",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "Winning Score",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 163
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 166
+        }
+      },
+      {
+        "comment": "",
+        "key": "Final Trick Bonus",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 170
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 172
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trick with Seven Trump",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 177
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 179
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 180
+        }
+      },
+      {
+        "comment": "",
+        "key": "Brisques",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 190
+        }
+      },
+      {
+        "comment": "",
+        "key": "Brisque Value",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 196
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 198
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 199
+        }
+      },
+      {
+        "comment": "",
+        "key": "Minimum Brisques",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 203
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 205
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 206
+        }
+      },
+      {
+        "comment": "",
+        "key": "Brisque Cutoff Score",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 210
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 212
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 213
+        }
+      },
+      {
+        "comment": "",
+        "key": "Min Score for Brisques",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 217
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 219
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 220
+        }
+      },
+      {
+        "comment": "",
+        "key": "Penalties",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 230
+        }
+      },
+      {
+        "comment": "",
+        "key": "General Penalty",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 236
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 238
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 239
+        }
+      },
+      {
+        "comment": "",
+        "key": "Penalty Below 100",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 243
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 245
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 246
+        }
+      },
+      {
+        "comment": "",
+        "key": "Penalty Few Brisques",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 250
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 252
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 253
+        }
+      },
+      {
+        "comment": "",
+        "key": "Penalty Out of Turn",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 257
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 259
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 260
+        }
+      },
+      {
+        "comment": "",
+        "key": "Global Card Size",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 270
+        }
+      },
+      {
+        "comment": "",
+        "key": "Card Size",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 274
+        }
+      },
+      {
+        "comment": "",
+        "key": "Small (1.5x)",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 275
+        }
+      },
+      {
+        "comment": "",
+        "key": "Medium (2x)",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 276
+        }
+      },
+      {
+        "comment": "",
+        "key": "Large (2.5x)",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 277
+        }
+      },
+      {
+        "comment": "",
+        "key": "Extra Large (3x)",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 278
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trick Area Size",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 288
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trick Area Size",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 292
+        }
+      },
+      {
+        "comment": "",
+        "key": "Small",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 293
+        }
+      },
+      {
+        "comment": "",
+        "key": "Medium",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 294
+        }
+      },
+      {
+        "comment": "",
+        "key": "Large",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 295
+        }
+      },
+      {
+        "comment": "",
+        "key": "Animation Timing",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 305
+        }
+      },
+      {
+        "comment": "",
+        "key": "Card Play Delay",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 310
+        }
+      },
+      {
+        "comment": "",
+        "key": "Card Play Duration",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 317
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fast (0.3s)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 311
+        }
+      },
+      {
+        "comment": "",
+        "key": "Normal (0.5s)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 312
+        }
+      },
+      {
+        "comment": "",
+        "key": "Slow (0.8s)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 313
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fast (0.3s)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 318
+        }
+      },
+      {
+        "comment": "",
+        "key": "Normal (0.5s)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 319
+        }
+      },
+      {
+        "comment": "",
+        "key": "Slow (0.8s)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 320
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dealer Determination Delay",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 325
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 328
+        }
+      },
+      {
+        "comment": "",
+        "key": "Winning Card Animation Delay",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 332
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 335
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Game",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 345
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 360
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 364
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start a new game with these settings?",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 366
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,16 @@
+{
+  "source": "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/CenterZoneView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Draw Card",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 12
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -451,7 +451,7 @@ class AIService: ObservableObject {
             if game.isEndgame && opponentsLikelyOutOfTrump(trumpSuit: trumpSuit, allPlayers: allPlayers, selfPlayer: player) {
                 // Only play brisque or meld card if it will win
                 if winningCard.isBrisque || meldCardIDs.contains(winningCard.id) {
-                    return winningCard
+                return winningCard
                 }
             }
         }

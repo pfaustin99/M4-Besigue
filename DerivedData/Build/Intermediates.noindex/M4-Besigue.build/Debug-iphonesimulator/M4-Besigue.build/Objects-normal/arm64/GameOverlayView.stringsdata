@@ -1,0 +1,16 @@
+{
+  "source": "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/GameOverlayView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Game Overlay",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 8
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,432 @@
+{
+  "source": "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/GameBoardView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 209
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Game",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 271
+        }
+      },
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 280
+        }
+      },
+      {
+        "comment": "",
+        "key": "Disable Unrestricted",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 290
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enable Unrestricted",
+        "location": {
+          "startingColumn": 76,
+          "startingLine": 290
+        }
+      },
+      {
+        "comment": "",
+        "key": "Run Tests",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 304
+        }
+      },
+      {
+        "comment": "",
+        "key": "Badge Legend",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 336
+        }
+      },
+      {
+        "comment": "",
+        "key": "Single Player Mode",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 319
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ wins the trick!",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 399
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@'s Turn",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 420
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dealer: %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 442
+        }
+      },
+      {
+        "comment": "",
+        "key": "Draw a card",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 479
+        }
+      },
+      {
+        "comment": "",
+        "key": "Play a card",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 496
+        }
+      },
+      {
+        "comment": "",
+        "key": "Player 1: %lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 517
+        }
+      },
+      {
+        "comment": "",
+        "key": "Player 2: %lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 520
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ (Your Turn)",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 565
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@'s Turn",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 646
+        }
+      },
+      {
+        "comment": "",
+        "key": "Round %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 665
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trump: None",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 673
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trump: %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 669
+        }
+      },
+      {
+        "comment": "",
+        "key": "Phase: %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 679
+        }
+      },
+      {
+        "comment": "",
+        "key": "Meld Badges",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 695
+        }
+      },
+      {
+        "comment": "",
+        "key": ": ",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 720
+        }
+      },
+      {
+        "comment": "",
+        "key": "+",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 735
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cards left: %lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 973
+        }
+      },
+      {
+        "comment": "",
+        "key": "Jack of %@ drawn - %@",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 985
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hand: %lld cards (%lld held, %lld melded)",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1107
+        }
+      },
+      {
+        "comment": "",
+        "key": "Score: %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1101
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select 2-4 cards to declare a meld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1125
+        }
+      },
+      {
+        "comment": "",
+        "key": "Selected: %lld cards",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1130
+        }
+      },
+      {
+        "comment": "",
+        "key": "Possible melds:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1140
+        }
+      },
+      {
+        "comment": "",
+        "key": "No valid meld with selected cards",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1149
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ (+%lld)",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1144
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your Melds",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1166
+        }
+      },
+      {
+        "comment": "",
+        "key": "Play Card",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1270
+        }
+      },
+      {
+        "comment": "",
+        "key": "Declare Meld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1339
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start New Game",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 1356
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap to draw (your turn)",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1497
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your Melded Cards",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1579
+        }
+      },
+      {
+        "comment": "",
+        "key": ": ",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1666
+        }
+      },
+      {
+        "comment": "",
+        "key": "+",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1682
+        }
+      },
+      {
+        "comment": "",
+        "key": "Declare Melds",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1722
+        }
+      },
+      {
+        "comment": "",
+        "key": "No melds available",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1707
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1726
+        }
+      },
+      {
+        "comment": "",
+        "key": "Declare",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1768
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld points",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1749
+        }
+      },
+      {
+        "comment": "",
+        "key": "Badge Legend",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1805
+        }
+      },
+      {
+        "comment": "",
+        "key": "Meld Badge Legend",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1785
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1809
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cards left: %lld",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 1973
+        }
+      },
+      {
+        "comment": "",
+        "key": "No cards played yet",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 2000
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cards left: %lld",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 2020
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap to Draw",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 2247
+        }
+      }
+    ]
+  },
+  "version": 1
+}

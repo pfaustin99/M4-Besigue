@@ -72,8 +72,8 @@ struct TestTableLayoutView: View {
                     .font(.caption2)
                     .foregroundColor(.green)
             }
-            .fixedSize()
             .frame(width: 100)
+            .fixedSize()
             .position(x: center.x, y: center.y)
         }
     }
@@ -136,38 +136,40 @@ struct TestTableLayoutView: View {
 
     private func getPlayerPosition(index: Int, playerCount: Int, center: CGPoint, geometry: GeometryProxy) -> (avatarPosition: CGPoint, handPosition: CGPoint, meldPosition: CGPoint, isHorizontal: Bool) {
         let minSide = min(geometry.size.width, geometry.size.height)
-        let offsets: [(dx: CGFloat, dy: CGFloat, isHorizontal: Bool)] = {
-            switch playerCount {
-            case 2:
-                return [(0, 1, true), (0, -1, true)]
-            case 3:
-                return [(0, 1, true), (1, 0, false), (0, -1, true)]
-            case 4:
-                return [(0, 1, true), (1, 0, false), (0, -1, true), (-1, 0, false)]
-            default:
-                return []
-            }
-        }()
+        let radiusFactors: [CGFloat] = [0.85, 0.65, 0.45]
 
-        guard index < offsets.count else {
-            return (center, center, center, true)
+        // Define direction vectors for bottom, right, top, left
+        let directions: [(dx: CGFloat, dy: CGFloat, isHorizontal: Bool)] = [
+            (0, 1, true),    // bottom
+            (1, 0, false),   // right
+            (0, -1, true),   // top
+            (-1, 0, false)   // left
+        ]
+
+        let playerOrder: [Int]
+        switch playerCount {
+        case 2: playerOrder = [0, 2]  // bottom, top
+        case 3: playerOrder = [0, 2, 1]  // bottom, top, right
+        case 4: playerOrder = [0, 2, 1, 3]  // bottom, top, right, left
+        default: playerOrder = []
         }
 
-        let offset = offsets[index]
+        let posIndex = playerOrder[index]
+        let direction = directions[posIndex]
 
-        func positionOnAxis(at radiusFactor: CGFloat) -> CGPoint {
+        func positionOnAxis(radiusFactor: CGFloat) -> CGPoint {
             let radius = minSide * radiusFactor / 2
             return CGPoint(
-                x: center.x + offset.dx * radius,
-                y: center.y - offset.dy * radius
+                x: center.x + direction.dx * radius,
+                y: center.y + direction.dy * radius
             )
         }
 
         return (
-            avatarPosition: positionOnAxis(at: 0.85),
-            handPosition: positionOnAxis(at: 0.65),
-            meldPosition: positionOnAxis(at: 0.45),
-            isHorizontal: offset.isHorizontal
+            avatarPosition: positionOnAxis(radiusFactor: radiusFactors[0]),
+            handPosition: positionOnAxis(radiusFactor: radiusFactors[1]),
+            meldPosition: positionOnAxis(radiusFactor: radiusFactors[2]),
+            isHorizontal: direction.isHorizontal
         )
     }
 }

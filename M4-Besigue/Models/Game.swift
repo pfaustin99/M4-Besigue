@@ -325,8 +325,9 @@ class Game: ObservableObject {
         self.deck = Deck()
         self.aiService = AIService(difficulty: .medium)
         
-        // Create players based on configuration
-        createPlayersFromConfiguration()
+        // Don't create players automatically - let the setup screen handle this
+        // This ensures the setup screen appears when the app starts
+        currentPhase = .setup
     }
     
     // MARK: - Player Creation

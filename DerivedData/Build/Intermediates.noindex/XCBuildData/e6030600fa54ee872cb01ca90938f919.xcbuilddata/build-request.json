@@ -1,0 +1,75 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildOnly"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "c621a689d5911c0757c6d5634ddcfa259123c19f4285ab7e018e60a025f0c5b3"
+    }
+  ],
+  "containerPath" : "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue.xcodeproj",
+  "continueBuildingAfterErrors" : false,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "arm64",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : false,
+      "platform" : "iphonesimulator",
+      "sdk" : "iphonesimulator18.5",
+      "sdkVariant" : "iphonesimulator",
+      "supportedArchitectures" : [
+        "arm64",
+        "x86_64"
+      ],
+      "targetArchitecture" : "arm64"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Products",
+      "derivedDataPath" : "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData",
+      "indexDataStoreFolderPath" : "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "ACTION" : "build",
+          "ASSETCATALOG_FILTER_FOR_DEVICE_MODEL" : "iPad16,6-A",
+          "ASSETCATALOG_FILTER_FOR_DEVICE_OS_VERSION" : "18.5",
+          "ASSETCATALOG_FILTER_FOR_THINNING_DEVICE_CONFIGURATION" : "iPad16,6-A",
+          "BUILD_ACTIVE_RESOURCES_ONLY" : "YES",
+          "CLANG_COVERAGE_MAPPING" : "YES",
+          "CLANG_PROFILE_DATA_DIRECTORY" : "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/ProfileData",
+          "COLOR_DIAGNOSTICS" : "YES",
+          "diagnostic_message_length" : "108",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES",
+          "ONLY_ACTIVE_ARCH" : "YES",
+          "TARGET_DEVICE_IDENTIFIER" : "E90F3124-3939-4485-97FA-392BB040568E",
+          "TARGET_DEVICE_MODEL" : "iPad16,6",
+          "TARGET_DEVICE_OS_VERSION" : "18.5",
+          "TARGET_DEVICE_PLATFORM_NAME" : "iphonesimulator"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "launch",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}

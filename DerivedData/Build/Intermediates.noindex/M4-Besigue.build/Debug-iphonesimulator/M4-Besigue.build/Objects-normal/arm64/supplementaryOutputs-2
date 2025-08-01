@@ -1,0 +1,24 @@
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/PlayerZoneView.swift":
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/PlayerZoneView.o"
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/PlayerZoneView.swiftdeps"
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/PlayerZoneView.dia"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/PlayerZoneView.swiftconstvalues"
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/PlayerZoneView.d"
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Models/Settings.swift":
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Settings.dia"
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Settings.o"
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Settings.d"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Settings.swiftconstvalues"
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/Settings.swiftdeps"
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Models/GameRules.swift":
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/GameRules.o"
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/GameRules.d"
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/GameRules.swiftdeps"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/GameRules.swiftconstvalues"
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/GameRules.dia"
+"/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/ScoreBadgeView.swift":
+  diagnostics: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/ScoreBadgeView.dia"
+  const-values: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/ScoreBadgeView.swiftconstvalues"
+  dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/ScoreBadgeView.d"
+  object: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/ScoreBadgeView.o"
+  swift-dependencies: "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/DerivedData/Build/Intermediates.noindex/M4-Besigue.build/Debug-iphonesimulator/M4-Besigue.build/Objects-normal/arm64/ScoreBadgeView.swiftdeps"

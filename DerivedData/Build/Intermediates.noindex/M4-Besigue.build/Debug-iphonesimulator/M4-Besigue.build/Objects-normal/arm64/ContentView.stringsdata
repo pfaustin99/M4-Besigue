@@ -1,0 +1,16 @@
+{
+  "source": "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Your Title",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 49
+        }
+      }
+    ]
+  },
+  "version": 1
+}

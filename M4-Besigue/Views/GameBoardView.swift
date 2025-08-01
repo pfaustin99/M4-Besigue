@@ -4,6 +4,7 @@ struct GameBoardView: View {
     @ObservedObject var game: Game
     @ObservedObject var settings: GameSettings
     @ObservedObject var gameRules: GameRules
+    let onEndGame: () -> Void
     @State private var selectedCards: [PlayerCard] = []
     @State private var showingMeldOptions = false
     @State private var showingSettings = false
@@ -20,36 +21,54 @@ struct GameBoardView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Enhanced table background
-                TableBackgroundView()
+                // Purple background like TestTableLayoutView
+                Rectangle()
+                    .fill(Color.purple.opacity(0.4))
+                    .edgesIgnoringSafeArea(.all)
                 
-                VStack(spacing: 0) {
-                    // Menu area with Single Player Mode badge
-                    menuAreaView
-                        .padding(.horizontal)
+            VStack(spacing: 0) {
+                    // Elegant scoreboard like TestTableLayoutView
+                    GameScoreboardView(game: game, settings: settings)
                     
-                    // Player Scores with triple tap detection
-                    scoreboardView
-                        .onTapGesture(count: 1) {
-                            handleScoreTap()
+                    // Game controls
+                    gameControls
+                    
+                    // Main game table area with TestTableLayoutView structure
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 40)
+                            .fill(Color.green.opacity(0.2))
+                            .stroke(Color.green, lineWidth: 4)
+                            .padding(40)
+                        
+                        // Debug info
+                        VStack {
+                            Text("Phase: \(game.currentPhase)")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                            Text("Players: \(game.players.count)")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                            Text("Current Player: \(game.currentPlayerIndex)")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                            if !game.players.isEmpty {
+                                Text("Player 0 cards: \(game.players[0].held.count)")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                Text("Player 0 held: \(game.players[0].held.map { $0.imageName }.joined(separator: ", "))")
+                                    .font(.caption2)
+                                    .foregroundColor(.red)
+                            }
+                            Text("Deck cards: \(game.deck.cards.count)")
+                                .font(.caption)
+                                .foregroundColor(.red)
                         }
-                        .padding(.bottom, 16)
-                    
-                    // Global Messages Area
-                    globalMessagesView
-                        .frame(height: 40)
-                        .padding(.horizontal)
-                        .padding(.bottom, 16)
-                    
-                    // Main game table area
-                    squareTableLayout(geometry: geometry)
-                        .padding(.horizontal, 16)
-                    
-                    // Player-Specific Messages Area
-                    playerSpecificMessagesView
-                        .frame(height: 40)
-                        .padding(.horizontal)
-                        .padding(.bottom, 16)
+                        .position(x: 100, y: 100)
+                        
+                        // Concentric squares content
+                        concentricSquaresContent(playerCount: game.players.count, geometry: geometry)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
         }
@@ -67,42 +86,252 @@ struct GameBoardView: View {
         }
     }
     
-    // MARK: - Square Table Layout
+    // MARK: - Game Scoreboard View (like TestTableLayoutView)
+    private func GameScoreboardView(game: Game, settings: GameSettings) -> some View {
+        VStack(spacing: 8) {
+            Text("BÉSIGUE - \(game.players.count) Players")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.purple)
+            
+            gameScoreboardGrid(game: game)
+        }
+        .padding()
+        .background(Color.white.opacity(0.95))
+        .shadow(radius: 2)
+    }
+    
+    private func gameScoreboardGrid(game: Game) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: game.players.count), spacing: 10) {
+            ForEach(0..<game.players.count, id: \.self) { index in
+                gamePlayerScoreCard(player: game.players[index], isCurrentPlayer: index == game.currentPlayerIndex)
+            }
+        }
+                    .padding(.horizontal)
+    }
+    
+    private func gamePlayerScoreCard(player: Player, isCurrentPlayer: Bool) -> some View {
+        VStack(spacing: 4) {
+            Text(player.name)
+                .font(.caption)
+                .fontWeight(.medium)
+            
+            HStack(spacing: 8) {
+                Text("Score: \(player.score)")
+                    .font(.caption2)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.yellow.opacity(0.8))
+                    .cornerRadius(4)
+                
+                Text("Tricks: \(player.tricksWon)")
+                    .font(.caption2)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.orange.opacity(0.8))
+                    .cornerRadius(4)
+            }
+        }
+        .padding(8)
+        .background(isCurrentPlayer ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
+        .cornerRadius(8)
+    }
+    
+    // MARK: - Game Concentric Squares Content
+    private func gameConcentricSquaresContent(geometry: GeometryProxy) -> some View {
+        let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
+        return ZStack {
+            ForEach(0..<self.game.players.count, id: \.self) { index in
+                let pos = getPlayerPositions(index: index, playerCount: self.game.players.count, center: center, geometry: geometry)
+                
+                Group {
+                    gamePlayerNameView(for: index, at: pos.avatarPosition)
+                    gamePlayerHandView(for: index, at: pos.handPosition, isHorizontal: pos.isHorizontal)
+                    if index != 0 {
+                        gamePlayerMeldView(for: index, at: pos.meldPosition, isHorizontal: pos.isHorizontal)
+                    }
+                }
+            }
+            
+            // Trick area with actual cards
+            gameTrickAreaView(at: center)
+        }
+    }
+    
+    // MARK: - Game Player Views (styled like TestTableLayoutView)
+    private func gamePlayerNameView(for index: Int, at position: CGPoint) -> some View {
+        let player = self.game.players[index]
+        let isCurrentPlayer = index == self.game.currentPlayerIndex
+        
+        return Text(player.name)
+            .font(.caption.bold())
+            .foregroundColor(.white)
+            .padding(6)
+            .background(isCurrentPlayer ? Color.blue : Color.red)
+            .cornerRadius(6)
+            .position(position)
+    }
+    
+    private func gamePlayerHandView(for index: Int, at position: CGPoint, isHorizontal: Bool) -> some View {
+        let player = self.game.players[index]
+        let isCurrentPlayer = index == self.game.currentPlayerIndex
+        
+        return Group {
+            if isCurrentPlayer && !player.held.isEmpty {
+                // Current player: show actual cards
+                HandView(
+                    cards: player.held,
+                    playableCards: player.held,
+                    selectedCards: selectedCards,
+                    onCardTap: { card in
+                        handleCardSelection(card)
+                    },
+                    onDoubleTap: { card in
+                        handleCardPlayed(card)
+                    }
+                )
+                .frame(width: isHorizontal ? 600 : 160, height: isHorizontal ? 160 : 600)
+            } else if game.currentPhase == .setup {
+                // Setup phase: show placeholder
+                Text("Setup Phase")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .padding(8)
+                    .background(Color.white.opacity(0.8))
+                    .cornerRadius(6)
+            } else {
+                // Other players or current player without cards: show card backs like TestTableLayoutView
+                Group {
+                    if isHorizontal {
+                        HStack(spacing: 4) {
+                            ForEach(0..<min(5, max(1, player.held.count)), id: \.self) { _ in
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.blue)
+                                    .frame(width: 30, height: 42)
+                            }
+                        }
+                    } else {
+                        VStack(spacing: 4) {
+                            ForEach(0..<min(5, max(1, player.held.count)), id: \.self) { _ in
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.blue)
+                                    .frame(width: 30, height: 42)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .position(position)
+    }
+    
+    private func gamePlayerMeldView(for index: Int, at position: CGPoint, isHorizontal: Bool) -> some View {
+        let player = self.game.players[index]
+        
+        return Group {
+            if isHorizontal {
+                HStack(spacing: 4) {
+                    ForEach(0..<min(3, player.melded.count), id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.orange)
+                            .frame(width: 25, height: 35)
+                    }
+                }
+            } else {
+                VStack(spacing: 4) {
+                    ForEach(0..<min(3, player.melded.count), id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.orange)
+                            .frame(width: 25, height: 35)
+                    }
+                }
+            }
+        }
+        .position(position)
+    }
+    
+    private func gameTrickAreaView(at center: CGPoint) -> some View {
+        return Group {
+            if self.game.currentTrick.isEmpty {
+                // Show placeholder like TestTableLayoutView
+                VStack(spacing: 4) {
+                    Text("TRICK AREA")
+                        .font(.caption).bold()
+                        .foregroundColor(.green)
+                    Text("Cards played here")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                }
+                .frame(width: 100)
+                .fixedSize()
+            } else {
+                // Show actual trick cards
+                TrickView(
+                    cards: self.game.currentTrick,
+                    game: self.game,
+                    settings: self.settings,
+                    gameRules: self.gameRules
+                )
+                .frame(width: 200, height: 150)
+            }
+        }
+        .position(x: center.x, y: center.y)
+    }
+    
+    // MARK: - Square Table Layout (keeping for reference)
     private func squareTableLayout(geometry: GeometryProxy) -> some View {
-        let tableSize = min(geometry.size.width - 32, geometry.size.height * 0.6)
+        let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
+        let minSide = min(geometry.size.width, geometry.size.height)
         
         return ZStack {
-            // Central trick area
+            // Main table area - green rounded rectangle like TestTableLayoutView
+            RoundedRectangle(cornerRadius: 40)
+                .fill(Color.green.opacity(0.2))
+                .stroke(Color.green, lineWidth: 4)
+                .padding(40)
+            
+            // Central trick area (Zone A - 0.25) - perfectly centered
             TrickView(
                 cards: self.game.currentTrick,
                 game: self.game,
                 settings: self.settings,
                 gameRules: self.gameRules
             )
-            .frame(width: tableSize * 0.4, height: tableSize * 0.3)
+            .frame(width: minSide * 0.25, height: minSide * 0.25)
             .background(Color.white.opacity(0.1))
             .cornerRadius(12)
+            .position(center)
             
-            // Player zones positioned around the table
+            // Player zones positioned using the exact same logic as TestTableLayoutView
             ForEach(0..<self.game.players.count, id: \.self) { playerIndex in
-                playerZoneView(for: playerIndex, tableSize: tableSize)
+                let pos = getPlayerPositions(index: playerIndex, playerCount: self.game.players.count, center: center, geometry: geometry)
+                
+                Group {
+                    // Player name and status (Zone D - 0.85)
+                    playerNameView(for: playerIndex, at: pos.avatarPosition)
+                    
+                    // Player's hand (Zone C - 0.65)
+                    playerHandView(for: playerIndex, at: pos.handPosition, isHorizontal: pos.isHorizontal)
+                    
+                    // Player's melds (Zone B - 0.45) - only for non-current players
+                    if playerIndex != 0 {
+                        playerMeldView(for: playerIndex, at: pos.meldPosition, isHorizontal: pos.isHorizontal)
+                    }
+                }
             }
             
             // Draw pile positioned based on player count and dealer
-            drawPileView(tableSize: tableSize)
+            drawPileView(center: center, geometry: geometry)
         }
-        .frame(width: tableSize, height: tableSize)
     }
     
-    // MARK: - Player Zone View
-    private func playerZoneView(for playerIndex: Int, tableSize: CGFloat) -> some View {
-        let player = self.game.players[playerIndex]
-        let isCurrentPlayer = playerIndex == self.game.currentPlayerIndex
-        let position = getPlayerPosition(playerIndex: playerIndex, playerCount: self.game.players.count)
+    // MARK: - Player View Helpers (matching TestTableLayoutView exactly)
+    private func playerNameView(for index: Int, at position: CGPoint) -> some View {
+        let player = self.game.players[index]
+        let isCurrentPlayer = index == self.game.currentPlayerIndex
         
-        return VStack(spacing: 8) {
-            // Player name and status
-            HStack {
+        return VStack(spacing: 4) {
+                                    HStack {
                 Text(player.name)
                     .font(.caption)
                     .fontWeight(.semibold)
@@ -124,10 +353,17 @@ struct GameBoardView: View {
             .padding(.vertical, 4)
             .background(isCurrentPlayer ? Color.blue.opacity(0.3) : Color.black.opacity(0.2))
             .cornerRadius(8)
-            
-            // Player's hand
+        }
+        .position(position)
+    }
+
+    private func playerHandView(for index: Int, at position: CGPoint, isHorizontal: Bool) -> some View {
+        let player = self.game.players[index]
+        let isCurrentPlayer = index == self.game.currentPlayerIndex
+        
+        return Group {
             if isCurrentPlayer {
-                // Current player: show face-up cards
+                // Current player: show face-up cards with full functionality
                 HandView(
                     cards: player.held,
                     playableCards: player.held,
@@ -139,13 +375,49 @@ struct GameBoardView: View {
                         handleCardPlayed(card)
                     }
                 )
-                .frame(height: 80)
+                .frame(width: isHorizontal ? 600 : 160, height: isHorizontal ? 160 : 600)
             } else {
                 // Other players: show card backs
+                Group {
+                    if isHorizontal {
+                        HStack(spacing: -20) {
+                            ForEach(player.hand, id: \.id) { _ in
+                                            CardBackView { }
+                                    .frame(width: 60, height: 84) // Scaled down for other players
+                            }
+                        }
+                    } else {
+                        VStack(spacing: -20) {
+                            ForEach(player.hand, id: \.id) { _ in
+                                CardBackView { }
+                                    .frame(width: 60, height: 84) // Scaled down for other players
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .position(position)
+    }
+
+    private func playerMeldView(for index: Int, at position: CGPoint, isHorizontal: Bool) -> some View {
+        let player = self.game.players[index]
+        
+        return Group {
+            if isHorizontal {
                 HStack(spacing: 4) {
-                    ForEach(player.hand, id: \.id) { _ in
-                        CardBackView { }
-                            .frame(width: 32, height: 48)
+                    ForEach(0..<min(3, player.melded.count), id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.orange)
+                            .frame(width: 25, height: 35)
+                    }
+                }
+            } else {
+                VStack(spacing: 4) {
+                    ForEach(0..<min(3, player.melded.count), id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.orange)
+                            .frame(width: 25, height: 35)
                     }
                 }
             }
@@ -153,47 +425,54 @@ struct GameBoardView: View {
         .position(position)
     }
     
-    // MARK: - Player Position Calculation
-    private func getPlayerPosition(playerIndex: Int, playerCount: Int) -> CGPoint {
-        let tableSize = 300.0 // Base table size for calculations
-        let center = CGPoint(x: tableSize / 2, y: tableSize / 2)
-        let radius = tableSize * 0.35
-        
+    // MARK: - Player Position Calculation (Proper Concentric Square System)
+    private func getPlayerPositions(index: Int, playerCount: Int, center: CGPoint, geometry: GeometryProxy) -> (avatarPosition: CGPoint, handPosition: CGPoint, meldPosition: CGPoint, isHorizontal: Bool) {
+        let minSide = min(geometry.size.width, geometry.size.height)
+        let radiusFactors: [CGFloat] = [0.85, 0.65, 0.45]
+
+        // Define direction vectors for bottom, right, top, left
+        let directions: [(dx: CGFloat, dy: CGFloat, isHorizontal: Bool)] = [
+            (0, 1, true),    // bottom
+            (1, 0, false),   // right
+            (0, -1, true),   // top
+            (-1, 0, false)   // left
+        ]
+
+        let playerOrder: [Int]
         switch playerCount {
-        case 2:
-            // 2 players: across from each other
-            switch playerIndex {
-            case 0: return CGPoint(x: center.x, y: center.y + radius) // Bottom
-            case 1: return CGPoint(x: center.x, y: center.y - radius) // Top
-            default: return center
-            }
-        case 3:
-            // 3 players: 2 across, 1 on side
-            switch playerIndex {
-            case 0: return CGPoint(x: center.x, y: center.y + radius) // Bottom
-            case 1: return CGPoint(x: center.x, y: center.y - radius) // Top
-            case 2: return CGPoint(x: center.x - radius, y: center.y) // Left
-            default: return center
-            }
-        case 4:
-            // 4 players: one on each side
-            switch playerIndex {
-            case 0: return CGPoint(x: center.x, y: center.y + radius) // Bottom
-            case 1: return CGPoint(x: center.x, y: center.y - radius) // Top
-            case 2: return CGPoint(x: center.x - radius, y: center.y) // Left
-            case 3: return CGPoint(x: center.x + radius, y: center.y) // Right
-            default: return center
-            }
-        default:
-            return center
+        case 2: playerOrder = [0, 2]  // bottom, top
+        case 3: playerOrder = [0, 2, 1]  // bottom, top, right
+        case 4: playerOrder = [0, 2, 1, 3]  // bottom, top, right, left
+        default: playerOrder = []
         }
+
+        guard index < playerOrder.count else {
+            return (center, center, center, true)
+        }
+
+        let posIndex = playerOrder[index]
+        let direction = directions[posIndex]
+
+        func positionOnAxis(radiusFactor: CGFloat) -> CGPoint {
+            let radius = minSide * radiusFactor / 2
+            return CGPoint(
+                x: center.x + direction.dx * radius,
+                y: center.y + direction.dy * radius
+            )
+        }
+
+        return (
+            avatarPosition: positionOnAxis(radiusFactor: radiusFactors[0]),
+            handPosition: positionOnAxis(radiusFactor: radiusFactors[1]),
+            meldPosition: positionOnAxis(radiusFactor: radiusFactors[2]),
+            isHorizontal: direction.isHorizontal
+        )
     }
     
     // MARK: - Draw Pile View
-    private func drawPileView(tableSize: CGFloat) -> some View {
-        let center = CGPoint(x: tableSize / 2, y: tableSize / 2)
+    private func drawPileView(center: CGPoint, geometry: GeometryProxy) -> some View {
         let dealerIndex = self.game.players.firstIndex(where: { $0.isDealer }) ?? 0
-        let drawPilePosition = getDrawPilePosition(playerCount: self.game.players.count, dealerIndex: dealerIndex)
+        let drawPilePosition = getDrawPilePosition(playerCount: self.game.players.count, dealerIndex: dealerIndex, center: center, geometry: geometry)
         
         return VStack(spacing: 4) {
             // Draw pile cards
@@ -221,26 +500,21 @@ struct GameBoardView: View {
     }
     
     // MARK: - Draw Pile Position Calculation
-    private func getDrawPilePosition(playerCount: Int, dealerIndex: Int) -> CGPoint {
-        let tableSize = 300.0
-        let center = CGPoint(x: tableSize / 2, y: tableSize / 2)
-        let radius = tableSize * 0.25
+    private func getDrawPilePosition(playerCount: Int, dealerIndex: Int, center: CGPoint, geometry: GeometryProxy) -> CGPoint {
+        let minSide = min(geometry.size.width, geometry.size.height)
+        let radius = minSide * 0.15 // Smaller radius for draw pile
         
         switch playerCount {
         case 2:
-            // Draw pile on left or right side
+            // Draw pile on left side (opposite to players)
             return CGPoint(x: center.x - radius, y: center.y)
         case 3:
-            // Draw pile on the open side (right)
-            return CGPoint(x: center.x + radius, y: center.y)
+            // Draw pile on the open side (left, since right has player)
+            return CGPoint(x: center.x - radius, y: center.y)
         case 4:
-            // Draw pile diagonal to dealer
-            let dealerPosition = getPlayerPosition(playerIndex: dealerIndex, playerCount: playerCount)
-            let diagonalOffset = CGPoint(x: radius * 0.7, y: radius * 0.7)
-            return CGPoint(
-                x: center.x + (dealerPosition.x > center.x ? -diagonalOffset.x : diagonalOffset.x),
-                y: center.y + (dealerPosition.y > center.y ? -diagonalOffset.y : diagonalOffset.y)
-            )
+            // Draw pile in one of the corners, avoiding player positions
+            // Place it in top-left corner
+            return CGPoint(x: center.x - radius * 0.7, y: center.y - radius * 0.7)
         default:
             return center
         }
@@ -349,7 +623,7 @@ struct GameBoardView: View {
     
     // MARK: - Other Player's Hand View
     private var otherPlayerHandView: some View {
-        let currentPlayer = self.game.players[self.game.currentPlayerIndex]
+        let _ = self.game.players[self.game.currentPlayerIndex]
         let otherPlayer = self.game.players[(self.game.currentPlayerIndex + 1) % 2]
         
         return VStack(spacing: 4) {
@@ -585,7 +859,7 @@ struct GameBoardView: View {
             .padding(.top, 8)
             .padding(.bottom, 16)
         }
-        .onChange(of: self.game.currentPlayerIndex) { newIndex in
+        .onChange(of: self.game.currentPlayerIndex) { _, newIndex in
             // In single player mode, automatically switch to the current player's hand
             // This ensures the trick winner's hand becomes active
             print("🎮 Single Player Mode: Switched to \(self.game.players[newIndex].name)'s hand")
@@ -1357,6 +1631,17 @@ struct GameBoardView: View {
                     game.startNewGame()
                 }
                 .buttonStyle(.borderedProminent)
+            } else {
+                Button("End Game") {
+                    onEndGame()
+                }
+                .buttonStyle(.bordered)
+                .foregroundColor(.red)
+                
+                Button("Settings") {
+                    showingSettings = true
+                }
+                .buttonStyle(.bordered)
             }
         }
         .padding(.horizontal)
@@ -1390,6 +1675,62 @@ struct GameBoardView: View {
     private var hasDeclaredMeldThisRound: Bool {
         guard let humanPlayer = game.players.first else { return false }
         return humanPlayer.meldsDeclared.last?.roundNumber == game.roundNumber
+    }
+
+    // MARK: - Concentric Squares Content (Circular Layout)
+    /// Displays all players centered around the trick area in a circular layout, aligned symmetrically.
+    private func concentricSquaresContent(playerCount: Int, geometry: GeometryProxy) -> some View {
+        let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
+        let minSide = min(geometry.size.width, geometry.size.height)
+
+        let radiusFactors = (avatar: 0.85, hand: 0.65, meld: 0.45)
+        let angles: [Double] = {
+            switch playerCount {
+            case 2: return [90, 270]
+            case 3: return [90, 210, 330]
+            case 4: return [90, 180, 270, 0]
+            default: return []
+            }
+        }()
+
+        return ZStack {
+            ForEach(0..<playerCount, id: \.self) { index in
+                let angle = angles[index]
+                let rad = Angle(degrees: angle).radians
+                let isHorizontal = angle == 90 || angle == 270
+
+                let avatarPoint = {
+                    let radius = minSide * radiusFactors.avatar / 2
+                    let x = center.x + CGFloat(cos(rad)) * radius
+                    let y = center.y + CGFloat(sin(rad)) * radius
+                    return CGPoint(x: x, y: y)
+                }()
+                
+                let handPoint = {
+                    let radius = minSide * radiusFactors.hand / 2
+                    let x = center.x + CGFloat(cos(rad)) * radius
+                    let y = center.y + CGFloat(sin(rad)) * radius
+                    return CGPoint(x: x, y: y)
+                }()
+                
+                let meldPoint = {
+                    let radius = minSide * radiusFactors.meld / 2
+                    let x = center.x + CGFloat(cos(rad)) * radius
+                    let y = center.y + CGFloat(sin(rad)) * radius
+                    return CGPoint(x: x, y: y)
+                }()
+
+                Group {
+                    gamePlayerNameView(for: index, at: avatarPoint)
+                    gamePlayerHandView(for: index, at: handPoint, isHorizontal: isHorizontal)
+                    if index != 0 {
+                        gamePlayerMeldView(for: index, at: meldPoint, isHorizontal: isHorizontal)
+                    }
+                }
+            }
+
+            gameTrickAreaView(at: center)
+        }
     }
     
     // MARK: - Actions
@@ -2338,13 +2679,23 @@ struct AICardDrawAnimationView: View {
 #if DEBUG
 struct GameBoardView_Previews: PreviewProvider {
     static var previews: some View {
-        GameBoardView(game: Game(gameRules: GameRules()), settings: GameSettings(), gameRules: GameRules())
+        GameBoardView(
+            game: Game(gameRules: GameRules()), 
+            settings: GameSettings(), 
+            gameRules: GameRules(),
+            onEndGame: {}
+        )
     }
 }
 #endif
 
 #Preview {
-    GameBoardView(game: Game(gameRules: GameRules()), settings: GameSettings(), gameRules: GameRules())
+    GameBoardView(
+        game: Game(gameRules: GameRules()), 
+        settings: GameSettings(), 
+        gameRules: GameRules(),
+        onEndGame: {}
+    )
 } 
 
 // MARK: - Melded Card Drop Delegate for Drag and Drop

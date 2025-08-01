@@ -1,0 +1,16 @@
+{
+  "source": "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/ScoreBadgeView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Score: %lld",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 6
+        }
+      }
+    ]
+  },
+  "version": 1
+}

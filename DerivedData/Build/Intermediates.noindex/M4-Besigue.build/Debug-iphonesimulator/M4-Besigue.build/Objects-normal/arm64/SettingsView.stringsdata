@@ -1,0 +1,56 @@
+{
+  "source": "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/SettingsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 30
+        }
+      },
+      {
+        "comment": "",
+        "key": "Draw Pile Position",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 14
+        }
+      },
+      {
+        "comment": "",
+        "key": "Draw Pile Position",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 17
+        }
+      },
+      {
+        "comment": "",
+        "key": "Center Left",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 18
+        }
+      },
+      {
+        "comment": "",
+        "key": "Center Right",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 19
+        }
+      }
+    ]
+  },
+  "version": 1
+}
