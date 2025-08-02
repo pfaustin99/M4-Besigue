@@ -21,47 +21,44 @@ struct GameBoardView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Purple background like TestTableLayoutView
+                // Blue background for player areas
                 Rectangle()
-                    .fill(Color.purple.opacity(0.4))
+                    .fill(Color(hex: "#016A16").opacity(0.3))
                     .edgesIgnoringSafeArea(.all)
                 
             VStack(spacing: 0) {
                     // Elegant scoreboard like TestTableLayoutView
                     GameScoreboardView(game: game, settings: settings)
                     
-                    // Game controls
-                    gameControls
-                    
                     // Main game table area with TestTableLayoutView structure
                     ZStack {
                         RoundedRectangle(cornerRadius: 40)
-                            .fill(Color.green.opacity(0.2))
-                            .stroke(Color.green, lineWidth: 4)
+                            .fill(Color(hex: "#016A16").opacity(0.2))
+                            .stroke(Color(hex: "#016A16"), lineWidth: 4)
                             .padding(40)
                         
                         // Debug info
                         VStack {
                             Text("Phase: \(game.currentPhase)")
                                 .font(.caption)
-                                .foregroundColor(.red)
+                                .foregroundColor(Color(hex: "#D21034"))
                             Text("Players: \(game.players.count)")
                                 .font(.caption)
-                                .foregroundColor(.red)
+                                .foregroundColor(Color(hex: "#D21034"))
                             Text("Current Player: \(game.currentPlayerIndex)")
                                 .font(.caption)
-                                .foregroundColor(.red)
+                                .foregroundColor(Color(hex: "#D21034"))
                             if !game.players.isEmpty {
                                 Text("Player 0 cards: \(game.players[0].held.count)")
                                     .font(.caption)
-                                    .foregroundColor(.red)
+                                    .foregroundColor(Color(hex: "#D21034"))
                                 Text("Player 0 held: \(game.players[0].held.map { $0.imageName }.joined(separator: ", "))")
                                     .font(.caption2)
-                                    .foregroundColor(.red)
+                                    .foregroundColor(Color(hex: "#D21034"))
                             }
                             Text("Deck cards: \(game.deck.cards.count)")
                                 .font(.caption)
-                                .foregroundColor(.red)
+                                .foregroundColor(Color(hex: "#D21034"))
                         }
                         .position(x: 100, y: 100)
                         
@@ -69,6 +66,66 @@ struct GameBoardView: View {
                         concentricSquaresContent(playerCount: game.players.count, geometry: geometry)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                
+                // Floating corner buttons
+                VStack {
+                    HStack {
+                        // End Game button (upper left) or Start New Game (setup phase)
+                        if game.currentPhase == .setup {
+                            Button(action: {
+                                game.startNewGame()
+                            }) {
+                                Image(systemName: "play.circle.fill")
+                            }
+                            .buttonStyle(FloatingButtonStyle())
+                            .scaleEffect(1.0)
+                            .animation(.easeInOut(duration: 0.1), value: true)
+                        } else {
+                            Button(action: {
+                                onEndGame()
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                            }
+                            .buttonStyle(FloatingButtonStyle())
+                            .scaleEffect(1.0)
+                            .animation(.easeInOut(duration: 0.1), value: true)
+                        }
+                        
+                        Spacer()
+                        
+                        // Settings button (upper center)
+                        Button(action: {
+                            showingSettings = true
+                        }) {
+                            Image(systemName: "gearshape.fill")
+                        }
+                        .buttonStyle(FloatingButtonStyle())
+                        .scaleEffect(1.0)
+                        .animation(.easeInOut(duration: 0.1), value: true)
+                        
+                        Spacer()
+                        
+                        // Save Game button (upper right) - only show when not in setup
+                        if game.currentPhase != .setup {
+                            Button(action: {
+                                saveGame()
+                            }) {
+                                Image(systemName: "square.and.arrow.down.fill")
+                            }
+                            .buttonStyle(FloatingButtonStyle())
+                            .scaleEffect(1.0)
+                            .animation(.easeInOut(duration: 0.1), value: true)
+                        } else {
+                            // Placeholder for setup phase to maintain layout
+                            Color.clear
+                                .frame(width: 50, height: 50)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    
+                    Spacer()
                 }
             }
         }
@@ -97,7 +154,8 @@ struct GameBoardView: View {
             Text("BÉSIGUE - \(game.players.count) Players")
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(.purple)
+                .foregroundColor(Color(hex: "#D21034"))
+                .shadow(color: Color(hex: "#F1B517"), radius: 1, x: 0.5, y: 0.5)
             
             gameScoreboardGrid(game: game)
         }
@@ -120,25 +178,26 @@ struct GameBoardView: View {
             Text(player.name)
                 .font(.caption)
                 .fontWeight(.medium)
+                .shadow(color: Color(hex: "#F1B517"), radius: 1, x: 0.5, y: 0.5)
             
             HStack(spacing: 8) {
                 Text("Score: \(player.score)")
                     .font(.caption2)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.yellow.opacity(0.8))
+                    .background(Color(hex: "#F1B517").opacity(0.8))
                     .cornerRadius(4)
                 
                 Text("Tricks: \(player.tricksWon)")
                     .font(.caption2)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.orange.opacity(0.8))
+                    .background(Color(hex: "#D21034").opacity(0.8))
                     .cornerRadius(4)
             }
         }
         .padding(8)
-        .background(isCurrentPlayer ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
+        .background(isCurrentPlayer ? Color(hex: "#016A16").opacity(0.2) : Color.gray.opacity(0.1))
         .cornerRadius(8)
     }
     
@@ -172,8 +231,9 @@ struct GameBoardView: View {
             .font(.caption.bold())
             .foregroundColor(.white)
             .padding(6)
-            .background(isCurrentPlayer ? Color.blue : Color.red)
+            .background(isCurrentPlayer ? Color(hex: "#016A16") : Color(hex: "#D21034"))
             .cornerRadius(6)
+            .shadow(color: Color(hex: "#F1B517"), radius: 2, x: 1, y: 1)
             .position(position)
     }
     
@@ -183,18 +243,26 @@ struct GameBoardView: View {
         
         return Group {
             if isCurrentPlayer && !player.held.isEmpty {
-                // Current player: show actual cards
-                HandView(
-                    cards: player.held,
-                    playableCards: player.held,
-                    selectedCards: selectedCards,
-                    onCardTap: { card in
-                        handleCardSelection(card)
-                    },
-                    onDoubleTap: { card in
-                        handleCardPlayed(card)
+                // Current player: show actual cards without scrolling
+                HStack(spacing: -20) {
+                    ForEach(player.held) { card in
+                        let isSelected = selectedCards.contains(card)
+                        CardView(
+                            card: card,
+                            isSelected: isSelected,
+                            isPlayable: true,
+                            showHint: false
+                        ) {
+                            handleCardSelection(card)
+                        }
+                        .onTapGesture(count: 2) {
+                            handleCardPlayed(card)
+                        }
+                        .scaleEffect(isSelected ? 1.1 : 1.0)
+                        .shadow(color: isSelected ? Color(hex: "#D21034").opacity(0.5) : .clear, radius: isSelected ? 8 : 0)
+                        .animation(.easeInOut(duration: 0.2), value: isSelected)
                     }
-                )
+                }
                 .frame(width: isHorizontal ? 600 : 160, height: isHorizontal ? 160 : 600)
             } else if game.currentPhase == .setup {
                 // Setup phase: show placeholder
@@ -205,26 +273,33 @@ struct GameBoardView: View {
                     .background(Color.white.opacity(0.8))
                     .cornerRadius(6)
             } else {
-                // Other players or current player without cards: show card backs like TestTableLayoutView
-                Group {
+                // Other players: show card backs oriented as if held by that player
+                VStack {
                     if isHorizontal {
-                        HStack(spacing: 4) {
-                            ForEach(0..<min(5, max(1, player.held.count)), id: \.self) { _ in
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.blue)
-                                    .frame(width: 30, height: 42)
+                        HStack(spacing: -15) {
+                            ForEach(0..<player.held.count, id: \.self) { cardIndex in
+                                CardBackView { }
+                                    .frame(width: 50, height: 70)
+                                    .rotationEffect(.degrees(180)) // Face toward the player
+                                    .offset(x: CGFloat(cardIndex) * 2) // Slight overlap
                             }
                         }
                     } else {
-                        VStack(spacing: 4) {
-                            ForEach(0..<min(5, max(1, player.held.count)), id: \.self) { _ in
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.blue)
-                                    .frame(width: 30, height: 42)
+                        VStack(spacing: -15) {
+                            ForEach(0..<player.held.count, id: \.self) { cardIndex in
+                                CardBackView { }
+                                    .frame(width: 50, height: 70)
+                                    .rotationEffect(.degrees(180)) // Face toward the player
+                                    .offset(y: CGFloat(cardIndex) * 2) // Slight overlap
                             }
                         }
                     }
                 }
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(hex: "#016A16").opacity(0.1))
+                        .stroke(Color(hex: "#016A16"), lineWidth: 1)
+                )
             }
         }
         .position(position)
@@ -234,22 +309,68 @@ struct GameBoardView: View {
         let player = self.game.players[index]
         
         return Group {
-            if isHorizontal {
-                HStack(spacing: 4) {
-                    ForEach(0..<min(3, player.melded.count), id: \.self) { _ in
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.orange)
-                            .frame(width: 25, height: 35)
+            if !player.melded.isEmpty {
+                // Show actual melded cards with existing badging system
+                VStack {
+                    if isHorizontal {
+                        HStack(spacing: 4) {
+                            ForEach(player.getMeldedCardsInOrder(), id: \.id) { card in
+                                VStack(spacing: 2) {
+                                    // Card face
+                                    Image(card.imageName)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(width: 40, height: 56)
+                                        .cornerRadius(4)
+                                    
+                                    // Badge row (simplified for smaller cards)
+                                    HStack(spacing: 1) {
+                                        ForEach(0..<min(2, card.usedInMeldTypes.count), id: \.self) { badgeIndex in
+                                            let meldType = Array(card.usedInMeldTypes)[badgeIndex]
+                                            Text(badgeIcon(for: meldType, card: card))
+                                                .font(.system(size: 12, weight: .bold))
+                                                .foregroundColor(.black)
+                                                .frame(width: 12, height: 12)
+                                                .background(Color.white)
+                                                .clipShape(Circle())
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        VStack(spacing: 4) {
+                            ForEach(player.getMeldedCardsInOrder(), id: \.id) { card in
+                                VStack(spacing: 2) {
+                                    // Card face
+                                    Image(card.imageName)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(width: 40, height: 56)
+                                        .cornerRadius(4)
+                                    
+                                    // Badge row (simplified for smaller cards)
+                                    HStack(spacing: 1) {
+                                        ForEach(0..<min(2, card.usedInMeldTypes.count), id: \.self) { badgeIndex in
+                                            let meldType = Array(card.usedInMeldTypes)[badgeIndex]
+                                            Text(badgeIcon(for: meldType, card: card))
+                                                .font(.system(size: 12, weight: .bold))
+                                                .foregroundColor(.black)
+                                                .frame(width: 12, height: 12)
+                                                .background(Color.white)
+                                                .clipShape(Circle())
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-            } else {
-                VStack(spacing: 4) {
-                    ForEach(0..<min(3, player.melded.count), id: \.self) { _ in
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.orange)
-                            .frame(width: 25, height: 35)
-                    }
-                }
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(hex: "#016A16").opacity(0.1))
+                        .stroke(Color(hex: "#016A16"), lineWidth: 1)
+                )
             }
         }
         .position(position)
@@ -1628,7 +1749,22 @@ struct GameBoardView: View {
         .padding(.horizontal)
     }
     
-    // MARK: - Game Controls
+    // MARK: - Floating Button Style
+    struct FloatingButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .font(.system(size: 24, weight: .medium))
+                .foregroundColor(.white)
+                .frame(width: 50, height: 50)
+                .background(Color(hex: "#00209F"))
+                .cornerRadius(25)
+                .shadow(color: Color(hex: "#D21034"), radius: 3, x: 2, y: 2)
+                .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+                .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+        }
+    }
+    
+    // MARK: - Game Controls (Legacy - now replaced by floating buttons)
     private var gameControls: some View {
         HStack(spacing: 15) {
             if game.currentPhase == .setup {
@@ -1636,20 +1772,34 @@ struct GameBoardView: View {
                     game.startNewGame()
                 }
                 .buttonStyle(.borderedProminent)
+                .foregroundColor(Color(hex: "#D21034"))
             } else {
                 Button("End Game") {
                     onEndGame()
                 }
                 .buttonStyle(.bordered)
-                .foregroundColor(.red)
+                .foregroundColor(Color(hex: "#D21034"))
                 
                 Button("Settings") {
                     showingSettings = true
                 }
                 .buttonStyle(.bordered)
+                .foregroundColor(Color(hex: "#D21034"))
+                
+                Button("Save Game") {
+                    saveGame()
+                }
+                .buttonStyle(.bordered)
+                .foregroundColor(Color(hex: "#D21034"))
             }
         }
         .padding(.horizontal)
+    }
+    
+    // MARK: - Save Game Function
+    private func saveGame() {
+        // TODO: Implement save game functionality
+        print("🎮 Save Game button tapped - functionality to be implemented")
     }
     
     // MARK: - Computed Properties
@@ -2742,5 +2892,19 @@ struct MeldedCardDropDelegate: DropDelegate {
     
     func dropExited(info: DropInfo) {
         // Clear visual feedback when leaving drop target
+    }
+}
+
+// MARK: - Color Extension for Hex Support
+extension Color {
+    init(hex: String) {
+        let scanner = Scanner(string: hex)
+        _ = scanner.scanString("#")
+        var rgb: UInt64 = 0
+        scanner.scanHexInt64(&rgb)
+        let r = Double((rgb >> 16) & 0xFF) / 255
+        let g = Double((rgb >> 8) & 0xFF) / 255
+        let b = Double(rgb & 0xFF) / 255
+        self.init(red: r, green: g, blue: b)
     }
 }
