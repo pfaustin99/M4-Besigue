@@ -37,10 +37,10 @@ struct HomePageView: View {
                             // BÉSIGUE Title - Gold with red shadow, Copperplate font (simplified)
                             // NOTE: Portrait support will be removed and landscape enforced once image assets are updated.
                             Text("BÉSIGUE")
-                                .font(.system(size: min(geometry.size.width * (isLandscape ? 0.42 : 0.32), isLandscape ? 140 : 110), weight: .black, design: .serif))
+                                .font(.system(size: min(geometry.size.width * (isLandscape ? 0.5 : 0.4), isLandscape ? 160 : 130), weight: .black, design: .serif))
                                 .fontWeight(.bold)
                                 .foregroundColor(Color(red: 241/255, green: 181/255, blue: 23/255)) // Gold
-                                .shadow(color: Color(red: 210/255, green: 16/255, blue: 52/255), radius: 2, x: 2, y: 2) // Red
+                                .shadow(color: Color(red: 210/255, green: 16/255, blue: 52/255), radius: 4, x: 4, y: 4) // Red
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.5)
                                 .frame(maxWidth: .infinity, alignment: .center)
