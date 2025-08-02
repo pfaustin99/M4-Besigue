@@ -77,39 +77,67 @@ struct HomePageView: View {
                         // 4 Circular Button Tokens - Centered using GeometryReader and frame
                         GeometryReader { innerGeo in
                             HStack(spacing: geometry.size.width * 0.07) {
-                                // Play Button
-                                CircularButtonView(
-                                    icon: "play.fill",
-                                    outlineColor: .black,
-                                    action: { startGame() },
-                                    iconFontSize: min(geometry.size.width * 0.10, 40)
-                                )
-                                // Configuration Button
-                                CircularButtonView(
-                                    icon: "gearshape.fill",
-                                    outlineColor: .red,
-                                    action: { showingConfiguration = true },
-                                    iconFontSize: min(geometry.size.width * 0.10, 40)
-                                )
-                                // How to Play Button
-                                CircularButtonView(
-                                    icon: "questionmark",
-                                    outlineColor: .black,
-                                    action: { showingHowToPlay = true },
-                                    iconFontSize: min(geometry.size.width * 0.10, 40)
-                                )
-                                // About Button
-                                CircularButtonView(
-                                    icon: "info.circle.fill",
-                                    outlineColor: .red,
-                                    action: { showingAbout = true },
-                                    iconFontSize: min(geometry.size.width * 0.10, 40)
-                                )
+                                // Play Button & Label
+                                VStack(spacing: 8) {
+                                    CircularButtonView(
+                                        icon: "play.fill",
+                                        outlineColor: .black,
+                                        action: { startGame() },
+                                        iconFontSize: min(geometry.size.width * 0.10, 40)
+                                    )
+                                    Text("Play")
+                                        .font(.system(size: 26, weight: .bold, design: .serif))
+                                        .foregroundColor(Color(red: 241/255, green: 181/255, blue: 23/255)) // Gold
+                                        .shadow(color: Color(red: 210/255, green: 16/255, blue: 52/255), radius: 2, x: 1, y: 1) // Red
+                                        .multilineTextAlignment(.center)
+                                }
+                                // Configuration Button & Label
+                                VStack(spacing: 8) {
+                                    CircularButtonView(
+                                        icon: "gearshape.fill",
+                                        outlineColor: .red,
+                                        action: { showingConfiguration = true },
+                                        iconFontSize: min(geometry.size.width * 0.10, 40)
+                                    )
+                                    Text("Settings")
+                                        .font(.system(size: 26, weight: .bold, design: .serif))
+                                        .foregroundColor(Color(red: 241/255, green: 181/255, blue: 23/255)) // Gold
+                                        .shadow(color: Color(red: 210/255, green: 16/255, blue: 52/255), radius: 2, x: 1, y: 1) // Red
+                                        .multilineTextAlignment(.center)
+                                }
+                                // How to Play Button & Label
+                                VStack(spacing: 8) {
+                                    CircularButtonView(
+                                        icon: "questionmark",
+                                        outlineColor: .black,
+                                        action: { showingHowToPlay = true },
+                                        iconFontSize: min(geometry.size.width * 0.10, 40)
+                                    )
+                                    Text("How to Play")
+                                        .font(.system(size: 26, weight: .bold, design: .serif))
+                                        .foregroundColor(Color(red: 241/255, green: 181/255, blue: 23/255)) // Gold
+                                        .shadow(color: Color(red: 210/255, green: 16/255, blue: 52/255), radius: 2, x: 1, y: 1) // Red
+                                        .multilineTextAlignment(.center)
+                                }
+                                // About Button & Label
+                                VStack(spacing: 8) {
+                                    CircularButtonView(
+                                        icon: "info.circle.fill",
+                                        outlineColor: .red,
+                                        action: { showingAbout = true },
+                                        iconFontSize: min(geometry.size.width * 0.10, 40)
+                                    )
+                                    Text("About")
+                                        .font(.system(size: 26, weight: .bold, design: .serif))
+                                        .foregroundColor(Color(red: 241/255, green: 181/255, blue: 23/255)) // Gold
+                                        .shadow(color: Color(red: 210/255, green: 16/255, blue: 52/255), radius: 2, x: 1, y: 1) // Red
+                                        .multilineTextAlignment(.center)
+                                }
                             }
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.horizontal, geometry.size.width * 0.05)
                         }
-                        .frame(height: 100)
+                        .frame(height: 120)
                         // Remove bottom spacers since footer is positioned as overlay
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -295,7 +323,7 @@ struct MarriageCardView: View {
                     .aspectRatio(2.5/3.5, contentMode: .fit)
                     .frame(width: 120, height: 168)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(cornerRadius: 3)
                             .stroke(getSuitColor(), lineWidth: 1)
                     )
             }
@@ -309,7 +337,7 @@ struct MarriageCardView: View {
                     .aspectRatio(2.5/3.5, contentMode: .fit)
                     .frame(width: 120, height: 168)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(cornerRadius: 3)
                             .stroke(getSuitColor(), lineWidth: 1)
                     )
             }
