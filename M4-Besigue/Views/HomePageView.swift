@@ -68,7 +68,7 @@ struct HomePageView: View {
                                 // Diamonds Marriage (-10°)
                                 MarriageCardView(suit: .diamonds, angle: -10)
                                 // Spades Marriage (0°)
-                                MarriageCardView(suit: .spades, angle: 0)
+                                MarriageCardView(suit: .spades, angle: -20)
                             }
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.horizontal, geometry.size.width * 0.05)

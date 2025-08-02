@@ -10,12 +10,24 @@ struct GameRootView: View {
     @ObservedObject var game: Game
     
     var body: some View {
-        GameBoardView(
-            game: game, 
-            settings: game.settings, 
-            gameRules: game.gameRules,
-            onEndGame: {}
-        )
+        ZStack {
+            tableColor
+                .ignoresSafeArea()
+
+            GameBoardView(
+                game: game, 
+                settings: game.settings, 
+                gameRules: game.gameRules,
+                onEndGame: {}
+            )
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(.ultraThinMaterial)
+                    .shadow(radius: 10)
+            )
+            .padding()
+        }
     }
 }
 
