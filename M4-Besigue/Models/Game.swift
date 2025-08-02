@@ -325,9 +325,21 @@ class Game: ObservableObject {
         self.deck = Deck()
         self.aiService = AIService(difficulty: .medium)
         
+        // Start in uninitialized state - no players, no game setup
+        // Game will be initialized when initializeFromConfiguration() is called
+        print("🎮 Game created in uninitialized state")
+    }
+    
+    // Initialize game from configuration
+    func initializeFromConfiguration() {
+        print("🎮 Initializing game from configuration...")
+        print("🎮 Configuration - playerCount: \(gameRules.playerCount)")
+        print("🎮 Configuration - playerConfigurations.count: \(gameRules.playerConfigurations.count)")
+        
         // Generate configuration if empty (for default games)
         if gameRules.playerConfigurations.isEmpty {
             gameRules.generatePlayerConfigurations()
+            print("🎮 Generated \(gameRules.playerConfigurations.count) player configurations")
         }
         
         // Set up players from configuration

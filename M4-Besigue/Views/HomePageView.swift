@@ -9,6 +9,8 @@ struct HomePageView: View {
     @State private var showingAbout = false
     @State private var isGameActive = false
     @State private var showingPrivacyPolicy = false
+    @State private var isConfiguringGame = false
+    @State private var configurationMessage = ""
     
     var body: some View {
         GeometryReader { geometry in
@@ -137,6 +139,28 @@ struct HomePageView: View {
                 .padding(.bottom, geometry.safeAreaInsets.bottom + 5),
                 alignment: .bottom
             )
+            .overlay(
+                // Configuration subview
+                Group {
+                    if isConfiguringGame {
+                        VStack(spacing: 20) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            
+                            Text(configurationMessage)
+                                .font(.title2)
+                                .foregroundColor(.white)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black.opacity(0.8))
+                        .transition(.opacity)
+                    }
+                },
+                alignment: .center
+            )
         }
         .sheet(isPresented: $showingConfiguration) {
             GameSettingsView(gameRules: gameRules) {
@@ -204,23 +228,32 @@ struct HomePageView: View {
             print("🎮 startGame - Configuration \(index): \(config.name) (\(config.type)) at position \(config.position)")
         }
         
-        // Create new game with current configuration
-        let newGame = Game(gameRules: gameRules)
-        print("🎮 Game created: \(newGame != nil)")
-        print("🎮 Game object ID: \(ObjectIdentifier(newGame))")
+        // Show configuration subview
+        isConfiguringGame = true
+        configurationMessage = "Configuring game for \(gameRules.playerCount) players..."
+        
+        // Create game if it doesn't exist
+        if game == nil {
+            game = Game(gameRules: gameRules)
+            print("🎮 Game created: \(game != nil)")
+            print("🎮 Game object ID: \(ObjectIdentifier(game!))")
+        }
+        
+        // Initialize game from configuration
+        game?.initializeFromConfiguration()
+        print("🎮 Game initialized from configuration")
         
         // Start the game
-        newGame.startNewGame()
+        game?.startNewGame()
         print("🎮 Game started")
         
-        // Assign to state variable
-        game = newGame
-        print("🎮 Game assigned to state variable")
-        
-        // Show the game
-        isGameActive = true
-        print("🎮 isGameActive set to true")
-        print("🎮 Game still exists: \(game != nil)")
+        // Wait 3 seconds before hiding configuration subview and showing game
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            isConfiguringGame = false
+            isGameActive = true
+            print("🎮 isGameActive set to true")
+            print("🎮 Game still exists: \(game != nil)")
+        }
     }
     
     private func restorePurchase() {
