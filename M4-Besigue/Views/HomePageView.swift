@@ -140,8 +140,12 @@ struct HomePageView: View {
         }
         .sheet(isPresented: $showingConfiguration) {
             GameSettingsView(gameRules: gameRules) {
-                // Save configuration
-                print("Configuration saved")
+                // Configuration saved
+                print("🎮 Configuration saved - gameRules.playerCount: \(gameRules.playerCount)")
+                print("🎮 Configuration saved - gameRules.playerConfigurations.count: \(gameRules.playerConfigurations.count)")
+                for (index, config) in gameRules.playerConfigurations.enumerated() {
+                    print("🎮 Configuration \(index): \(config.name) (\(config.type)) at position \(config.position)")
+                }
             }
         }
         .sheet(isPresented: $showingHowToPlay) {
@@ -161,30 +165,62 @@ struct HomePageView: View {
                     gameRules: gameRules,
                     onEndGame: { isGameActive = false }
                 )
+                .onAppear {
+                    print("🎮 fullScreenCover triggered - isGameActive: \(isGameActive)")
+                    print("🎮 Game object: \(game != nil ? "exists" : "nil")")
+                    print("🎮 Game object ID at fullScreenCover: \(ObjectIdentifier(game))")
+                    print("🎮 Presenting GameBoardView with \(game.players.count) players")
+                }
+            } else {
+                // Fallback view if game is nil
+                VStack {
+                    Text("Error: Game not initialized")
+                        .font(.title)
+                        .foregroundColor(.red)
+                        .padding()
+
+                    Button("Back to Menu") {
+                        isGameActive = false
+                    }
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.8))
+                .onAppear {
+                    print("🎮 ERROR: Game is nil in fullScreenCover")
+                }
             }
         }
-        .onAppear {
-            setupDefaultConfiguration()
-        }
-    }
-    
-    private func setupDefaultConfiguration() {
-        // Set up default 2-player configuration
-        gameRules.playerCount = 2
-        gameRules.playerConfigurations = [
-            PlayerConfiguration(name: "Player 1", type: .human, position: 0),
-            PlayerConfiguration(name: "Player 2", type: .human, position: 1)
-        ]
     }
     
     private func startGame() {
-        // Create new game with current configuration
-        game = Game(gameRules: gameRules)
-        if let game = game {
-            game.updatePlayersFromConfiguration()
-            game.startNewGame()
+        print("🎮 startGame() called")
+        print("🎮 startGame - gameRules.playerCount: \(gameRules.playerCount)")
+        print("🎮 startGame - gameRules.playerConfigurations.count: \(gameRules.playerConfigurations.count)")
+        for (index, config) in gameRules.playerConfigurations.enumerated() {
+            print("🎮 startGame - Configuration \(index): \(config.name) (\(config.type)) at position \(config.position)")
         }
+        
+        // Create new game with current configuration
+        let newGame = Game(gameRules: gameRules)
+        print("🎮 Game created: \(newGame != nil)")
+        print("🎮 Game object ID: \(ObjectIdentifier(newGame))")
+        
+        // Start the game
+        newGame.startNewGame()
+        print("🎮 Game started")
+        
+        // Assign to state variable
+        game = newGame
+        print("🎮 Game assigned to state variable")
+        
+        // Show the game
         isGameActive = true
+        print("🎮 isGameActive set to true")
+        print("🎮 Game still exists: \(game != nil)")
     }
     
     private func restorePurchase() {

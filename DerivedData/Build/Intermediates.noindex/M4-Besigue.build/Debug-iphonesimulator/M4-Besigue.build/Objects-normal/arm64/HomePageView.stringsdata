@@ -1,0 +1,224 @@
+{
+  "source": "/Users/paulfaustin/Documents/My Docs/My Working/M4/M4-Besigue/M4-Besigue/Views/HomePageView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "BÉSIGUE",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "A Strategic Classic Card Game",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "Play",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 104
+        }
+      },
+      {
+        "comment": "",
+        "key": "How to Play",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 117
+        }
+      },
+      {
+        "comment": "",
+        "key": "About",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 130
+        }
+      },
+      {
+        "comment": "",
+        "key": "Privacy Policy",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 151
+        }
+      },
+      {
+        "comment": "",
+        "key": "Restore Purchase",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "Privacy Policy",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 251
+        }
+      },
+      {
+        "comment": "",
+        "key": "Close",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 252
+        }
+      },
+      {
+        "comment": "",
+        "key": "Privacy Policy content goes here.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 248
+        }
+      },
+      {
+        "comment": "",
+        "key": "✕",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 400
+        }
+      },
+      {
+        "comment": "",
+        "key": "How to Play Bésigue",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 366
+        }
+      },
+      {
+        "comment": "",
+        "key": "Bésigue is a trick-taking card game for 2-4 players. The goal is to score points by winning tricks and forming melds.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 373
+        }
+      },
+      {
+        "comment": "",
+        "key": "Game Setup:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 376
+        }
+      },
+      {
+        "comment": "",
+        "key": "• Each player is dealt 9 cards\n• The remaining cards form the draw pile\n• Players take turns playing cards and drawing new ones",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 380
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scoring:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 383
+        }
+      },
+      {
+        "comment": "",
+        "key": "• Win tricks to score points\n• Form melds (sets of cards) for bonus points\n• The player with the highest score at the end wins",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 387
+        }
+      },
+      {
+        "comment": "",
+        "key": "Playing a Trick:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 390
+        }
+      },
+      {
+        "comment": "",
+        "key": "• Each player plays one card\n• The highest card of the led suit wins the trick\n• Trump cards beat all other cards",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 394
+        }
+      },
+      {
+        "comment": "",
+        "key": "✕",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 462
+        }
+      },
+      {
+        "comment": "",
+        "key": "About Bésigue",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 415
+        }
+      },
+      {
+        "comment": "",
+        "key": "🎉 You found the easter egg! 🎉",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 452
+        }
+      },
+      {
+        "comment": "",
+        "key": "Version 1.0",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 422
+        }
+      },
+      {
+        "comment": "",
+        "key": "A modern implementation of the classic French card game Bésigue.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 427
+        }
+      },
+      {
+        "comment": "",
+        "key": "Developed with SwiftUI",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 431
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap for a surprise!",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 442
+        }
+      }
+    ]
+  },
+  "version": 1
+}

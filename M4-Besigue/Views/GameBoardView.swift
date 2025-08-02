@@ -74,6 +74,11 @@ struct GameBoardView: View {
         }
         .onAppear {
             print("🎮 GameBoardView appeared - Players: \(self.game.players.count), Current: \(self.game.currentPlayerIndex)")
+            print("🎮 GameBoardView - Game phase: \(self.game.currentPhase)")
+            print("🎮 GameBoardView - Game object ID: \(ObjectIdentifier(self.game))")
+            print("🎮 GameBoardView - Players: \(self.game.players.map { "\($0.name) (\($0.type))" })")
+            print("🎮 GameBoardView - Current player: \(self.game.currentPlayer.name)")
+            print("🎮 GameBoardView - Current player cards: \(self.game.currentPlayer.hand.count)")
         }
         .sheet(isPresented: $showingMeldOptions) {
             MeldOptionsView(game: self.game, settings: self.settings, selectedCards: $selectedCards)

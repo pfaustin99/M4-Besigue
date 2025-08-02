@@ -224,8 +224,8 @@ class GameRules: ObservableObject, Codable, Equatable {
     }
     
     init() {
-        // Generate initial player configurations for a default 2-player game
-        generatePlayerConfigurations()
+        // Start with empty configuration - no automatic generation
+        // Configuration will be set when user explicitly configures the game
     }
     
     func encode(to encoder: Encoder) throws {

@@ -325,9 +325,15 @@ class Game: ObservableObject {
         self.deck = Deck()
         self.aiService = AIService(difficulty: .medium)
         
-        // Don't create players automatically - let the setup screen handle this
-        // This ensures the setup screen appears when the app starts
-        currentPhase = .setup
+        // Generate configuration if empty (for default games)
+        if gameRules.playerConfigurations.isEmpty {
+            gameRules.generatePlayerConfigurations()
+        }
+        
+        // Set up players from configuration
+        updatePlayersFromConfiguration()
+        
+        print("🎮 Game initialized with \(players.count) players")
     }
     
     // MARK: - Player Creation
@@ -362,11 +368,6 @@ class Game: ObservableObject {
     // Start a new game
     func startNewGame() {
         print("🎮 Starting new game...")
-        
-
-        
-        // Update players from current configuration
-        updatePlayersFromConfiguration()
         
         // Reset all players
         for player in players {
