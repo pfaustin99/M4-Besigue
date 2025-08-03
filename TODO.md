@@ -46,6 +46,46 @@
   }
   ```
 
+## Phase 2.5: GameBoardView Refactoring (HIGH PRIORITY) ✅ IN PROGRESS
+
+### File Structure Reorganization ✅ COMPLETE
+- [x] Created GameBoardView+Constants.swift with all magic numbers replaced
+- [x] Created GameBoardViewState.swift for consolidated state management
+- [x] Created GameBoardView+Actions.swift for action handlers
+- [x] Created GameBoardView+Layout.swift for layout calculations
+- [x] Created GameBoardView+PlayerViews.swift for player-related views
+- [x] Created GameBoardView+Animations.swift for animation management
+- [x] Updated main GameBoardView.swift to use new structure
+
+### Constants Structure ✅ COMPLETE
+- [x] Replaced all magic numbers with named constants in GameBoardConstants
+- [x] Organized constants by category (dimensions, animations, colors, etc.)
+- [x] Updated main view to use new constants
+
+### State Consolidation ✅ COMPLETE
+- [x] Created GameBoardViewState class for all view-related state
+- [x] Moved all @State variables to the state management class
+- [x] Added comprehensive state management methods
+- [x] Updated main view to use @StateObject for state management
+
+### Next Steps for GameBoardView Refactoring
+- [x] Update remaining methods in main GameBoardView.swift to use new structure
+- [x] Replace remaining magic numbers with constants
+- [x] **BUILD SUCCESSFUL** - All compilation errors fixed!
+- [ ] Test that all functionality works with new structure
+- [ ] Add error handling improvements
+- [ ] Add performance optimizations
+
+### Progress Made:
+- [x] Updated main GameBoardView.swift to use @StateObject for viewState
+- [x] Replaced magic numbers with GameBoardConstants throughout
+- [x] Updated action handlers to use new state management
+- [x] Updated animation references to use viewState
+- [x] Updated UI state references (settings, badge legend, etc.)
+- [x] Updated card selection logic to use viewState
+- [x] Updated tap handling to use new state management
+- [x] Removed duplicate methods that are now in extension files
+
 ## Phase 3: Add GameBoard Controls
 
 ### End Game Button

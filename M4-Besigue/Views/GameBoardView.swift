@@ -1,43 +1,38 @@
 import SwiftUI
 
+/// Displays the main game board with all players, cards, and interactions
+/// - Parameters:
+///   - game: The main game state object
+///   - settings: User preferences and settings
+///   - gameRules: Game rules and configuration
+///   - onEndGame: Closure called when ending the game
 struct GameBoardView: View {
     @ObservedObject var game: Game
     @ObservedObject var settings: GameSettings
     @ObservedObject var gameRules: GameRules
     let onEndGame: () -> Void
-    @State private var selectedCards: [PlayerCard] = []
-    @State private var showingMeldOptions = false
-    @State private var showingSettings = false
-    @State private var showingBadgeLegend = false
-    @State private var showInvalidMeld: Bool = false
-    @State private var shakeMeldButton: Bool = false
-    @Namespace private var drawPileNamespace
-    @State private var animatingDrawnCard: PlayerCard? = nil
-    @State private var showDrawAnimation: Bool = false
-    @State private var isSinglePlayerMode: Bool = false
-    @State private var tapCount: Int = 0
-    @State private var lastTapTime: Date = Date()
+    
+    // MARK: - State Management
+    @StateObject var viewState = GameBoardViewState()
     
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Blue background for player areas
+                // Background for player areas
                 Rectangle()
-                    .fill(Color(hex: "#016A16").opacity(0.3))
+                    .fill(GameBoardConstants.Colors.backgroundGreen)
                     .edgesIgnoringSafeArea(.all)
                 
-            VStack(spacing: 0) {
-                    // Elegant scoreboard like TestTableLayoutView
+                VStack(spacing: 0) {
+                    // Elegant scoreboard
                     GameScoreboardView(game: game, settings: settings)
                     
-                    // Main game table area with TestTableLayoutView structure
+                    // Main game table area
                     ZStack {
-                        RoundedRectangle(cornerRadius: 40)
-                            .fill(Color(hex: "#016A16").opacity(0.2))
-                            .stroke(Color(hex: "#016A16"), lineWidth: 4)
+                        RoundedRectangle(cornerRadius: GameBoardConstants.extraLargeCornerRadius)
+                            .fill(GameBoardConstants.Colors.tableGreen)
+                            .stroke(GameBoardConstants.Colors.primaryGreen, lineWidth: GameBoardConstants.strokeWidth)
                             .padding(40)
-                        
-
                         
                         // Concentric squares content
                         concentricSquaresContent(playerCount: game.players.count, geometry: geometry)
@@ -47,52 +42,44 @@ struct GameBoardView: View {
                 
                 // Floating buttons overlay at top right
                 .overlay(
-                    HStack(spacing: 10) {
+                    HStack(spacing: GameBoardConstants.buttonSpacing) {
                         // End Game button or Start New Game (setup phase)
                         if game.currentPhase == .setup {
-                            Button(action: {
-                                game.startNewGame()
-                            }) {
+                            Button(action: handleStartNewGame) {
                                 Image(systemName: "play.circle.fill")
                             }
                             .buttonStyle(FloatingButtonStyle())
                             .scaleEffect(1.0)
-                            .animation(.easeInOut(duration: 0.1), value: true)
+                            .animation(.easeInOut(duration: GameBoardConstants.buttonAnimationDuration), value: true)
                         } else {
-                            Button(action: {
-                                onEndGame()
-                            }) {
+                            Button(action: handleEndGame) {
                                 Image(systemName: "xmark.circle.fill")
                             }
                             .buttonStyle(FloatingButtonStyle())
                             .scaleEffect(1.0)
-                            .animation(.easeInOut(duration: 0.1), value: true)
+                            .animation(.easeInOut(duration: GameBoardConstants.buttonAnimationDuration), value: true)
                         }
                         
                         // Settings button
-                        Button(action: {
-                            showingSettings = true
-                        }) {
+                        Button(action: handleShowSettings) {
                             Image(systemName: "gearshape.fill")
                         }
                         .buttonStyle(FloatingButtonStyle())
                         .scaleEffect(1.0)
-                        .animation(.easeInOut(duration: 0.1), value: true)
+                        .animation(.easeInOut(duration: GameBoardConstants.buttonAnimationDuration), value: true)
                         
                         // Save Game button - only show when not in setup
                         if game.currentPhase != .setup {
-                            Button(action: {
-                                saveGame()
-                            }) {
+                            Button(action: handleSaveGame) {
                                 Image(systemName: "square.and.arrow.down.fill")
                             }
                             .buttonStyle(FloatingButtonStyle())
                             .scaleEffect(1.0)
-                            .animation(.easeInOut(duration: 0.1), value: true)
+                            .animation(.easeInOut(duration: GameBoardConstants.buttonAnimationDuration), value: true)
                         }
                     }
-                    .padding(.trailing, 16)
-                    .padding(.top, 12),
+                    .padding(.trailing, GameBoardConstants.buttonPadding)
+                    .padding(.top, GameBoardConstants.topButtonPadding),
                     alignment: .topTrailing
                 )
             }
@@ -100,73 +87,22 @@ struct GameBoardView: View {
         .onAppear {
             // GameBoardView appeared
         }
-        .sheet(isPresented: $showingMeldOptions) {
-            MeldOptionsView(game: self.game, settings: self.settings, selectedCards: $selectedCards)
+        .sheet(isPresented: $viewState.showingMeldOptions) {
+            MeldOptionsView(game: self.game, settings: self.settings, selectedCards: $viewState.selectedCards)
         }
-        .sheet(isPresented: $showingSettings) {
+        .sheet(isPresented: $viewState.showingSettings) {
             SettingsView(settings: self.settings)
         }
-        .sheet(isPresented: $showingBadgeLegend) {
+        .sheet(isPresented: $viewState.showingBadgeLegend) {
             BadgeLegendView()
         }
     }
     
-    // MARK: - Game Scoreboard View (like TestTableLayoutView)
-    private func GameScoreboardView(game: Game, settings: GameSettings) -> some View {
-        VStack(spacing: 8) {
-            Text("BÉSIGUE - \(game.players.count) Players")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(Color(hex: "#D21034"))
-                .shadow(color: Color(hex: "#F1B517"), radius: 1, x: 0.5, y: 0.5)
-            
-            gameScoreboardGrid(game: game)
-        }
-        .padding()
-        .background(Color.white.opacity(0.95))
-        .shadow(radius: 2)
-    }
-    
-    private func gameScoreboardGrid(game: Game) -> some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: game.players.count), spacing: 10) {
-            ForEach(0..<game.players.count, id: \.self) { index in
-                gamePlayerScoreCard(player: game.players[index], isCurrentPlayer: index == game.currentPlayerIndex)
-            }
-        }
-                    .padding(.horizontal)
-    }
-    
-    private func gamePlayerScoreCard(player: Player, isCurrentPlayer: Bool) -> some View {
-        VStack(spacing: 4) {
-            Text(player.name)
-                .font(.caption)
-                .fontWeight(.medium)
-                .shadow(color: Color(hex: "#F1B517"), radius: 1, x: 0.5, y: 0.5)
-            
-            HStack(spacing: 8) {
-                Text("Score: \(player.score)")
-                    .font(.caption2)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color(hex: "#F1B517").opacity(0.8))
-                    .cornerRadius(4)
-                
-                Text("Tricks: \(player.tricksWon)")
-                    .font(.caption2)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color(hex: "#D21034").opacity(0.8))
-                    .cornerRadius(4)
-            }
-        }
-        .padding(8)
-        .background(isCurrentPlayer ? Color(hex: "#016A16").opacity(0.2) : Color.gray.opacity(0.1))
-        .cornerRadius(8)
-    }
+
     
     // MARK: - Game Concentric Squares Content
     private func gameConcentricSquaresContent(geometry: GeometryProxy) -> some View {
-        let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
+        let center = getGameBoardCenter(geometry: geometry)
         return ZStack {
             ForEach(0..<self.game.players.count, id: \.self) { index in
                 let pos = getPlayerPositions(index: index, playerCount: self.game.players.count, center: center, geometry: geometry)
@@ -185,171 +121,23 @@ struct GameBoardView: View {
         }
     }
     
-    // MARK: - Game Player Views (styled like TestTableLayoutView)
-    private func gamePlayerNameView(for index: Int, at position: CGPoint) -> some View {
-        let player = self.game.players[index]
-        let isCurrentPlayer = index == self.game.currentPlayerIndex
-        
-        return Text(player.name)
-            .font(.caption.bold())
-            .foregroundColor(.white)
-            .padding(6)
-            .background(isCurrentPlayer ? Color(hex: "#016A16") : Color(hex: "#D21034"))
-            .cornerRadius(6)
-            .shadow(color: Color(hex: "#F1B517"), radius: 2, x: 1, y: 1)
-            .position(position)
-    }
-    
-    private func gamePlayerHandView(for index: Int, at position: CGPoint, isHorizontal: Bool, angle: Double) -> some View {
-        let player = self.game.players[index]
-        let isCurrentPlayer = index == self.game.currentPlayerIndex
-        
-        return Group {
-            if isCurrentPlayer && !player.held.isEmpty {
-                // Current player: show actual cards without scrolling
-                HStack(spacing: -20) {
-                    ForEach(player.held) { card in
-                        let isSelected = selectedCards.contains(card)
-                        CardView(
-                            card: card,
-                            isSelected: isSelected,
-                            isPlayable: true,
-                            showHint: false
-                        ) {
-                            handleCardSelection(card)
-                        }
-                        .onTapGesture(count: 2) {
-                            handleCardPlayed(card)
-                        }
-                        .scaleEffect(isSelected ? 1.1 : 1.0)
-                        .shadow(color: isSelected ? Color(hex: "#D21034").opacity(0.5) : .clear, radius: isSelected ? 8 : 0)
-                        .animation(.easeInOut(duration: 0.2), value: isSelected)
-                    }
-                }
-                .frame(width: isHorizontal ? 600 : 160, height: isHorizontal ? 160 : 600)
-            } else if game.currentPhase == .setup {
-                // Setup phase: show placeholder
-                Text("Setup Phase")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .padding(8)
-                    .background(Color.white.opacity(0.8))
-                    .cornerRadius(6)
-            } else {
-                // Other players: show card backs oriented as if held by that player
-                VStack {
-                    if isHorizontal {
-                        HStack(spacing: -40) {
-                            ForEach(0..<player.held.count, id: \.self) { cardIndex in
-                                CardBackView { }
-                                    .frame(width: 50, height: 70)
-                                    .rotationEffect(.degrees(180 + getCardRotation(for: angle))) // Face toward the player + angle rotation
-                                    .offset(x: CGFloat(cardIndex) * 8) // Increased overlap like top player
-                            }
-                        }
-                    } else {
-                        VStack(spacing: -60) {
-                            ForEach(0..<player.held.count, id: \.self) { cardIndex in
-                                CardBackView { }
-                                    .frame(width: 50, height: 70)
-                                    .rotationEffect(.degrees(180 + getCardRotation(for: angle))) // Face toward the player + angle rotation
-                                    .offset(y: CGFloat(cardIndex) * 8) // Increased overlap like top player
-                            }
-                        }
-                    }
-                }
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(hex: "#016A16").opacity(0.1))
-                        .stroke(Color(hex: "#016A16"), lineWidth: 1)
-                )
-            }
-        }
-        .position(position)
-    }
-    
-    private func gamePlayerMeldView(for index: Int, at position: CGPoint, isHorizontal: Bool) -> some View {
-        let player = self.game.players[index]
-        
-        return Group {
-            if !player.melded.isEmpty {
-                // Show actual melded cards with existing badging system
-                VStack {
-                    if isHorizontal {
-                        HStack(spacing: 4) {
-                            ForEach(player.getMeldedCardsInOrder(), id: \.id) { card in
-                                VStack(spacing: 2) {
-                                    // Card face
-                                    Image(card.imageName)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(width: 40, height: 56)
-                                        .cornerRadius(4)
-                                    
-                                    // Badge row (simplified for smaller cards)
-                                    HStack(spacing: 1) {
-                                        ForEach(0..<min(2, card.usedInMeldTypes.count), id: \.self) { badgeIndex in
-                                            let meldType = Array(card.usedInMeldTypes)[badgeIndex]
-                                            Text(badgeIcon(for: meldType, card: card))
-                                                .font(.system(size: 12, weight: .bold))
-                                                .foregroundColor(.black)
-                                                .frame(width: 12, height: 12)
-                                                .background(Color.white)
-                                                .clipShape(Circle())
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        VStack(spacing: 4) {
-                            ForEach(player.getMeldedCardsInOrder(), id: \.id) { card in
-                                VStack(spacing: 2) {
-                                    // Card face
-                                    Image(card.imageName)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(width: 40, height: 56)
-                                        .cornerRadius(4)
-                                    
-                                    // Badge row (simplified for smaller cards)
-                                    HStack(spacing: 1) {
-                                        ForEach(0..<min(2, card.usedInMeldTypes.count), id: \.self) { badgeIndex in
-                                            let meldType = Array(card.usedInMeldTypes)[badgeIndex]
-                                            Text(badgeIcon(for: meldType, card: card))
-                                                .font(.system(size: 12, weight: .bold))
-                                                .foregroundColor(.black)
-                                                .frame(width: 12, height: 12)
-                                                .background(Color.white)
-                                                .clipShape(Circle())
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(hex: "#016A16").opacity(0.1))
-                        .stroke(Color(hex: "#016A16"), lineWidth: 1)
-                )
-            }
-        }
-        .position(position)
-    }
+    // MARK: - Game Player Views (delegated to extension)
+    // These methods are now implemented in GameBoardView+PlayerViews.swift
+    // They use GameBoardConstants for consistent styling and viewState for state management
     
     private func gameTrickAreaView(at center: CGPoint) -> some View {
+        let trickFrame = getTrickAreaFrame()
+        
         return Group {
             if self.game.currentTrick.isEmpty {
                 // Show placeholder like TestTableLayoutView
                 VStack(spacing: 4) {
                     Text("TRICK AREA")
                         .font(.caption).bold()
-                        .foregroundColor(.green)
+                        .foregroundColor(GameBoardConstants.Colors.primaryGreen)
                     Text("Cards played here")
                         .font(.caption2)
-                        .foregroundColor(.green)
+                        .foregroundColor(GameBoardConstants.Colors.primaryGreen)
                 }
                 .frame(width: 100)
                 .fixedSize()
@@ -361,7 +149,7 @@ struct GameBoardView: View {
                     settings: self.settings,
                     gameRules: self.gameRules
                 )
-                .frame(width: 200, height: 150)
+                .frame(width: trickFrame.width, height: trickFrame.height)
             }
         }
         .position(x: center.x, y: center.y)
@@ -411,7 +199,7 @@ struct GameBoardView: View {
                 HandView(
                     cards: player.held,
                     playableCards: player.held,
-                    selectedCards: selectedCards,
+                    selectedCards: viewState.selectedCards,
                     onCardTap: { card in
                         handleCardSelection(card)
                     },
@@ -473,50 +261,7 @@ struct GameBoardView: View {
         .position(position)
     }
     
-    // MARK: - Player Position Calculation (Proper Concentric Square System)
-    private func getPlayerPositions(index: Int, playerCount: Int, center: CGPoint, geometry: GeometryProxy) -> (avatarPosition: CGPoint, handPosition: CGPoint, meldPosition: CGPoint, isHorizontal: Bool, angle: Double) {
-        let minSide = min(geometry.size.width, geometry.size.height)
-        let radiusFactors: [CGFloat] = [0.85, 0.65, 0.45]
 
-        // Define direction vectors for bottom, right, top, left with angles
-        let directions: [(dx: CGFloat, dy: CGFloat, isHorizontal: Bool, angle: Double)] = [
-            (0, 1, true, 90),     // bottom
-            (1, 0, true, 0),      // right
-            (0, -1, true, 270),   // top
-            (-1, 0, true, 180)    // left
-        ]
-
-        let playerOrder: [Int]
-        switch playerCount {
-        case 2: playerOrder = [0, 2]  // bottom, top
-        case 3: playerOrder = [0, 2, 1]  // bottom, top, right
-        case 4: playerOrder = [0, 2, 1, 3]  // bottom, top, right, left
-        default: playerOrder = []
-        }
-
-        guard index < playerOrder.count else {
-            return (center, center, center, true, 0)
-        }
-
-        let posIndex = playerOrder[index]
-        let direction = directions[posIndex]
-
-        func positionOnAxis(radiusFactor: CGFloat) -> CGPoint {
-            let radius = minSide * radiusFactor / 2
-            return CGPoint(
-                x: center.x + direction.dx * radius,
-                y: center.y + direction.dy * radius
-            )
-        }
-
-        return (
-            avatarPosition: positionOnAxis(radiusFactor: radiusFactors[0]),
-            handPosition: positionOnAxis(radiusFactor: radiusFactors[1]),
-            meldPosition: positionOnAxis(radiusFactor: radiusFactors[2]),
-            isHorizontal: direction.isHorizontal,
-            angle: direction.angle
-        )
-    }
     
     // MARK: - Draw Pile View
     private func drawPileView(center: CGPoint, geometry: GeometryProxy) -> some View {
@@ -575,18 +320,7 @@ struct GameBoardView: View {
         print("Draw pile tapped")
     }
     
-    private func handleCardSelection(_ card: PlayerCard) {
-        if selectedCards.contains(card) {
-            selectedCards.removeAll { $0.id == card.id }
-        } else {
-            selectedCards.append(card)
-        }
-    }
-    
-    private func handleCardPlayed(_ card: PlayerCard) {
-        // Handle card being played
-        print("Card played: \(card)")
-    }
+
     
     // MARK: - Menu Area with Single Player Mode Badge
     private var menuAreaView: some View {
@@ -601,7 +335,7 @@ struct GameBoardView: View {
             .cornerRadius(6)
             
             Button("Settings") {
-                showingSettings = true
+                viewState.showSettings()
             }
             .font(.caption)
             .padding(.horizontal, 8)
@@ -634,7 +368,7 @@ struct GameBoardView: View {
             .cornerRadius(6)
             
             // Single Player Mode Badge (stationary in menu)
-            if isSinglePlayerMode {
+            if viewState.isSinglePlayerMode {
                 HStack(spacing: 4) {
                     Image(systemName: "person.fill")
                         .foregroundColor(.purple)
@@ -657,7 +391,7 @@ struct GameBoardView: View {
             Spacer()
             
             Button("Badge Legend") {
-                showingBadgeLegend = true
+                viewState.showBadgeLegend()
             }
             .font(.caption)
             .padding(.horizontal, 8)
@@ -694,21 +428,7 @@ struct GameBoardView: View {
         .cornerRadius(8)
     }
     
-    // MARK: - Triple Tap Handler
-    private func handleScoreTap() {
-        let now = Date()
-        if now.timeIntervalSince(lastTapTime) < 1.0 {
-            tapCount += 1
-            if tapCount >= 3 {
-                isSinglePlayerMode.toggle()
-                tapCount = 0
-                print("🎮 Single Player Mode: \(isSinglePlayerMode ? "ON" : "OFF")")
-            }
-        } else {
-            tapCount = 1
-        }
-        lastTapTime = now
-    }
+
     
     // MARK: - Global Messages Area (Dynamic Single Message)
     private var globalMessagesView: some View {
@@ -717,21 +437,21 @@ struct GameBoardView: View {
                 // Priority 1: Trick winner message (Green theme)
                 HStack(spacing: 6) {
                     Image(systemName: "trophy.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(GameBoardConstants.Colors.primaryGreen)
                         .font(.title3)
                     Text("\(winnerName) wins the trick!")
                         .font(.headline)
                         .fontWeight(.bold)
-                        .foregroundColor(.green)
+                        .foregroundColor(GameBoardConstants.Colors.primaryGreen)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, GameBoardConstants.horizontalPadding)
                 .padding(.vertical, 8)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: GameBoardConstants.largeCornerRadius)
                         .fill(.ultraThinMaterial)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.green.opacity(0.3), lineWidth: 2)
+                            RoundedRectangle(cornerRadius: GameBoardConstants.largeCornerRadius)
+                                .stroke(GameBoardConstants.Colors.strokeGreen, lineWidth: GameBoardConstants.mediumStrokeWidth)
                         )
                 )
             } else if self.game.currentPhase == .playing {
@@ -745,14 +465,14 @@ struct GameBoardView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.blue)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, GameBoardConstants.horizontalPadding)
                 .padding(.vertical, 8)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: GameBoardConstants.largeCornerRadius)
                         .fill(.ultraThinMaterial)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.blue.opacity(0.3), lineWidth: 2)
+                            RoundedRectangle(cornerRadius: GameBoardConstants.largeCornerRadius)
+                                .stroke(GameBoardConstants.Colors.strokeBlue, lineWidth: GameBoardConstants.mediumStrokeWidth)
                         )
                 )
             } else {
@@ -760,31 +480,31 @@ struct GameBoardView: View {
                 if let dealer = self.game.players.first(where: { $0.isDealer }) {
                     HStack(spacing: 6) {
                         Image(systemName: "crown.fill")
-                            .foregroundColor(.yellow)
+                            .foregroundColor(GameBoardConstants.Colors.primaryGold)
                             .font(.title3)
                         Text("Dealer: \(dealer.name)")
                             .font(.headline)
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, GameBoardConstants.horizontalPadding)
                     .padding(.vertical, 8)
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: GameBoardConstants.largeCornerRadius)
                             .fill(.ultraThinMaterial)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.yellow.opacity(0.3), lineWidth: 2)
+                                RoundedRectangle(cornerRadius: GameBoardConstants.largeCornerRadius)
+                                    .stroke(GameBoardConstants.Colors.primaryGold.opacity(0.3), lineWidth: GameBoardConstants.mediumStrokeWidth)
                             )
                     )
                 }
             }
         }
         .frame(maxWidth: .infinity)
-        .animation(.easeInOut(duration: 0.3), value: self.game.currentPhase)
-        .animation(.easeInOut(duration: 0.3), value: self.game.currentPlayerIndex)
-        .animation(.easeInOut(duration: 0.3), value: self.game.isShowingTrickResult)
-        .animation(.easeInOut(duration: 0.3), value: self.game.lastTrickWinner)
+        .animation(.easeInOut(duration: GameBoardConstants.animationDuration), value: self.game.currentPhase)
+        .animation(.easeInOut(duration: GameBoardConstants.animationDuration), value: self.game.currentPlayerIndex)
+        .animation(.easeInOut(duration: GameBoardConstants.animationDuration), value: self.game.isShowingTrickResult)
+        .animation(.easeInOut(duration: GameBoardConstants.animationDuration), value: self.game.lastTrickWinner)
     }
     
     // MARK: - Player-Specific Messages Area
@@ -918,7 +638,7 @@ struct GameBoardView: View {
     private var badgeLegendButton: some View {
         HStack {
             Spacer()
-            Button(action: { showingBadgeLegend = true }) {
+            Button(action: { viewState.showBadgeLegend() }) {
                 HStack(spacing: 4) {
                     Image(systemName: "info.circle")
                     Text("Meld Badges")
@@ -1023,7 +743,7 @@ struct GameBoardView: View {
                         // Row 2: The card
                         CardView(
                             card: card,
-                            isSelected: selectedCards.contains(card),
+                            isSelected: viewState.selectedCards.contains(card),
                             isPlayable: true, // All melded cards are playable
                             showHint: false,
                             onTap: { handleCardTap(card) }
@@ -1111,7 +831,7 @@ struct GameBoardView: View {
         .overlay(
             // Card drawing animation overlay
             Group {
-                if showDrawAnimation {
+                if viewState.showDrawAnimation {
                     CardDrawAnimationView(
                         fromPosition: settings.drawPilePosition
                     )
@@ -1161,7 +881,7 @@ struct GameBoardView: View {
             HandView(
                 cards: currentPlayer.held,
                 playableCards: playableCards,
-                selectedCards: selectedCards,
+                selectedCards: viewState.selectedCards,
                 showHintFor: []
             ) { card in
                 if isCurrentPlayer {
@@ -1355,15 +1075,15 @@ struct GameBoardView: View {
                 .font(.subheadline)
                 .foregroundColor(.blue)
                 .bold()
-            if !selectedCards.isEmpty {
-                Text("Selected: \(selectedCards.count) cards")
+            if !viewState.selectedCards.isEmpty {
+                Text("Selected: \(viewState.selectedCards.count) cards")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            if selectedCards.count >= 2 && selectedCards.count <= 4 {
-                let selectedIDs = Set(selectedCards.map { $0.id })
+            if viewState.selectedCards.count >= 2 && viewState.selectedCards.count <= 4 {
+                let selectedIDs = Set(viewState.selectedCards.map { $0.id })
                 let possibleMelds = game.getPossibleMelds(for: player).filter { meld in
-                    meld.cardIDs.count == selectedCards.count && Set(meld.cardIDs) == selectedIDs
+                    meld.cardIDs.count == viewState.selectedCards.count && Set(meld.cardIDs) == selectedIDs
                 }
                 if !possibleMelds.isEmpty {
                     Text("Possible melds:")
@@ -1442,7 +1162,7 @@ struct GameBoardView: View {
                             // Row 2: The card
                             CardView(
                                 card: card,
-                                isSelected: selectedCards.contains(card),
+                                isSelected: viewState.selectedCards.contains(card),
                                 isPlayable: true, // All melded cards are playable
                                 showHint: false,
                                 onTap: { handleCardTap(card) }
@@ -1479,19 +1199,19 @@ struct GameBoardView: View {
         print("   Current player type: \(game.currentPlayer.type)")
         print("   Awaiting meld choice: \(game.awaitingMeldChoice)")
         print("   Can player meld: \(game.canPlayerMeld)")
-        print("   Selected cards count: \(selectedCards.count)")
+        print("   Selected cards count: \(viewState.selectedCards.count)")
         
         return HStack(spacing: 15) {
             // Play Card button: when a card is selected and it's the player's turn to play
             if game.currentPhase == .playing && 
                game.currentPlayer.id == player.id && 
                !game.awaitingMeldChoice && 
-               !selectedCards.isEmpty && 
+               !viewState.selectedCards.isEmpty && 
                game.canPlayCard() {
                 Button(action: {
-                    if let cardToPlay = selectedCards.first {
+                    if let cardToPlay = viewState.selectedCards.first {
                         game.playCard(cardToPlay, from: player)
-                        selectedCards.removeAll()
+                        viewState.selectedCards.removeAll()
                     }
                 }) {
                     HStack(spacing: 4) {
@@ -1504,19 +1224,19 @@ struct GameBoardView: View {
             }
             
             // Declare Meld button: only for trick winner during meld choice and 2-4 cards selected
-            if game.awaitingMeldChoice && game.currentPlayer.type == .human && game.canPlayerMeld && selectedCards.count >= 2 && selectedCards.count <= 4 && player.id == game.trickWinnerId {
+            if game.awaitingMeldChoice && game.currentPlayer.type == .human && game.canPlayerMeld && viewState.selectedCards.count >= 2 && viewState.selectedCards.count <= 4 && player.id == game.trickWinnerId {
                 Button(action: {
                     print("🔍 MELD BUTTON PRESSED:")
                     print("   Awaiting meld choice: \(game.awaitingMeldChoice)")
                     print("   Current player type: \(game.currentPlayer.type)")
-                    print("   Selected cards count: \(selectedCards.count)")
-                    print("   Selected cards: \(selectedCards.map { $0.displayName })")
+                    print("   Selected cards count: \(viewState.selectedCards.count)")
+                    print("   Selected cards: \(viewState.selectedCards.map { $0.displayName })")
 
                     let humanPlayer = game.currentPlayer
-                    if humanPlayer.type == .human, selectedCards.count >= 2, selectedCards.count <= 4 {
+                    if humanPlayer.type == .human, viewState.selectedCards.count >= 2, viewState.selectedCards.count <= 4 {
                         // Deduplicate selected cards to prevent duplicates in meld
-                        let uniqueSelectedCards = Array(Set(selectedCards))
-                        print("   Original selected cards: \(selectedCards.count)")
+                        let uniqueSelectedCards = Array(Set(viewState.selectedCards))
+                        print("   Original selected cards: \(viewState.selectedCards.count)")
                         print("   Unique selected cards: \(uniqueSelectedCards.count)")
                         
                         print("🔍 MELD CREATION DEBUG:")
@@ -1537,28 +1257,28 @@ struct GameBoardView: View {
                             if game.canDeclareMeld(meld, by: humanPlayer) {
                                 print("   Found meld: \(meld.type.name) with \(meld.cardIDs.count) cards")
                                 game.declareMeld(meld, by: humanPlayer)
-                                selectedCards.removeAll()
+                                viewState.selectedCards.removeAll()
                             } else {
                                 print("   ❌ Cannot declare meld")
                                 withAnimation(.default) {
-                                    shakeMeldButton.toggle()
-                                    showInvalidMeld = true
+                                    viewState.shakeMeldButton.toggle()
+                                    viewState.showInvalidMeld = true
                                 }
                                 game.playInvalidMeldAnimation()
                             }
                         } else {
                             print("   ❌ No valid meld found for selected cards")
                             withAnimation(.default) {
-                                shakeMeldButton.toggle()
-                                showInvalidMeld = true
+                                viewState.shakeMeldButton.toggle()
+                                viewState.showInvalidMeld = true
                             }
                             game.playInvalidMeldAnimation()
                         }
                     } else {
                         print("   ❌ Invalid card selection")
                         withAnimation(.default) {
-                            shakeMeldButton.toggle()
-                            showInvalidMeld = true
+                            viewState.shakeMeldButton.toggle()
+                            viewState.showInvalidMeld = true
                         }
                         game.playInvalidMeldAnimation()
                     }
@@ -1569,7 +1289,7 @@ struct GameBoardView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .modifier(Shake(animatableData: CGFloat(shakeMeldButton ? 1 : 0)))
+                .modifier(Shake(animatableData: CGFloat(viewState.shakeMeldButton ? 1 : 0)))
                 .font(.headline)
             }
             
@@ -1610,7 +1330,7 @@ struct GameBoardView: View {
                 .foregroundColor(Color(hex: "#D21034"))
                 
                 Button("Settings") {
-                    showingSettings = true
+                    viewState.showingSettings = true
                 }
                 .buttonStyle(.bordered)
                 .foregroundColor(Color(hex: "#D21034"))
@@ -1722,21 +1442,21 @@ struct GameBoardView: View {
         if game.awaitingMeldChoice && game.currentPlayer.type == .human && game.canPlayerMeld && game.currentPlayer.id == game.trickWinnerId {
             print("🎯 CARD TAP:")
             print("   Card: \(card.displayName) (ID: \(card.id))")
-            print("   Currently selected: \(selectedCards.map { "\($0.displayName) (ID: \($0.id))" })")
-            print("   Card already in selectedCards: \(selectedCards.contains(card))")
+            print("   Currently selected: \(viewState.selectedCards.map { "\($0.displayName) (ID: \($0.id))" })")
+            print("   Card already in selectedCards: \(viewState.selectedCards.contains(card))")
             
             // In melding phase, tap to select/deselect cards for melds
-            if selectedCards.contains(card) {
-                selectedCards.removeAll { $0 == card }
+            if viewState.selectedCards.contains(card) {
+                viewState.selectedCards.removeAll { $0 == card }
                 print("   ✅ Removed card from selection")
-            } else if selectedCards.count < 4 {
-                selectedCards.append(card)
+            } else if viewState.selectedCards.count < 4 {
+                viewState.selectedCards.append(card)
                 print("   ✅ Added card to selection")
             } else {
                 print("   ❌ Cannot add more cards (already have 4)")
             }
             
-            print("   Final selected cards: \(selectedCards.map { "\($0.displayName) (ID: \($0.id))" })")
+            print("   Final selected cards: \(viewState.selectedCards.map { "\($0.displayName) (ID: \($0.id))" })")
         }
         // At all other times, do not allow card selection for melding or play
     }
@@ -1757,7 +1477,7 @@ struct GameBoardView: View {
             print("✅ DOUBLE-TAP SUCCESS - Playing card")
             // Double-tap plays the card immediately using the current play cycle
             game.playCardForCurrentPlayTurn(card)
-            selectedCards.removeAll()
+            viewState.selectedCards.removeAll()
         } else {
             print("❌ DOUBLE-TAP FAILED - Conditions not met")
         }
@@ -1765,7 +1485,7 @@ struct GameBoardView: View {
     }
     
     // Helper function for badge icon
-    private func badgeIcon(for meldType: MeldType, card: PlayerCard) -> String {
+    func badgeIcon(for meldType: MeldType, card: PlayerCard) -> String {
         switch meldType {
         case .fourKings: return settings.badgeIcons.fourKingsIcon
         case .fourQueens: return settings.badgeIcons.fourQueensIcon
@@ -1788,10 +1508,10 @@ struct GameBoardView: View {
         let canDraw = game.currentPhase == .playing && game.isDrawCycle && game.currentPlayer.type == .human && !game.hasDrawnForNextTrick[game.currentPlayer.id, default: false] && !game.deck.isEmpty
         return Button(action: {
             if canDraw {
-                showDrawAnimation = true
+                viewState.showDrawAnimation = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                     game.drawCardForCurrentDrawTurn()
-                    showDrawAnimation = false
+                    viewState.showDrawAnimation = false
                 }
             }
         }) {
@@ -1834,7 +1554,7 @@ struct GameBoardView: View {
         )
         .overlay(
             Group {
-                if showDrawAnimation, let card = animatingDrawnCard {
+                if viewState.showDrawAnimation, let card = viewState.animatingDrawnCard {
                     DrawCardAnimationView(card: card)
                 }
             }
@@ -1880,7 +1600,7 @@ struct GameBoardView: View {
         return HandView(
             cards: heldCards,
             playableCards: canPlay ? playableCards : [],
-            selectedCards: selectedCards,
+            selectedCards: viewState.selectedCards,
             showHintFor: possibleMeldCards
         ) { card in
             if canPlay {
@@ -1908,7 +1628,7 @@ struct GameBoardView: View {
                     ForEach(meldedCards) { card in
                         MeldedCardWithBadgesView(
                             card: card,
-                            isSelected: selectedCards.contains(card),
+                            isSelected: viewState.selectedCards.contains(card),
                             isPlayable: game.getPlayableCards().contains { $0.id == card.id },
                             onTap: { handleCardTap(card) },
                             onDoubleTap: { handleCardDoubleTap(card) },
