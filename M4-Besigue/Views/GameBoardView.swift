@@ -37,30 +37,7 @@ struct GameBoardView: View {
                             .stroke(Color(hex: "#016A16"), lineWidth: 4)
                             .padding(40)
                         
-                        // Debug info
-                        VStack {
-                            Text("Phase: \(game.currentPhase)")
-                                .font(.caption)
-                                .foregroundColor(Color(hex: "#D21034"))
-                            Text("Players: \(game.players.count)")
-                                .font(.caption)
-                                .foregroundColor(Color(hex: "#D21034"))
-                            Text("Current Player: \(game.currentPlayerIndex)")
-                                .font(.caption)
-                                .foregroundColor(Color(hex: "#D21034"))
-                            if !game.players.isEmpty {
-                                Text("Player 0 cards: \(game.players[0].held.count)")
-                                    .font(.caption)
-                                    .foregroundColor(Color(hex: "#D21034"))
-                                Text("Player 0 held: \(game.players[0].held.map { $0.imageName }.joined(separator: ", "))")
-                                    .font(.caption2)
-                                    .foregroundColor(Color(hex: "#D21034"))
-                            }
-                            Text("Deck cards: \(game.deck.cards.count)")
-                                .font(.caption)
-                                .foregroundColor(Color(hex: "#D21034"))
-                        }
-                        .position(x: 100, y: 100)
+
                         
                         // Concentric squares content
                         concentricSquaresContent(playerCount: game.players.count, geometry: geometry)
@@ -68,10 +45,10 @@ struct GameBoardView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 
-                // Floating corner buttons
+                // Floating buttons in upper right corner
                 VStack {
-                    HStack {
-                        // End Game button (upper left) or Start New Game (setup phase)
+                    HStack(spacing: 10) {
+                        // End Game button or Start New Game (setup phase)
                         if game.currentPhase == .setup {
                             Button(action: {
                                 game.startNewGame()
@@ -92,9 +69,7 @@ struct GameBoardView: View {
                             .animation(.easeInOut(duration: 0.1), value: true)
                         }
                         
-                        Spacer()
-                        
-                        // Settings button (upper center)
+                        // Settings button
                         Button(action: {
                             showingSettings = true
                         }) {
@@ -104,9 +79,7 @@ struct GameBoardView: View {
                         .scaleEffect(1.0)
                         .animation(.easeInOut(duration: 0.1), value: true)
                         
-                        Spacer()
-                        
-                        // Save Game button (upper right) - only show when not in setup
+                        // Save Game button - only show when not in setup
                         if game.currentPhase != .setup {
                             Button(action: {
                                 saveGame()
@@ -116,26 +89,18 @@ struct GameBoardView: View {
                             .buttonStyle(FloatingButtonStyle())
                             .scaleEffect(1.0)
                             .animation(.easeInOut(duration: 0.1), value: true)
-                        } else {
-                            // Placeholder for setup phase to maintain layout
-                            Color.clear
-                                .frame(width: 50, height: 50)
                         }
                     }
-                    .padding(.horizontal, 20)
                     .padding(.top, 10)
+                    .padding(.trailing, 20)
                     
                     Spacer()
                 }
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
         .onAppear {
-            print("🎮 GameBoardView appeared - Players: \(self.game.players.count), Current: \(self.game.currentPlayerIndex)")
-            print("🎮 GameBoardView - Game phase: \(self.game.currentPhase)")
-            print("🎮 GameBoardView - Game object ID: \(ObjectIdentifier(self.game))")
-            print("🎮 GameBoardView - Players: \(self.game.players.map { "\($0.name) (\($0.type))" })")
-            print("🎮 GameBoardView - Current player: \(self.game.currentPlayer.name)")
-            print("🎮 GameBoardView - Current player cards: \(self.game.currentPlayer.hand.count)")
+            // GameBoardView appeared
         }
         .sheet(isPresented: $showingMeldOptions) {
             MeldOptionsView(game: self.game, settings: self.settings, selectedCards: $selectedCards)
@@ -559,9 +524,9 @@ struct GameBoardView: View {
         // Define direction vectors for bottom, right, top, left
         let directions: [(dx: CGFloat, dy: CGFloat, isHorizontal: Bool)] = [
             (0, 1, true),    // bottom
-            (1, 0, false),   // right
+            (1, 0, true),    // right - horizontal cards for side players
             (0, -1, true),   // top
-            (-1, 0, false)   // left
+            (-1, 0, true)    // left - horizontal cards for side players
         ]
 
         let playerOrder: [Int]
@@ -1799,7 +1764,6 @@ struct GameBoardView: View {
     // MARK: - Save Game Function
     private func saveGame() {
         // TODO: Implement save game functionality
-        print("🎮 Save Game button tapped - functionality to be implemented")
     }
     
     // MARK: - Computed Properties
