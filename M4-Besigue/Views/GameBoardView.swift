@@ -18,70 +18,12 @@ struct GameBoardView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Background for player areas
                 Rectangle()
                     .fill(GameBoardConstants.Colors.backgroundGreen)
                     .edgesIgnoringSafeArea(.all)
                 
-                VStack(spacing: 0) {
-                    // Elegant scoreboard
-                    GameScoreboardView(game: game, settings: settings)
-                    
-                    // Main game table area
-                    ZStack {
-                        RoundedRectangle(cornerRadius: GameBoardConstants.extraLargeCornerRadius)
-                            .fill(GameBoardConstants.Colors.tableGreen)
-                            .stroke(GameBoardConstants.Colors.primaryGreen, lineWidth: GameBoardConstants.strokeWidth)
-                            .padding(40)
-                        
-                        // Concentric squares content
-                        concentricSquaresContent(playerCount: game.players.count, geometry: geometry)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                
-                // Floating buttons overlay at top right
-                .overlay(
-                    HStack(spacing: GameBoardConstants.buttonSpacing) {
-                        // End Game button or Start New Game (setup phase)
-                        if game.currentPhase == .setup {
-                            Button(action: handleStartNewGame) {
-                                Image(systemName: "play.circle.fill")
-                            }
-                            .buttonStyle(FloatingButtonStyle())
-                            .scaleEffect(1.0)
-                            .animation(.easeInOut(duration: GameBoardConstants.buttonAnimationDuration), value: true)
-                        } else {
-                            Button(action: handleEndGame) {
-                                Image(systemName: "xmark.circle.fill")
-                            }
-                            .buttonStyle(FloatingButtonStyle())
-                            .scaleEffect(1.0)
-                            .animation(.easeInOut(duration: GameBoardConstants.buttonAnimationDuration), value: true)
-                        }
-                        
-                        // Settings button
-                        Button(action: handleShowSettings) {
-                            Image(systemName: "gearshape.fill")
-                        }
-                        .buttonStyle(FloatingButtonStyle())
-                        .scaleEffect(1.0)
-                        .animation(.easeInOut(duration: GameBoardConstants.buttonAnimationDuration), value: true)
-                        
-                        // Save Game button - only show when not in setup
-                        if game.currentPhase != .setup {
-                            Button(action: handleSaveGame) {
-                                Image(systemName: "square.and.arrow.down.fill")
-                            }
-                            .buttonStyle(FloatingButtonStyle())
-                            .scaleEffect(1.0)
-                            .animation(.easeInOut(duration: GameBoardConstants.buttonAnimationDuration), value: true)
-                        }
-                    }
-                    .padding(.trailing, GameBoardConstants.buttonPadding)
-                    .padding(.top, GameBoardConstants.topButtonPadding),
-                    alignment: .topTrailing
-                )
+                // Use the new responsive content method
+                responsiveContent(geometry: geometry)
             }
         }
         .onAppear {
@@ -1382,7 +1324,7 @@ struct GameBoardView: View {
 
     // MARK: - Concentric Squares Content (Circular Layout)
     /// Displays all players centered around the trick area in a circular layout, aligned symmetrically.
-    private func concentricSquaresContent(playerCount: Int, geometry: GeometryProxy) -> some View {
+    func concentricSquaresContent(playerCount: Int, geometry: GeometryProxy, config: DynamicLayoutConfig? = nil) -> some View {
         let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
         let minSide = min(geometry.size.width, geometry.size.height)
 
@@ -1437,7 +1379,7 @@ struct GameBoardView: View {
     }
     
     // MARK: - Actions
-    private func handleCardTap(_ card: PlayerCard) {
+    func handleCardTap(_ card: PlayerCard) {
         // Only allow card selection for melding when the current player is the trick winner
         if game.awaitingMeldChoice && game.currentPlayer.type == .human && game.canPlayerMeld && game.currentPlayer.id == game.trickWinnerId {
             print("🎯 CARD TAP:")
@@ -1462,7 +1404,7 @@ struct GameBoardView: View {
     }
     
     // Handle double-tap to play card
-    private func handleCardDoubleTap(_ card: PlayerCard) {
+    func handleCardDoubleTap(_ card: PlayerCard) {
         print("🎯 DOUBLE-TAP ATTEMPT:")
         print("   Card: \(card.displayName)")
         print("   Current player: \(game.currentPlayer.name)")
