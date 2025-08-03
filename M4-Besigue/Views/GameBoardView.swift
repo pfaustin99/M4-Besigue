@@ -45,8 +45,8 @@ struct GameBoardView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 
-                // Floating buttons in upper right corner
-                VStack {
+                // Floating buttons overlay at top right
+                .overlay(
                     HStack(spacing: 10) {
                         // End Game button or Start New Game (setup phase)
                         if game.currentPhase == .setup {
@@ -91,12 +91,10 @@ struct GameBoardView: View {
                             .animation(.easeInOut(duration: 0.1), value: true)
                         }
                     }
-                    .padding(.top, 10)
-                    .padding(.trailing, 20)
-                    
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.trailing, 16)
+                    .padding(.top, 12),
+                    alignment: .topTrailing
+                )
             }
         }
         .onAppear {
@@ -369,52 +367,7 @@ struct GameBoardView: View {
         .position(x: center.x, y: center.y)
     }
     
-    // MARK: - Square Table Layout (keeping for reference)
-    private func squareTableLayout(geometry: GeometryProxy) -> some View {
-        let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
-        let minSide = min(geometry.size.width, geometry.size.height)
-        
-        return ZStack {
-            // Main table area - green rounded rectangle like TestTableLayoutView
-            RoundedRectangle(cornerRadius: 40)
-                .fill(Color.green.opacity(0.2))
-                .stroke(Color.green, lineWidth: 4)
-                .padding(40)
-            
-            // Central trick area (Zone A - 0.25) - perfectly centered
-            TrickView(
-                cards: self.game.currentTrick,
-                game: self.game,
-                settings: self.settings,
-                gameRules: self.gameRules
-            )
-            .frame(width: minSide * 0.25, height: minSide * 0.25)
-            .background(Color.white.opacity(0.1))
-            .cornerRadius(12)
-            .position(center)
-            
-            // Player zones positioned using the exact same logic as TestTableLayoutView
-            ForEach(0..<self.game.players.count, id: \.self) { playerIndex in
-                let pos = getPlayerPositions(index: playerIndex, playerCount: self.game.players.count, center: center, geometry: geometry)
-                
-                Group {
-                    // Player name and status (Zone D - 0.85)
-                    playerNameView(for: playerIndex, at: pos.avatarPosition)
-                    
-                    // Player's hand (Zone C - 0.65)
-                    playerHandView(for: playerIndex, at: pos.handPosition, isHorizontal: pos.isHorizontal, angle: pos.angle)
-                    
-                    // Player's melds (Zone B - 0.45) - only for non-current players
-                    if playerIndex != 0 {
-                        playerMeldView(for: playerIndex, at: pos.meldPosition, isHorizontal: pos.isHorizontal)
-                    }
-                }
-            }
-            
-            // Draw pile positioned based on player count and dealer
-            drawPileView(center: center, geometry: geometry)
-        }
-    }
+
     
     // MARK: - Player View Helpers (matching TestTableLayoutView exactly)
     private func playerNameView(for index: Int, at position: CGPoint) -> some View {
@@ -899,101 +852,7 @@ struct GameBoardView: View {
         .fixedSize()
     }
     
-    // MARK: - 2-Player Main Area
-    private func twoPlayerMainArea() -> some View {
-        let currentPlayer = self.game.players[self.game.currentPlayerIndex]
-        
-        return VStack(spacing: 0) {
-            if isSinglePlayerMode {
-                // Single Player Mode: Active player's hand at bottom, rotated to your view
-                singlePlayerLayout(currentPlayer: currentPlayer)
-            } else {
-                // Normal Mode: Current player at bottom
-                normalTwoPlayerLayout(currentPlayer: currentPlayer)
-            }
-        }
-        .onAppear {
-            print("🎯 2-Player layout - Current: \(currentPlayer.name), Single Player: \(isSinglePlayerMode)")
-        }
-    }
-    
-    // MARK: - Single Player Layout (for testing)
-    private func singlePlayerLayout(currentPlayer: Player) -> some View {
-        VStack(spacing: 0) {
-            // Player info and meld instructions
-            playerInfoView(currentPlayer)
-            if self.game.canPlayerMeld && currentPlayer.type == .human && currentPlayer.id == game.trickWinnerId {
-                meldInstructionsView(currentPlayer)
-            }
-            if !currentPlayer.meldsDeclared.isEmpty {
-                meldsAreaView(currentPlayer)
-            }
-            actionButtonsView(currentPlayer)
-            
-            // Active player's hand (face up, interactive) - rotated to your view
-            VStack(spacing: 4) {
-                Text("\(currentPlayer.name) (Your Turn)")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.blue)
-                
-                // Use HandView for drag-and-drop support
-                HandView(
-                    cards: currentPlayer.held,
-                    playableCards: currentPlayer.held, // All cards playable in single player mode
-                    selectedCards: self.selectedCards,
-                    showHintFor: []
-                ) { card in
-                    handleCardTap(card)
-                } onDoubleTap: { card in
-                    handleCardDoubleTap(card)
-                } onReorder: { newOrder in
-                    // Update the player's held cards order
-                    currentPlayer.held = newOrder
-                }
-            }
-            .padding(.top, 8)
-            .padding(.bottom, 16)
-        }
-        .onChange(of: self.game.currentPlayerIndex) { _, newIndex in
-            // In single player mode, automatically switch to the current player's hand
-            // This ensures the trick winner's hand becomes active
-            print("🎮 Single Player Mode: Switched to \(self.game.players[newIndex].name)'s hand")
-        }
-    }
-    
-    // MARK: - Normal Two Player Layout
-    private func normalTwoPlayerLayout(currentPlayer: Player) -> some View {
-        VStack(spacing: 0) {
-            // Player info and meld instructions
-            playerInfoView(currentPlayer)
-            if self.game.canPlayerMeld && currentPlayer.type == .human && currentPlayer.id == game.trickWinnerId {
-                meldInstructionsView(currentPlayer)
-            }
-            if !currentPlayer.melded.isEmpty {
-                meldedCardsAreaView(currentPlayer)
-            }
-            actionButtonsView(currentPlayer)
-            HandView(
-                cards: currentPlayer.held,
-                playableCards: game.getPlayableCards(),
-                selectedCards: selectedCards,
-                showHintFor: []
-            ) { card in
-                if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
-                    handleCardTap(card)
-                }
-            } onDoubleTap: { card in
-                if game.currentPlayerIndex == game.players.firstIndex(where: { $0.id == currentPlayer.id }) {
-                    handleCardDoubleTap(card)
-                }
-            } onReorder: { newOrder in
-                currentPlayer.held = newOrder
-            }
-            .padding(.top, 8)
-            .padding(.bottom, 16)
-        }
-    }
+
     
     // MARK: - Top Section
     private var topSection: some View {
