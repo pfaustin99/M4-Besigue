@@ -175,7 +175,7 @@ struct GameBoardView: View {
                 
                 Group {
                     gamePlayerNameView(for: index, at: pos.avatarPosition)
-                    gamePlayerHandView(for: index, at: pos.handPosition, isHorizontal: pos.isHorizontal)
+                    gamePlayerHandView(for: index, at: pos.handPosition, isHorizontal: pos.isHorizontal, angle: pos.angle)
                     if index != 0 {
                         gamePlayerMeldView(for: index, at: pos.meldPosition, isHorizontal: pos.isHorizontal)
                     }
@@ -202,7 +202,7 @@ struct GameBoardView: View {
             .position(position)
     }
     
-    private func gamePlayerHandView(for index: Int, at position: CGPoint, isHorizontal: Bool) -> some View {
+    private func gamePlayerHandView(for index: Int, at position: CGPoint, isHorizontal: Bool, angle: Double) -> some View {
         let player = self.game.players[index]
         let isCurrentPlayer = index == self.game.currentPlayerIndex
         
@@ -241,21 +241,21 @@ struct GameBoardView: View {
                 // Other players: show card backs oriented as if held by that player
                 VStack {
                     if isHorizontal {
-                        HStack(spacing: -15) {
+                        HStack(spacing: -20) {
                             ForEach(0..<player.held.count, id: \.self) { cardIndex in
                                 CardBackView { }
                                     .frame(width: 50, height: 70)
-                                    .rotationEffect(.degrees(180)) // Face toward the player
-                                    .offset(x: CGFloat(cardIndex) * 2) // Slight overlap
+                                    .rotationEffect(.degrees(180 + getCardRotation(for: angle))) // Face toward the player + angle rotation
+                                    .offset(x: CGFloat(cardIndex) * 8) // Increased overlap like top player
                             }
                         }
                     } else {
-                        VStack(spacing: -15) {
+                        VStack(spacing: -20) {
                             ForEach(0..<player.held.count, id: \.self) { cardIndex in
                                 CardBackView { }
                                     .frame(width: 50, height: 70)
-                                    .rotationEffect(.degrees(180)) // Face toward the player
-                                    .offset(y: CGFloat(cardIndex) * 2) // Slight overlap
+                                    .rotationEffect(.degrees(180 + getCardRotation(for: angle))) // Face toward the player + angle rotation
+                                    .offset(y: CGFloat(cardIndex) * 8) // Increased overlap like top player
                             }
                         }
                     }
@@ -402,7 +402,7 @@ struct GameBoardView: View {
                     playerNameView(for: playerIndex, at: pos.avatarPosition)
                     
                     // Player's hand (Zone C - 0.65)
-                    playerHandView(for: playerIndex, at: pos.handPosition, isHorizontal: pos.isHorizontal)
+                    playerHandView(for: playerIndex, at: pos.handPosition, isHorizontal: pos.isHorizontal, angle: pos.angle)
                     
                     // Player's melds (Zone B - 0.45) - only for non-current players
                     if playerIndex != 0 {
@@ -448,7 +448,7 @@ struct GameBoardView: View {
         .position(position)
     }
 
-    private func playerHandView(for index: Int, at position: CGPoint, isHorizontal: Bool) -> some View {
+    private func playerHandView(for index: Int, at position: CGPoint, isHorizontal: Bool, angle: Double) -> some View {
         let player = self.game.players[index]
         let isCurrentPlayer = index == self.game.currentPlayerIndex
         
@@ -472,16 +472,20 @@ struct GameBoardView: View {
                 Group {
                     if isHorizontal {
                         HStack(spacing: -20) {
-                            ForEach(player.hand, id: \.id) { _ in
-                                            CardBackView { }
+                            ForEach(Array(player.hand.enumerated()), id: \.element.id) { cardIndex, _ in
+                                CardBackView { }
                                     .frame(width: 60, height: 84) // Scaled down for other players
+                                    .rotationEffect(.degrees(180 + getCardRotation(for: angle))) // Face toward the player + angle rotation
+                                    .offset(x: CGFloat(cardIndex) * 8) // Increased overlap like top player
                             }
                         }
                     } else {
                         VStack(spacing: -20) {
-                            ForEach(player.hand, id: \.id) { _ in
+                            ForEach(Array(player.hand.enumerated()), id: \.element.id) { cardIndex, _ in
                                 CardBackView { }
                                     .frame(width: 60, height: 84) // Scaled down for other players
+                                    .rotationEffect(.degrees(180 + getCardRotation(for: angle))) // Face toward the player + angle rotation
+                                    .offset(y: CGFloat(cardIndex) * 8) // Increased overlap like top player
                             }
                         }
                     }
@@ -517,16 +521,16 @@ struct GameBoardView: View {
     }
     
     // MARK: - Player Position Calculation (Proper Concentric Square System)
-    private func getPlayerPositions(index: Int, playerCount: Int, center: CGPoint, geometry: GeometryProxy) -> (avatarPosition: CGPoint, handPosition: CGPoint, meldPosition: CGPoint, isHorizontal: Bool) {
+    private func getPlayerPositions(index: Int, playerCount: Int, center: CGPoint, geometry: GeometryProxy) -> (avatarPosition: CGPoint, handPosition: CGPoint, meldPosition: CGPoint, isHorizontal: Bool, angle: Double) {
         let minSide = min(geometry.size.width, geometry.size.height)
         let radiusFactors: [CGFloat] = [0.85, 0.65, 0.45]
 
-        // Define direction vectors for bottom, right, top, left
-        let directions: [(dx: CGFloat, dy: CGFloat, isHorizontal: Bool)] = [
-            (0, 1, true),    // bottom
-            (1, 0, true),    // right - horizontal cards for side players
-            (0, -1, true),   // top
-            (-1, 0, true)    // left - horizontal cards for side players
+        // Define direction vectors for bottom, right, top, left with angles
+        let directions: [(dx: CGFloat, dy: CGFloat, isHorizontal: Bool, angle: Double)] = [
+            (0, 1, true, 90),     // bottom
+            (1, 0, true, 0),      // right
+            (0, -1, true, 270),   // top
+            (-1, 0, true, 180)    // left
         ]
 
         let playerOrder: [Int]
@@ -538,7 +542,7 @@ struct GameBoardView: View {
         }
 
         guard index < playerOrder.count else {
-            return (center, center, center, true)
+            return (center, center, center, true, 0)
         }
 
         let posIndex = playerOrder[index]
@@ -556,7 +560,8 @@ struct GameBoardView: View {
             avatarPosition: positionOnAxis(radiusFactor: radiusFactors[0]),
             handPosition: positionOnAxis(radiusFactor: radiusFactors[1]),
             meldPosition: positionOnAxis(radiusFactor: radiusFactors[2]),
-            isHorizontal: direction.isHorizontal
+            isHorizontal: direction.isHorizontal,
+            angle: direction.angle
         )
     }
     
@@ -1841,7 +1846,7 @@ struct GameBoardView: View {
 
                 Group {
                     gamePlayerNameView(for: index, at: avatarPoint)
-                    gamePlayerHandView(for: index, at: handPoint, isHorizontal: isHorizontal)
+                    gamePlayerHandView(for: index, at: handPoint, isHorizontal: isHorizontal, angle: angle)
                     if index != 0 {
                         gamePlayerMeldView(for: index, at: meldPoint, isHorizontal: isHorizontal)
                     }
@@ -2856,6 +2861,27 @@ struct MeldedCardDropDelegate: DropDelegate {
     
     func dropExited(info: DropInfo) {
         // Clear visual feedback when leaving drop target
+    }
+}
+
+// MARK: - Helper Functions
+private func getCardRotation(for angle: Double) -> Double {
+    // Determine proper card rotation based on player position
+    switch angle {
+    case 90:   // Bottom player
+        return 0    // Cards horizontal and face up
+    case 270:  // Top player  
+        return 0    // Cards horizontal and face up
+    case 180:  // Left player
+        return 90   // Cards rotated 90° to stand vertically
+    case 0:    // Right player (4 players)
+        return 90   // Cards rotated 90° to stand vertically
+    case 330:  // Right player (3 players)
+        return 90   // Cards rotated 90° to stand vertically
+    case 210:  // Left player (3 players)
+        return 90   // Cards rotated 90° to stand vertically
+    default:
+        return 0    // Default to horizontal
     }
 }
 
