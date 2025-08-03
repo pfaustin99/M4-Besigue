@@ -241,7 +241,7 @@ struct GameBoardView: View {
                 // Other players: show card backs oriented as if held by that player
                 VStack {
                     if isHorizontal {
-                        HStack(spacing: -20) {
+                        HStack(spacing: -40) {
                             ForEach(0..<player.held.count, id: \.self) { cardIndex in
                                 CardBackView { }
                                     .frame(width: 50, height: 70)
@@ -250,7 +250,7 @@ struct GameBoardView: View {
                             }
                         }
                     } else {
-                        VStack(spacing: -20) {
+                        VStack(spacing: -60) {
                             ForEach(0..<player.held.count, id: \.self) { cardIndex in
                                 CardBackView { }
                                     .frame(width: 50, height: 70)
@@ -471,7 +471,7 @@ struct GameBoardView: View {
                 // Other players: show card backs
                 Group {
                     if isHorizontal {
-                        HStack(spacing: -20) {
+                        HStack(spacing: -40) {
                             ForEach(Array(player.hand.enumerated()), id: \.element.id) { cardIndex, _ in
                                 CardBackView { }
                                     .frame(width: 60, height: 84) // Scaled down for other players
@@ -480,7 +480,7 @@ struct GameBoardView: View {
                             }
                         }
                     } else {
-                        VStack(spacing: -20) {
+                        VStack(spacing: -60) {
                             ForEach(Array(player.hand.enumerated()), id: \.element.id) { cardIndex, _ in
                                 CardBackView { }
                                     .frame(width: 60, height: 84) // Scaled down for other players
