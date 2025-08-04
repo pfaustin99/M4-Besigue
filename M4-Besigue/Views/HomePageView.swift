@@ -88,7 +88,7 @@ struct HomePageView: View {
                 )
                 .onAppear {
                     print("🎮 fullScreenCover triggered - isGameActive: \(isGameActive)")
-                    print("🎮 Game object: \(game != nil ? "exists" : "nil")")
+                    print("🎮 Game object: exists")
                     print("🎮 Game object ID at fullScreenCover: \(ObjectIdentifier(game))")
                     print("🎮 Presenting GameBoardView with \(game.players.count) players")
                 }
@@ -663,36 +663,365 @@ struct HowToPlayView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("How to Play Bésigue")
+                    // Header
+                    Text("How to Play Haitian Bésigue")
                         .font(.title)
                         .fontWeight(.bold)
+                        .foregroundColor(Color(hex: "00209F"))
                         .padding(.bottom, 10)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
                     
-                    Text("Bésigue is a trick-taking card game for 2-4 players. The goal is to score points by winning tricks and forming melds.")
+                    // Objective
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("🎯 Objective")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        Text("Score points by winning tricks containing Aces and 10s (called 'brisques') and by declaring valuable card combinations known as melds. The first player to reach the target score wins!")
+                            .font(.body)
+                    }
+                    
+                    // Deck Information
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("🃏 Game Deck: 132 Cards")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Four 32-card Piquet decks + 4 Jokers")
+                                .font(.subheadline)
+                                .padding(8)
+                                .background(Color(hex: "F1B517").opacity(0.2))
+                                .cornerRadius(8)
+                            
+                            HStack {
+                                ForEach(["A", "10", "K", "Q", "J", "9", "8", "7"], id: \.self) { rank in
+                                    SimpleCardView(rank: rank, suit: "♠", isRed: false, isJoker: false)
+                                }
+                            }
+                            
+                            HStack {
+                                ForEach(["A", "10", "K", "Q"], id: \.self) { rank in
+                                    SimpleCardView(rank: rank, suit: "♥", isRed: true, isJoker: false)
+                                }
+                                SimpleCardView(rank: "🃏", suit: "", isRed: false, isJoker: true)
+                            }
+                            
+                            Text("Card Ranking: A (high), 10, K, Q, J, 9, 8, 7 (low)")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    
+                    // Setup
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("🎲 Setup")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        Text("• Players draw cards until someone draws a Jack - that player becomes the dealer\n• Each player receives 9 cards, dealt in groups of 3\n• Gameplay proceeds to the right")
+                            .font(.body)
+                    }
+                    
+                    // Trump Suit
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("♠️ Trump Suit")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        Text("The trump suit is determined by the first Royal Marriage played (King and Queen of the same suit)")
+                            .font(.body)
+                            .padding(12)
+                            .background(Color(hex: "F1B517").opacity(0.2))
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color(hex: "F1B517"), lineWidth: 2)
+                            )
+                    }
+                    
+                    // Melds Section
+                    VStack(alignment: .leading, spacing: 15) {
+                        Text("🏆 Melds & Scoring")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        Text("⚠️ Important: Melds can only be declared AFTER a Royal Marriage establishes the trump suit!")
+                            .font(.subheadline)
+                            .foregroundColor(Color(hex: "D21034"))
+                            .fontWeight(.medium)
+                        
+                        // Bésigue
+                        MeldView(
+                            title: "Bésigue",
+                            points: "40 pts",
+                            description: "Queen of Spades + Jack of Diamonds",
+                            cards: [
+                                ("Q", "♠", false),
+                                ("J", "♦", true)
+                            ]
+                        )
+                        
+                        // Royal Marriage
+                        MeldView(
+                            title: "Royal Marriage",
+                            points: "40 pts",
+                            description: "King + Queen of Trump Suit",
+                            cards: [
+                                ("K", "♠", false),
+                                ("Q", "♠", false)
+                            ]
+                        )
+                        
+                        // Common Marriage
+                        MeldView(
+                            title: "Common Marriage",
+                            points: "20 pts",
+                            description: "King + Queen of Non-Trump Suit",
+                            cards: [
+                                ("K", "♥", true),
+                                ("Q", "♥", true)
+                            ]
+                        )
+                        
+                        // Four Aces
+                        MeldView(
+                            title: "Four Aces",
+                            points: "100 pts",
+                            description: "All four Aces (doubles to 200 if trump suit)",
+                            cards: [
+                                ("A", "♠", false),
+                                ("A", "♥", true),
+                                ("A", "♦", true),
+                                ("A", "♣", false)
+                            ]
+                        )
+                        
+                        // Four Kings
+                        MeldView(
+                            title: "Four Kings",
+                            points: "80 pts",
+                            description: "All four Kings (doubles to 160 if trump suit)",
+                            cards: [
+                                ("K", "♠", false),
+                                ("K", "♥", true),
+                                ("K", "♦", true),
+                                ("K", "♣", false)
+                            ]
+                        )
+                        
+                        // Four Queens
+                        MeldView(
+                            title: "Four Queens",
+                            points: "60 pts",
+                            description: "All four Queens (doubles to 120 if trump suit)",
+                            cards: [
+                                ("Q", "♠", false),
+                                ("Q", "♥", true),
+                                ("Q", "♦", true),
+                                ("Q", "♣", false)
+                            ]
+                        )
+                        
+                        // Four Jacks
+                        MeldView(
+                            title: "Four Jacks",
+                            points: "40 pts",
+                            description: "All four Jacks (doubles to 80 if trump suit)",
+                            cards: [
+                                ("J", "♠", false),
+                                ("J", "♥", true),
+                                ("J", "♦", true),
+                                ("J", "♣", false)
+                            ]
+                        )
+                        
+                        // Four Jokers
+                        MeldView(
+                            title: "Four Jokers",
+                            points: "200 pts",
+                            description: "All four Jokers",
+                            cards: [
+                                ("🃏", "", false),
+                                ("🃏", "", false),
+                                ("🃏", "", false),
+                                ("🃏", "", false)
+                            ],
+                            isJokerMeld: true
+                        )
+                        
+                        // Sequence
+                        MeldView(
+                            title: "Sequence (Trump Suit)",
+                            points: "250 pts",
+                            description: "A, 10, K, Q, J of Trump Suit",
+                            cards: [
+                                ("A", "♠", false),
+                                ("10", "♠", false),
+                                ("K", "♠", false),
+                                ("Q", "♠", false),
+                                ("J", "♠", false)
+                            ]
+                        )
+                    }
+                    
+                    // Joker Rules
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("🃏 Joker Rules")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("• Jokers can substitute for any card to complete Four of a Kind melds")
+                            Text("• Example: 3 Kings + 1 Joker = Four Kings meld")
+                        }
                         .font(.body)
+                        .padding(12)
+                        .background(Color(hex: "F1B517").opacity(0.1))
+                        .cornerRadius(10)
+                    }
                     
-                    Text("Game Setup:")
-                        .font(.headline)
-                        .fontWeight(.semibold)
+                    // Gameplay
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("🎮 Gameplay")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        Text("• Players take turns leading cards\n• Others must follow suit if possible\n• Highest card of led suit or highest trump wins\n• Trick winner draws first, then others in sequence\n• Players must maintain 8-9 cards while draw pile has cards")
+                            .font(.body)
+                    }
                     
-                    Text("• Each player is dealt 9 cards\n• The remaining cards form the draw pile\n• Players take turns playing cards and drawing new ones")
+                    // Scoring System
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("📊 Scoring System")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Brisques (Aces & 10s)")
+                                Spacer()
+                                Text("10 pts each")
+                                    .foregroundColor(Color(hex: "016A16"))
+                                    .fontWeight(.semibold)
+                            }
+                            
+                            HStack {
+                                Text("Insufficient Brisques")
+                                Spacer()
+                                Text("-20 pts")
+                                    .foregroundColor(Color(hex: "D21034"))
+                                    .fontWeight(.semibold)
+                            }
+                            
+                            HStack {
+                                Text("7 of Trump Suit")
+                                Spacer()
+                                Text("+10 pts")
+                                    .foregroundColor(Color(hex: "016A16"))
+                                    .fontWeight(.semibold)
+                            }
+                            
+                            Text("Note: Need minimum 5 brisques to count")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        .padding(12)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(10)
+                    }
+                    
+                    // The Dog Rules
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("🐕 'The Dog' Special Rules")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        Text("The player with the lowest score becomes 'The Dog':")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("• Starts next game at -20 points")
+                            Text("• Cannot speak without King's permission")
+                            Text("• Must bark when Bésigue meld is played")
+                            Text("• Must say 'Man, this game is so hard for me!' when 7 of trump is played")
+                            Text("• Counts to 10 for each player's turn")
+                            Text("• Cannot place the first Royal Marriage")
+                        }
                         .font(.body)
+                        .padding(12)
+                        .background(Color(hex: "D21034").opacity(0.1))
+                        .cornerRadius(10)
+                    }
                     
-                    Text("Scoring:")
-                        .font(.headline)
-                        .fontWeight(.semibold)
+                    // Winning
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("🏁 Winning the Game")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("4 Players:")
+                                Spacer()
+                                Text("750 points")
+                                    .foregroundColor(Color(hex: "016A16"))
+                                    .fontWeight(.semibold)
+                            }
+                            
+                            HStack {
+                                Text("2-3 Players:")
+                                Spacer()
+                                Text("1000 points")
+                                    .foregroundColor(Color(hex: "016A16"))
+                                    .fontWeight(.semibold)
+                            }
+                            
+                            Text("Note: In 4-player games, brisques don't count after 600 points")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        .padding(12)
+                        .background(Color(hex: "016A16").opacity(0.1))
+                        .cornerRadius(10)
+                    }
                     
-                    Text("• Win tricks to score points\n• Form melds (sets of cards) for bonus points\n• The player with the highest score at the end wins")
-                        .font(.body)
+                    // Table Rankings
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("👑 Table Rankings")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        Text("King: Highest scorer, gets +20 points next game\n2nd Place: Sits to King's right\n3rd Place: May be replaced by standby players\nThe Dog: Lowest scorer, follows special rules")
+                            .font(.body)
+                    }
                     
-                    Text("Playing a Trick:")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    Text("• Each player plays one card\n• The highest card of the led suit wins the trick\n• Trump cards beat all other cards")
-                        .font(.body)
+                    // Strategy Tips
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("💡 Strategy Tips")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: "00209F"))
+                        
+                        Text("• Early Game: Focus on establishing trump suit with Royal Marriage\n• Mid Game: Collect cards for high-value melds\n• Late Game: Count brisques and avoid becoming The Dog\n• Trump Management: Control trump cards for critical tricks")
+                            .font(.body)
+                            .padding(12)
+                            .background(Color(hex: "F1B517").opacity(0.1))
+                            .cornerRadius(10)
+                    }
                 }
                 .padding()
             }
@@ -703,6 +1032,90 @@ struct HowToPlayView: View {
         }
     }
 }
+
+// MARK: - Supporting Views
+
+struct MeldView: View {
+    let title: String
+    let points: String
+    let description: String
+    let cards: [(String, String, Bool)]
+    var isJokerMeld: Bool = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color(hex: "00209F"))
+                
+                Spacer()
+                
+                Text(points)
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color(hex: "016A16"))
+                    .cornerRadius(12)
+            }
+            
+            HStack(spacing: 4) {
+                ForEach(Array(cards.enumerated()), id: \.offset) { index, card in
+                    SimpleCardView(
+                        rank: card.0,
+                        suit: card.1,
+                        isRed: card.2,
+                        isJoker: isJokerMeld || card.0 == "🃏"
+                    )
+                }
+            }
+            
+            Text(description)
+                .font(.caption)
+                .foregroundColor(.gray)
+        }
+        .padding(12)
+        .background(Color.white)
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Simple Card View for HomePage
+struct SimpleCardView: View {
+    let rank: String
+    let suit: String
+    let isRed: Bool
+    let isJoker: Bool
+    
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(rank)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(isRed ? .red : .black)
+            
+            Text(suit)
+                .font(.system(size: 16))
+                .foregroundColor(isRed ? .red : .black)
+        }
+        .frame(width: 30, height: 40)
+        .background(Color.white)
+        .cornerRadius(4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Color Extension
+// Note: Color hex extension is defined in GameBoardView.swift to avoid duplication
 
 // MARK: - About View
 struct AboutView: View {
