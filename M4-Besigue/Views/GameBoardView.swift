@@ -42,26 +42,7 @@ struct GameBoardView: View {
     
 
     
-    // MARK: - Game Concentric Squares Content
-    private func gameConcentricSquaresContent(geometry: GeometryProxy) -> some View {
-        let center = getGameBoardCenter(geometry: geometry)
-        return ZStack {
-            ForEach(0..<self.game.players.count, id: \.self) { index in
-                let pos = getPlayerPositions(index: index, playerCount: self.game.players.count, center: center, geometry: geometry)
-                
-                Group {
-                    gamePlayerNameView(for: index, at: pos.avatarPosition)
-                    gamePlayerHandView(for: index, at: pos.handPosition, isHorizontal: pos.isHorizontal, angle: pos.angle)
-                    if index != 0 {
-                        gamePlayerMeldView(for: index, at: pos.meldPosition, isHorizontal: pos.isHorizontal)
-                    }
-                }
-            }
-            
-            // Trick area with actual cards
-            gameTrickAreaView(at: center)
-        }
-    }
+
     
     // MARK: - Game Player Views (delegated to extension)
     // These methods are now implemented in GameBoardView+PlayerViews.swift
@@ -99,109 +80,7 @@ struct GameBoardView: View {
     
 
     
-    // MARK: - Player View Helpers (matching TestTableLayoutView exactly)
-    private func playerNameView(for index: Int, at position: CGPoint) -> some View {
-        let player = self.game.players[index]
-        let isCurrentPlayer = index == self.game.currentPlayerIndex
-        
-        return VStack(spacing: 4) {
-                                    HStack {
-                Text(player.name)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(isCurrentPlayer ? .white : .secondary)
-                
-                if isCurrentPlayer {
-                    Image(systemName: "person.fill")
-                        .foregroundColor(.yellow)
-                        .font(.caption2)
-                }
-                
-                if player.type == .ai {
-                    Image(systemName: "cpu")
-                        .foregroundColor(.blue)
-                        .font(.caption2)
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(isCurrentPlayer ? Color.blue.opacity(0.3) : Color.black.opacity(0.2))
-            .cornerRadius(8)
-        }
-        .position(position)
-    }
 
-    private func playerHandView(for index: Int, at position: CGPoint, isHorizontal: Bool, angle: Double) -> some View {
-        let player = self.game.players[index]
-        let isCurrentPlayer = index == self.game.currentPlayerIndex
-        
-        return Group {
-            if isCurrentPlayer {
-                // Current player: show face-up cards with full functionality
-                HandView(
-                    cards: player.held,
-                    playableCards: player.held,
-                    selectedCards: viewState.selectedCards,
-                    onCardTap: { card in
-                        handleCardSelection(card)
-                    },
-                    onDoubleTap: { card in
-                        handleCardPlayed(card)
-                    }
-                )
-                .frame(width: isHorizontal ? 600 : 160, height: isHorizontal ? 160 : 600)
-            } else {
-                // Other players: show card backs
-                Group {
-                    if isHorizontal {
-                        HStack(spacing: -40) {
-                            ForEach(Array(player.hand.enumerated()), id: \.element.id) { cardIndex, _ in
-                                CardBackView { }
-                                    .frame(width: 60, height: 84) // Scaled down for other players
-                                    .rotationEffect(.degrees(180 + getCardRotation(for: angle))) // Face toward the player + angle rotation
-                                    .offset(x: CGFloat(cardIndex) * 8) // Increased overlap like top player
-                            }
-                        }
-                    } else {
-                        VStack(spacing: -60) {
-                            ForEach(Array(player.hand.enumerated()), id: \.element.id) { cardIndex, _ in
-                                CardBackView { }
-                                    .frame(width: 60, height: 84) // Scaled down for other players
-                                    .rotationEffect(.degrees(180 + getCardRotation(for: angle))) // Face toward the player + angle rotation
-                                    .offset(y: CGFloat(cardIndex) * 8) // Increased overlap like top player
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .position(position)
-    }
-
-    private func playerMeldView(for index: Int, at position: CGPoint, isHorizontal: Bool) -> some View {
-        let player = self.game.players[index]
-        
-        return Group {
-            if isHorizontal {
-                HStack(spacing: 4) {
-                    ForEach(0..<min(3, player.melded.count), id: \.self) { _ in
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.orange)
-                            .frame(width: 25, height: 35)
-                    }
-                }
-            } else {
-                VStack(spacing: 4) {
-                    ForEach(0..<min(3, player.melded.count), id: \.self) { _ in
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.orange)
-                            .frame(width: 25, height: 35)
-                    }
-                }
-            }
-        }
-        .position(position)
-    }
     
 
     
@@ -2382,27 +2261,6 @@ struct MeldedCardDropDelegate: DropDelegate {
     
     func dropExited(info: DropInfo) {
         // Clear visual feedback when leaving drop target
-    }
-}
-
-// MARK: - Helper Functions
-private func getCardRotation(for angle: Double) -> Double {
-    // Determine proper card rotation based on player position
-    switch angle {
-    case 90:   // Bottom player
-        return 0    // Cards horizontal and face up
-    case 270:  // Top player  
-        return 0    // Cards horizontal and face up
-    case 180:  // Left player
-        return 90   // Cards rotated 90° to stand vertically
-    case 0:    // Right player (4 players)
-        return 90   // Cards rotated 90° to stand vertically
-    case 330:  // Right player (3 players)
-        return 90   // Cards rotated 90° to stand vertically
-    case 210:  // Left player (3 players)
-        return 90   // Cards rotated 90° to stand vertically
-    default:
-        return 0    // Default to horizontal
     }
 }
 
