@@ -71,9 +71,11 @@ struct HomePageView: View {
         }
         .sheet(isPresented: $showingHowToPlay) {
             HowToPlayView()
+                .presentationDetents(getSheetDetents(for: getDeviceType(from: UIScreen.main.bounds.size)))
         }
         .sheet(isPresented: $showingAbout) {
             AboutView()
+                .presentationDetents(getSheetDetents(for: getDeviceType(from: UIScreen.main.bounds.size)))
         }
         .sheet(isPresented: $showingPrivacyPolicy) {
             PrivacyPolicyView()
@@ -489,6 +491,15 @@ struct HomePageView: View {
         }
     }
     
+    private func getSheetDetents(for deviceType: DeviceType) -> Set<PresentationDetent> {
+        switch deviceType {
+        case .iPad:
+            return [.large, .medium] // Larger sheet for iPad
+        default:
+            return [.medium] // Standard size for iPhone
+        }
+    }
+    
     // MARK: - Game Functions
     private func startGame() {
         print("🎮 startGame() called")
@@ -659,40 +670,117 @@ struct PrivacyPolicyView: View {
 struct HowToPlayView: View {
     @Environment(\.dismiss) private var dismiss
     
+    private var deviceType: DeviceType {
+        // Detect device type based on screen size
+        let screenSize = UIScreen.main.bounds.size
+        let minDimension = min(screenSize.width, screenSize.height)
+        let maxDimension = max(screenSize.width, screenSize.height)
+        
+        if maxDimension >= 1024 {
+            return .iPad
+        } else if minDimension >= 414 {
+            return .iPhonePlus
+        } else if minDimension >= 375 {
+            return .iPhoneRegular
+        } else {
+            return .iPhoneCompact
+        }
+    }
+    
+    private func getTitleFontSize() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 32
+        default:
+            return 28
+        }
+    }
+    
+    private func getHeadlineFontSize() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 24
+        default:
+            return 20
+        }
+    }
+    
+    private func getBodyFontSize() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 18
+        default:
+            return 16
+        }
+    }
+    
+    private func getSubheadlineFontSize() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 16
+        default:
+            return 14
+        }
+    }
+    
+    private func getCaptionFontSize() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 14
+        default:
+            return 12
+        }
+    }
+    
+    private func getSpacing() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 30
+        default:
+            return 20
+        }
+    }
+    
+    private func getSectionSpacing() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 15
+        default:
+            return 10
+        }
+    }
+    
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: getSpacing()) {
                     // Header
                     Text("How to Play Haitian Bésigue")
-                        .font(.title)
-                        .fontWeight(.bold)
+                        .font(.system(size: getTitleFontSize(), weight: .bold))
                         .foregroundColor(Color(hex: "00209F"))
                         .padding(.bottom, 10)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
                     
                     // Objective
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: getSectionSpacing()) {
                         Text("🎯 Objective")
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                            .font(.system(size: getHeadlineFontSize(), weight: .semibold))
                             .foregroundColor(Color(hex: "00209F"))
                         
                         Text("Score points by winning tricks containing Aces and 10s (called 'brisques') and by declaring valuable card combinations known as melds. The first player to reach the target score wins!")
-                            .font(.body)
+                            .font(.system(size: getBodyFontSize()))
                     }
                     
                     // Deck Information
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: getSectionSpacing()) {
                         Text("🃏 Game Deck: 132 Cards")
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                            .font(.system(size: getHeadlineFontSize(), weight: .semibold))
                             .foregroundColor(Color(hex: "00209F"))
                         
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Four 32-card Piquet decks + 4 Jokers")
-                                .font(.subheadline)
+                                .font(.system(size: getSubheadlineFontSize()))
                                 .padding(8)
                                 .background(Color(hex: "F1B517").opacity(0.2))
                                 .cornerRadius(8)
@@ -711,31 +799,29 @@ struct HowToPlayView: View {
                             }
                             
                             Text("Card Ranking: A (high), 10, K, Q, J, 9, 8, 7 (low)")
-                                .font(.caption)
+                                .font(.system(size: getCaptionFontSize()))
                                 .foregroundColor(.gray)
                         }
                     }
                     
                     // Setup
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: getSectionSpacing()) {
                         Text("🎲 Setup")
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                            .font(.system(size: getHeadlineFontSize(), weight: .semibold))
                             .foregroundColor(Color(hex: "00209F"))
                         
                         Text("• Players draw cards until someone draws a Jack - that player becomes the dealer\n• Each player receives 9 cards, dealt in groups of 3\n• Gameplay proceeds to the right")
-                            .font(.body)
+                            .font(.system(size: getBodyFontSize()))
                     }
                     
                     // Trump Suit
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: getSectionSpacing()) {
                         Text("♠️ Trump Suit")
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                            .font(.system(size: getHeadlineFontSize(), weight: .semibold))
                             .foregroundColor(Color(hex: "00209F"))
                         
                         Text("The trump suit is determined by the first Royal Marriage played (King and Queen of the same suit)")
-                            .font(.body)
+                            .font(.system(size: getBodyFontSize()))
                             .padding(12)
                             .background(Color(hex: "F1B517").opacity(0.2))
                             .cornerRadius(10)
@@ -748,14 +834,12 @@ struct HowToPlayView: View {
                     // Melds Section
                     VStack(alignment: .leading, spacing: 15) {
                         Text("🏆 Melds & Scoring")
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                            .font(.system(size: getHeadlineFontSize(), weight: .semibold))
                             .foregroundColor(Color(hex: "00209F"))
                         
                         Text("⚠️ Important: Melds can only be declared AFTER a Royal Marriage establishes the trump suit!")
-                            .font(.subheadline)
+                            .font(.system(size: getSubheadlineFontSize(), weight: .medium))
                             .foregroundColor(Color(hex: "D21034"))
-                            .fontWeight(.medium)
                         
                         // Bésigue
                         MeldView(
@@ -1042,19 +1126,60 @@ struct MeldView: View {
     let cards: [(String, String, Bool)]
     var isJokerMeld: Bool = false
     
+    private var deviceType: DeviceType {
+        let screenSize = UIScreen.main.bounds.size
+        let minDimension = min(screenSize.width, screenSize.height)
+        let maxDimension = max(screenSize.width, screenSize.height)
+        
+        if maxDimension >= 1024 {
+            return .iPad
+        } else if minDimension >= 414 {
+            return .iPhonePlus
+        } else if minDimension >= 375 {
+            return .iPhoneRegular
+        } else {
+            return .iPhoneCompact
+        }
+    }
+    
+    private func getSubheadlineFontSize() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 18
+        default:
+            return 14
+        }
+    }
+    
+    private func getCaptionFontSize() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 14
+        default:
+            return 12
+        }
+    }
+    
+    private func getPadding() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 16
+        default:
+            return 12
+        }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                    .font(.system(size: getSubheadlineFontSize(), weight: .semibold))
                     .foregroundColor(Color(hex: "00209F"))
                 
                 Spacer()
                 
                 Text(points)
-                    .font(.caption)
-                    .fontWeight(.bold)
+                    .font(.system(size: getCaptionFontSize(), weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -1074,10 +1199,10 @@ struct MeldView: View {
             }
             
             Text(description)
-                .font(.caption)
+                .font(.system(size: getCaptionFontSize()))
                 .foregroundColor(.gray)
         }
-        .padding(12)
+        .padding(getPadding())
         .background(Color.white)
         .cornerRadius(10)
         .overlay(
@@ -1094,23 +1219,61 @@ struct SimpleCardView: View {
     let isRed: Bool
     let isJoker: Bool
     
-    var body: some View {
-        VStack(spacing: 2) {
-            Text(rank)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(isRed ? .red : .black)
-            
-            Text(suit)
-                .font(.system(size: 16))
-                .foregroundColor(isRed ? .red : .black)
+    private var imageName: String {
+        if isJoker {
+            return "joker_red_1" // Use a joker image
         }
-        .frame(width: 30, height: 40)
-        .background(Color.white)
-        .cornerRadius(4)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-        )
+        
+        // Convert Unicode suit symbols to asset names
+        let suitName: String
+        switch suit {
+        case "♠":
+            suitName = "spades"
+        case "♥":
+            suitName = "hearts"
+        case "♦":
+            suitName = "diamonds"
+        case "♣":
+            suitName = "clubs"
+        default:
+            return "card_back" // Fallback for unknown suit
+        }
+        
+        // Handle special cases for rank
+        switch rank {
+        case "A":
+            return "\(suitName)_ace"
+        case "K":
+            return "\(suitName)_king"
+        case "Q":
+            return "\(suitName)_queen"
+        case "J":
+            return "\(suitName)_jack"
+        case "10":
+            return "\(suitName)_10"
+        case "9":
+            return "\(suitName)_9"
+        case "8":
+            return "\(suitName)_8"
+        case "7":
+            return "\(suitName)_7"
+        default:
+            return "card_back" // Fallback
+        }
+    }
+    
+    var body: some View {
+        Image(imageName)
+            .resizable()
+            .aspectRatio(2.5/3.5, contentMode: .fit)
+            .frame(width: 40, height: 56) // Smaller size for help section
+            .background(Color.white)
+            .cornerRadius(4)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 1)
     }
 }
 
@@ -1122,27 +1285,96 @@ struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showEasterEgg = false
     
+    private var deviceType: DeviceType {
+        let screenSize = UIScreen.main.bounds.size
+        let minDimension = min(screenSize.width, screenSize.height)
+        let maxDimension = max(screenSize.width, screenSize.height)
+        
+        if maxDimension >= 1024 {
+            return .iPad
+        } else if minDimension >= 414 {
+            return .iPhonePlus
+        } else if minDimension >= 375 {
+            return .iPhoneRegular
+        } else {
+            return .iPhoneCompact
+        }
+    }
+    
+    private func getTitleFontSize() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 32
+        default:
+            return 28
+        }
+    }
+    
+    private func getHeadlineFontSize() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 24
+        default:
+            return 20
+        }
+    }
+    
+    private func getBodyFontSize() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 18
+        default:
+            return 16
+        }
+    }
+    
+    private func getCaptionFontSize() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 16
+        default:
+            return 12
+        }
+    }
+    
+    private func getSpacing() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 40
+        default:
+            return 30
+        }
+    }
+    
+    private func getSectionSpacing() -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 20
+        default:
+            return 15
+        }
+    }
+    
     var body: some View {
         NavigationView {
-            VStack(spacing: 30) {
+            VStack(spacing: getSpacing()) {
                 Text("About Bésigue")
-                    .font(.title)
-                    .fontWeight(.bold)
+                    .font(.system(size: getTitleFontSize(), weight: .bold))
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
                 
-                VStack(spacing: 15) {
+                VStack(spacing: getSectionSpacing()) {
                     Text("Version 1.0")
-                        .font(.headline)
+                        .font(.system(size: getHeadlineFontSize()))
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
                     
                     Text("A modern implementation of the classic French card game Bésigue.")
-                        .font(.body)
+                        .font(.system(size: getBodyFontSize()))
                         .multilineTextAlignment(.center)
                     
                     Text("Developed with SwiftUI")
-                        .font(.caption)
+                        .font(.system(size: getCaptionFontSize()))
                         .foregroundColor(.gray)
                 }
                 
@@ -1152,7 +1384,7 @@ struct AboutView: View {
                     }
                 }) {
                     Text("Tap for a surprise!")
-                        .font(.caption)
+                        .font(.system(size: getCaptionFontSize()))
                         .foregroundColor(.blue)
                         .padding(.vertical, 10)
                         .padding(.horizontal, 20)
@@ -1162,7 +1394,7 @@ struct AboutView: View {
                 
                 if showEasterEgg {
                     Text("🎉 You found the easter egg! 🎉")
-                        .font(.headline)
+                        .font(.system(size: getHeadlineFontSize()))
                         .foregroundColor(.purple)
                         .transition(.scale.combined(with: .opacity))
                 }
