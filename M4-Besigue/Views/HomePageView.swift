@@ -47,11 +47,12 @@ struct HomePageView: View {
                         
                         // Bottom spacer to account for footer
                         Spacer()
-                            .frame(height: 100)
+                            .frame(height: deviceType == .iPad ? 150 : 100)  // More space for iPad to separate from footer
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.horizontal, getHorizontalPadding(for: deviceType, geometry: geometry))
                     .padding(.bottom, geometry.safeAreaInsets.bottom + 20)
+                    .offset(y: deviceType == .iPad ? -40 : 0)  // Move all iPad content up by 40 points
                 }
                 
                 // Configuration overlay
@@ -158,6 +159,12 @@ struct HomePageView: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .multilineTextAlignment(.center)
+            
+            // Add spacing between subtitle and cards for iPhone portrait only
+            if deviceType != .iPad && !isLandscape {
+                Spacer()
+                    .frame(height: getSubtitleToCardsSpacing(for: deviceType))
+            }
         }
     }
     
@@ -166,31 +173,15 @@ struct HomePageView: View {
         let cardSize = getMarriageCardSize(for: deviceType)
         let spacing = getMarriageCardSpacing(for: deviceType, geometry: geometry)
         
-        if deviceType == .iPad {
-            // iPad: Single row layout
-            HStack(spacing: spacing) {
-                MarriageCardView(suit: .hearts, angle: 10, cardSize: cardSize)
-                MarriageCardView(suit: .clubs, angle: 20, cardSize: cardSize)
-                MarriageCardView(suit: .diamonds, angle: -10, cardSize: cardSize)
-                MarriageCardView(suit: .spades, angle: -20, cardSize: cardSize)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, getHorizontalPadding(for: deviceType, geometry: geometry))
-        } else {
-            // iPhone: Two rows layout for better fit
-            VStack(spacing: spacing / 2) {
-                HStack(spacing: spacing) {
-                    MarriageCardView(suit: .hearts, angle: 10, cardSize: cardSize)
-                    MarriageCardView(suit: .clubs, angle: 20, cardSize: cardSize)
-                }
-                HStack(spacing: spacing) {
-                    MarriageCardView(suit: .diamonds, angle: -10, cardSize: cardSize)
-                    MarriageCardView(suit: .spades, angle: -20, cardSize: cardSize)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, getHorizontalPadding(for: deviceType, geometry: geometry))
+        // Single row layout for all devices
+        HStack(spacing: spacing) {
+            MarriageCardView(suit: .hearts, angle: 10, cardSize: cardSize)
+            MarriageCardView(suit: .clubs, angle: 20, cardSize: cardSize)
+            MarriageCardView(suit: .diamonds, angle: -10, cardSize: cardSize)
+            MarriageCardView(suit: .spades, angle: -20, cardSize: cardSize)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, getHorizontalPadding(for: deviceType, geometry: geometry))
     }
     
     @ViewBuilder
@@ -200,31 +191,15 @@ struct HomePageView: View {
         let labelFontSize = getButtonLabelFontSize(for: deviceType)
         let spacing = getButtonSpacing(for: deviceType, geometry: geometry)
         
-        if deviceType == .iPad {
-            // iPad: Single row layout
-            HStack(spacing: spacing) {
-                buttonColumn("play.fill", "Play", .black, { startGame() }, buttonSize, iconSize, labelFontSize)
-                buttonColumn("gearshape.fill", "Settings", .red, { showingConfiguration = true }, buttonSize, iconSize, labelFontSize)
-                buttonColumn("questionmark", "How to Play", .black, { showingHowToPlay = true }, buttonSize, iconSize, labelFontSize)
-                buttonColumn("info.circle.fill", "About", .red, { showingAbout = true }, buttonSize, iconSize, labelFontSize)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, getHorizontalPadding(for: deviceType, geometry: geometry))
-        } else {
-            // iPhone: Two rows layout
-            VStack(spacing: spacing / 2) {
-                HStack(spacing: spacing) {
-                    buttonColumn("play.fill", "Play", .black, { startGame() }, buttonSize, iconSize, labelFontSize)
-                    buttonColumn("gearshape.fill", "Settings", .red, { showingConfiguration = true }, buttonSize, iconSize, labelFontSize)
-                }
-                HStack(spacing: spacing) {
-                    buttonColumn("questionmark", "How to Play", .black, { showingHowToPlay = true }, buttonSize, iconSize, labelFontSize)
-                    buttonColumn("info.circle.fill", "About", .red, { showingAbout = true }, buttonSize, iconSize, labelFontSize)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, getHorizontalPadding(for: deviceType, geometry: geometry))
+        // Single row layout for all devices
+        HStack(spacing: spacing) {
+            buttonColumn("play.fill", "Play", .black, { startGame() }, buttonSize, iconSize, labelFontSize)
+            buttonColumn("gearshape.fill", "Settings", .red, { showingConfiguration = true }, buttonSize, iconSize, labelFontSize)
+            buttonColumn("questionmark", "Help", .black, { showingHowToPlay = true }, buttonSize, iconSize, labelFontSize)
+            buttonColumn("info.circle.fill", "About", .red, { showingAbout = true }, buttonSize, iconSize, labelFontSize)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, getHorizontalPadding(for: deviceType, geometry: geometry))
     }
     
     @ViewBuilder
@@ -291,6 +266,7 @@ struct HomePageView: View {
         .padding(.vertical, getFooterVerticalPadding(for: deviceType))
         .frame(maxWidth: .infinity)
         .background(Color.black.opacity(0.6))
+        .offset(y: deviceType == .iPad ? -30 : -50)  // Move iPad footer up by 30 points, iPhone by 50 points
         .padding(.bottom, geometry.safeAreaInsets.bottom + 5)
     }
     
@@ -300,24 +276,24 @@ struct HomePageView: View {
         case .iPad:
             return geometry.size.height * 0.06
         case .iPhonePlus:
-            return geometry.size.height * 0.045
+            return geometry.size.height * 0.035  // Reduced for single-line layout
         case .iPhoneRegular:
-            return geometry.size.height * 0.04
+            return geometry.size.height * 0.03   // Reduced for single-line layout
         case .iPhoneCompact:
-            return geometry.size.height * 0.035
+            return geometry.size.height * 0.025  // Reduced for single-line layout
         }
     }
     
     private func getTopSpacing(for deviceType: DeviceType, geometry: GeometryProxy) -> CGFloat {
         switch deviceType {
         case .iPad:
-            return geometry.size.height * 0.08
+            return geometry.size.height * 0.06  // Reduced from 0.08 to move title up and make room
         case .iPhonePlus:
-            return geometry.size.height * 0.06
+            return geometry.size.height * 0.04   // Reduced for more content space
         case .iPhoneRegular:
-            return geometry.size.height * 0.05
+            return geometry.size.height * 0.035  // Reduced for more content space
         case .iPhoneCompact:
-            return geometry.size.height * 0.04
+            return geometry.size.height * 0.03   // Reduced for more content space
         }
     }
     
@@ -326,27 +302,27 @@ struct HomePageView: View {
         case .iPad:
             return geometry.size.width * 0.08
         case .iPhonePlus:
-            return geometry.size.width * 0.06
+            return geometry.size.width * 0.04   // Reduced for more content space
         case .iPhoneRegular:
-            return geometry.size.width * 0.05
+            return geometry.size.width * 0.035  // Reduced for more content space
         case .iPhoneCompact:
-            return geometry.size.width * 0.04
+            return geometry.size.width * 0.03   // Reduced for more content space
         }
     }
     
     private func getTitleFontSize(for deviceType: DeviceType, geometry: GeometryProxy, isLandscape: Bool) -> CGFloat {
-        let baseSizeMultiplier: CGFloat = isLandscape ? 0.35 : 0.3
+        let baseSizeMultiplier: CGFloat = isLandscape ? 0.35 : (deviceType == .iPad ? 0.3 : 0.22)  // Original for iPad, reduced for iPhone portrait
         let maxSize: CGFloat
         
         switch deviceType {
         case .iPad:
             maxSize = isLandscape ? 200 : 160
         case .iPhonePlus:
-            maxSize = isLandscape ? 140 : 110
+            maxSize = isLandscape ? 140 : 85   // Significantly reduced for portrait
         case .iPhoneRegular:
-            maxSize = isLandscape ? 120 : 95
+            maxSize = isLandscape ? 120 : 75   // Significantly reduced for portrait
         case .iPhoneCompact:
-            maxSize = isLandscape ? 100 : 80
+            maxSize = isLandscape ? 100 : 65   // Significantly reduced for portrait
         }
         
         return min(geometry.size.width * baseSizeMultiplier, maxSize)
@@ -354,17 +330,17 @@ struct HomePageView: View {
     
     private func getSubtitleFontSize(for deviceType: DeviceType, geometry: GeometryProxy) -> CGFloat {
         let maxSize: CGFloat
-        let multiplier: CGFloat = 0.04
+        let multiplier: CGFloat = deviceType == .iPad ? 0.04 : 0.03  // Original for iPad, reduced for iPhone
         
         switch deviceType {
         case .iPad:
             maxSize = 36
         case .iPhonePlus:
-            maxSize = 28
+            maxSize = 20   // Reduced for better fit
         case .iPhoneRegular:
-            maxSize = 24
+            maxSize = 18   // Reduced for better fit
         case .iPhoneCompact:
-            maxSize = 20
+            maxSize = 16   // Reduced for better fit
         }
         
         return min(geometry.size.width * multiplier, maxSize)
@@ -375,11 +351,11 @@ struct HomePageView: View {
         case .iPad:
             return 16
         case .iPhonePlus:
-            return 12
+            return 8   // Reduced spacing
         case .iPhoneRegular:
-            return 10
+            return 6   // Reduced spacing
         case .iPhoneCompact:
-            return 8
+            return 5   // Reduced spacing
         }
     }
     
@@ -388,11 +364,11 @@ struct HomePageView: View {
         case .iPad:
             return CGSize(width: 140, height: 196)
         case .iPhonePlus:
-            return CGSize(width: 100, height: 140)
+            return CGSize(width: 70, height: 98)    // Reduced for single-line fit
         case .iPhoneRegular:
-            return CGSize(width: 85, height: 119)
+            return CGSize(width: 65, height: 91)    // Reduced for single-line fit
         case .iPhoneCompact:
-            return CGSize(width: 70, height: 98)
+            return CGSize(width: 55, height: 77)    // Reduced for single-line fit
         }
     }
     
@@ -401,11 +377,11 @@ struct HomePageView: View {
         case .iPad:
             return geometry.size.width * 0.04
         case .iPhonePlus:
-            return geometry.size.width * 0.03
+            return geometry.size.width * 0.015  // Reduced for single-line fit
         case .iPhoneRegular:
-            return geometry.size.width * 0.025
+            return geometry.size.width * 0.012  // Reduced for single-line fit
         case .iPhoneCompact:
-            return geometry.size.width * 0.02
+            return geometry.size.width * 0.01   // Reduced for single-line fit
         }
     }
     
@@ -414,11 +390,11 @@ struct HomePageView: View {
         case .iPad:
             return 120
         case .iPhonePlus:
-            return 90
+            return 65   // Reduced for single-line fit
         case .iPhoneRegular:
-            return 80
+            return 60   // Reduced for single-line fit
         case .iPhoneCompact:
-            return 70
+            return 55   // Reduced for single-line fit
         }
     }
     
@@ -427,11 +403,11 @@ struct HomePageView: View {
         case .iPad:
             return 48
         case .iPhonePlus:
-            return 36
+            return 24   // Reduced for single-line fit
         case .iPhoneRegular:
-            return 32
+            return 22   // Reduced for single-line fit
         case .iPhoneCompact:
-            return 28
+            return 20   // Reduced for single-line fit
         }
     }
     
@@ -440,11 +416,11 @@ struct HomePageView: View {
         case .iPad:
             return 32
         case .iPhonePlus:
-            return 24
+            return 16   // Reduced for single-line fit
         case .iPhoneRegular:
-            return 20
+            return 14   // Reduced for single-line fit
         case .iPhoneCompact:
-            return 18
+            return 12   // Reduced for single-line fit
         }
     }
     
@@ -453,11 +429,11 @@ struct HomePageView: View {
         case .iPad:
             return geometry.size.width * 0.06
         case .iPhonePlus:
-            return geometry.size.width * 0.08
+            return geometry.size.width * 0.02   // Reduced for single-line fit
         case .iPhoneRegular:
-            return geometry.size.width * 0.06
+            return geometry.size.width * 0.015  // Reduced for single-line fit
         case .iPhoneCompact:
-            return geometry.size.width * 0.05
+            return geometry.size.width * 0.01   // Reduced for single-line fit
         }
     }
     
@@ -497,6 +473,19 @@ struct HomePageView: View {
             return 8
         case .iPhoneCompact:
             return 6
+        }
+    }
+    
+    private func getSubtitleToCardsSpacing(for deviceType: DeviceType) -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 0    // Not used for iPad
+        case .iPhonePlus:
+            return 20   // More spacing for larger iPhone
+        case .iPhoneRegular:
+            return 16   // Medium spacing
+        case .iPhoneCompact:
+            return 12   // Less spacing for smaller iPhone
         }
     }
     
