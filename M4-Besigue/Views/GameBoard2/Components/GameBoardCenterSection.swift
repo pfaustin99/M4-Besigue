@@ -28,8 +28,8 @@ struct GameBoardCenterSection: View {
                 gameRules: gameRules
             )
             
-            // Draw pile
-            GameDrawPileView(game: game)
+            // Floating draw pile
+            FloatingDrawPileView(game: game)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
