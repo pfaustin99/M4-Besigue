@@ -33,6 +33,7 @@ struct GameBoardView2: View {
                 )
             }
         }
+        .ignoresSafeArea(.container, edges: [])
         .sheet(isPresented: $viewState.showingMeldOptions) {
             MeldOptionsView2(
                 game: game,

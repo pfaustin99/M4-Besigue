@@ -38,10 +38,7 @@ struct GameBoardCenterSection: View {
 /// GameTableBackgroundView - Background for the game table
 struct GameTableBackgroundView: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: GameBoardConstants.extraLargeCornerRadius)
-            .fill(GameBoardConstants.Colors.tableGreen)
-            .stroke(GameBoardConstants.Colors.primaryGreen, lineWidth: GameBoardConstants.strokeWidth)
-            .padding(40)
+        Color.clear
     }
 }
 

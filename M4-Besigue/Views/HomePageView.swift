@@ -82,7 +82,7 @@ struct HomePageView: View {
         }
         .fullScreenCover(isPresented: $isGameActive) {
             if let game = game {
-                GameBoardView(
+                GameBoardView2(
                     game: game,
                     settings: settings,
                     gameRules: gameRules,
@@ -195,10 +195,10 @@ struct HomePageView: View {
         
         // Single row layout for all devices
         HStack(spacing: spacing) {
-            buttonColumn("play.fill", "Play", .black, { startGame() }, buttonSize, iconSize, labelFontSize)
-            buttonColumn("gearshape.fill", "Settings", .red, { showingConfiguration = true }, buttonSize, iconSize, labelFontSize)
-            buttonColumn("questionmark", "Help", .black, { showingHowToPlay = true }, buttonSize, iconSize, labelFontSize)
-            buttonColumn("info.circle.fill", "About", .red, { showingAbout = true }, buttonSize, iconSize, labelFontSize)
+            buttonColumn("play.fill", "Play", Color(hex: "016A16"), { startGame() }, buttonSize, iconSize, labelFontSize)
+            buttonColumn("gearshape.fill", "Settings", Color(hex: "D21034"), { showingConfiguration = true }, buttonSize, iconSize, labelFontSize)
+            buttonColumn("questionmark", "Help", Color(hex: "00209F"), { showingHowToPlay = true }, buttonSize, iconSize, labelFontSize)
+            buttonColumn("info.circle.fill", "About", Color(hex: "F1B517"), { showingAbout = true }, buttonSize, iconSize, labelFontSize)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, getHorizontalPadding(for: deviceType, geometry: geometry))
