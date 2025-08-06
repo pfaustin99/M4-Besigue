@@ -9,13 +9,53 @@ struct GamePlayerHandView: View {
     let isHorizontal: Bool
     let geometry: GeometryProxy
     
+    // MARK: - Responsive Card Sizing
+    private var humanCardSize: CGSize {
+        geometry.size.width < 768 ? CGSize(width: 50, height: 75) : CGSize(width: 80, height: 120)
+    }
+    
+    private var aiCardSize: CGSize {
+        geometry.size.width < 768 ? CGSize(width: 30, height: 45) : CGSize(width: 50, height: 75)
+    }
+    
     // MARK: - Responsive Stacking
     private var humanCardSpacing: CGFloat {
-        geometry.size.width < 768 ? -25 : -15  // More overlap on iPhone
+        geometry.size.width < 768 ? -40 : -20  // More overlap on iPhone
     }
     
     private var aiCardSpacing: CGFloat {
-        geometry.size.width < 768 ? -30 : -20  // More overlap on iPhone
+        geometry.size.width < 768 ? -35 : -25  // More overlap on iPhone
+    }
+    
+    // MARK: - Responsive Container Frames
+    private var humanContainerSize: CGSize {
+        let cardWidth = humanCardSize.width
+        let cardHeight = humanCardSize.height
+        let spacing = humanCardSpacing
+        let cardCount = CGFloat(player.held.count)
+        
+        if isHorizontal {
+            let totalWidth = cardWidth + (spacing * (cardCount - 1))
+            return CGSize(width: totalWidth, height: cardHeight)
+        } else {
+            let totalHeight = cardHeight + (spacing * (cardCount - 1))
+            return CGSize(width: cardWidth, height: totalHeight)
+        }
+    }
+    
+    private var aiContainerSize: CGSize {
+        let cardWidth = aiCardSize.width
+        let cardHeight = aiCardSize.height
+        let spacing = aiCardSpacing
+        let cardCount = CGFloat(player.held.count)
+        
+        if isHorizontal {
+            let totalWidth = cardWidth + (spacing * (cardCount - 1))
+            return CGSize(width: totalWidth, height: cardHeight)
+        } else {
+            let totalHeight = cardHeight + (spacing * (cardCount - 1))
+            return CGSize(width: cardWidth, height: totalHeight)
+        }
     }
     
     var body: some View {
@@ -43,10 +83,10 @@ struct GamePlayerHandView: View {
                 ) {
                     // Card selection will be handled by parent
                 }
-                .frame(width: 70, height: 105)
+                .frame(width: humanCardSize.width, height: humanCardSize.height)
             }
         }
-        .frame(width: isHorizontal ? 550 : 105, height: isHorizontal ? 105 : 550)
+        .frame(width: humanContainerSize.width, height: humanContainerSize.height)
     }
     
     // MARK: - AI Player Hand View
@@ -56,10 +96,10 @@ struct GamePlayerHandView: View {
             ForEach(player.held) { _ in
                 Image("card_back")
                     .resizable()
-                    .frame(width: 40, height: 60)
+                    .frame(width: aiCardSize.width, height: aiCardSize.height)
             }
         }
-        .frame(width: isHorizontal ? 400 : 60, height: isHorizontal ? 60 : 400)
+        .frame(width: aiContainerSize.width, height: aiContainerSize.height)
     }
 }
 
