@@ -34,7 +34,8 @@ struct GameBoardContentView: View {
             GameBoardBottomSection(
                 game: game,
                 settings: settings,
-                viewState: viewState
+                viewState: viewState,
+                geometry: geometry
             )
         }
         .overlay(

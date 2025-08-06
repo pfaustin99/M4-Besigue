@@ -543,6 +543,21 @@ enum DeviceType {
     case iPhonePlus
     case iPhoneRegular
     case iPhoneCompact
+    
+    static func current(geometry: GeometryProxy) -> DeviceType {
+        let minDimension = min(geometry.size.width, geometry.size.height)
+        let maxDimension = max(geometry.size.width, geometry.size.height)
+        
+        if maxDimension >= 1024 {
+            return .iPad
+        } else if minDimension >= 414 {
+            return .iPhonePlus
+        } else if minDimension >= 375 {
+            return .iPhoneRegular
+        } else {
+            return .iPhoneCompact
+        }
+    }
 }
 
 // MARK: - Updated Marriage Card View

@@ -5,6 +5,7 @@ struct GameBoardBottomSection: View {
     let game: Game
     let settings: GameSettings
     let viewState: GameBoardViewState2
+    let geometry: GeometryProxy
     
     var body: some View {
         VStack(spacing: 8) {
@@ -23,6 +24,12 @@ struct GameBoardBottomSection: View {
                     viewState: viewState
                 )
             }
+            
+            // Draw pile layer
+            DrawPileLayerView(
+                game: game,
+                geometry: geometry
+            )
         }
         .padding(.horizontal)
         .padding(.bottom, 8)
@@ -58,15 +65,6 @@ struct GameActionButtonsView: View {
                 .scaleEffect(viewState.shakeMeldButton ? 1.1 : 1.0)
                 .animation(.easeInOut(duration: 0.1), value: viewState.shakeMeldButton)
             }
-            
-            // Draw Card button
-            if shouldShowDrawButton {
-                Button("Draw Card") {
-                    handleDrawCard()
-                }
-                .buttonStyle(.borderedProminent)
-                .font(.headline)
-            }
         }
     }
     
@@ -85,14 +83,6 @@ struct GameActionButtonsView: View {
         viewState.selectedCards.count >= 2 &&
         viewState.selectedCards.count <= 4 &&
         game.currentPlayer.id == game.trickWinnerId
-    }
-    
-    private var shouldShowDrawButton: Bool {
-        if game.currentPhase == .dealerDetermination {
-            return game.currentPlayer.type == .human
-        } else {
-            return game.currentPlayer.type == .human && game.mustDrawCard && !game.awaitingMeldChoice
-        }
     }
     
     private func handleMeldDeclaration() {
@@ -120,17 +110,6 @@ struct GameActionButtonsView: View {
                 viewState.triggerMeldButtonShake()
                 viewState.showInvalidMeldMessage()
             }
-        }
-    }
-    
-    private func handleDrawCard() {
-        if game.currentPhase == .dealerDetermination {
-            // Handle dealer determination draw
-            game.drawCardForDealerDetermination()
-        } else {
-            // Handle regular draw
-            game.drawCardForCurrentPlayer()
-            // Note: drawCardForCurrentPlayer doesn't return a card, it handles the draw internally
         }
     }
 }
@@ -211,5 +190,119 @@ struct GameMeldedCardView: View {
             .onTapGesture(count: 2) {
                 onDoubleTap()
             }
+    }
+}
+
+/// DrawPileLayerView - Draw pile information and draw button
+struct DrawPileLayerView: View {
+    let game: Game
+    let geometry: GeometryProxy
+    
+    // MARK: - Device Detection
+    private var deviceType: DeviceType {
+        DeviceType.current(geometry: geometry)
+    }
+    
+    // MARK: - Computed Properties
+    private var remainingCount: Int {
+        game.deck.remainingCount
+    }
+    
+    private var playerCount: Int {
+        game.players.count
+    }
+    
+    private var roundsRemaining: Int {
+        playerCount > 0 ? remainingCount / playerCount : 0
+    }
+    
+    private var shouldShowRedText: Bool {
+        roundsRemaining <= 5
+    }
+    
+    private var isDrawButtonActive: Bool {
+        game.mustDrawCard && game.currentPlayer.type == .human
+    }
+    
+    private var buttonColor: Color {
+        isDrawButtonActive ? Color(hex: "00209F") : Color.gray.opacity(0.6)
+    }
+    
+    var body: some View {
+        HStack {
+            // Draw pile count message
+            Text("Draw Pile: \(remainingCount)")
+                .font(getDrawPileFont(for: deviceType))
+                .foregroundColor(shouldShowRedText ? .red : .white)
+                .fontWeight(.bold)
+            
+            Spacer()
+            
+            // Draw button
+            Button(action: {
+                if isDrawButtonActive {
+                    game.drawCardForCurrentPlayer()
+                }
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.down.circle")
+                        .foregroundColor(Color(hex: "F1B517"))
+                    Text("Draw Card")
+                        .foregroundColor(.white)
+                        .fontWeight(.bold)
+                }
+                .font(getDrawPileFont(for: deviceType))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(buttonColor)
+                .cornerRadius(8)
+            }
+            .disabled(!isDrawButtonActive)
+        }
+        .padding(.horizontal, getDrawPileHorizontalPadding(for: deviceType))
+        .padding(.vertical, getDrawPileVerticalPadding(for: deviceType))
+        .frame(maxWidth: .infinity)
+        .background(Color.black.opacity(0.6))
+        .cornerRadius(8)
+    }
+    
+    // MARK: - Responsive Sizing Functions
+    private func getDrawPileFont(for deviceType: DeviceType) -> Font {
+        switch deviceType {
+        case .iPad:
+            return .system(size: 16, weight: .bold)
+        case .iPhonePlus:
+            return .system(size: 14, weight: .bold)
+        case .iPhoneRegular:
+            return .footnote.bold()
+        case .iPhoneCompact:
+            return .system(size: 11, weight: .bold)
+        }
+    }
+    
+    private func getDrawPileHorizontalPadding(for deviceType: DeviceType) -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 4
+        case .iPhonePlus:
+            return 3
+        case .iPhoneRegular:
+            return 2
+        case .iPhoneCompact:
+            return 2
+        }
+    }
+    
+    private func getDrawPileVerticalPadding(for deviceType: DeviceType) -> CGFloat {
+        switch deviceType {
+        case .iPad:
+            return 4
+        case .iPhonePlus:
+            return 3
+        case .iPhoneRegular:
+            return 2
+        case .iPhoneCompact:
+            return 2
+        }
     }
 } 
