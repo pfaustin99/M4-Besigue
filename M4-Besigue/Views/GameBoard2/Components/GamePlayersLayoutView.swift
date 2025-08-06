@@ -1,7 +1,7 @@
 
 import SwiftUI
 
-struct GamePlayersCircleView: View {
+struct GamePlayersLayoutView: View {
     let game: Game
     let settings: GameSettings
     let viewState: GameBoardViewState2
@@ -36,13 +36,13 @@ struct GamePlayersCircleView: View {
     private func anchorPoint(for position: TablePosition, in size: CGSize) -> CGPoint {
         switch position {
         case .bottom:
-            return CGPoint(x: size.width / 2, y: size.height * 0.75 - 60)
+            return CGPoint(x: size.width / 2, y: size.height * 0.75 - 20)
         case .top:
-            return CGPoint(x: size.width / 2, y: size.height * 0.25 - 60)
+            return CGPoint(x: size.width / 2, y: size.height * 0.25 - 20)
         case .left:
-            return CGPoint(x: size.width * 0.25, y: size.height / 2 - 60)
+            return CGPoint(x: size.width * 0.25, y: size.height / 2 - 20)
         case .right:
-            return CGPoint(x: size.width * 0.75, y: size.height / 2 - 60)
+            return CGPoint(x: size.width * 0.75, y: size.height / 2 - 20)
         }
     }
 }

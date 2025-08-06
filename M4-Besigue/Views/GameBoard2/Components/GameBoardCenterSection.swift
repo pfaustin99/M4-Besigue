@@ -13,8 +13,8 @@ struct GameBoardCenterSection: View {
             // Game table background
             GameTableBackgroundView()
             
-            // Players arranged in a circle
-            GamePlayersCircleView(
+            // Players arranged in a square layout
+            GamePlayersLayoutView(
                 game: game,
                 settings: settings,
                 viewState: viewState,
