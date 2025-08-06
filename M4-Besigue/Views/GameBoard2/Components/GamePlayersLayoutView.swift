@@ -27,24 +27,26 @@ struct GamePlayersLayoutView: View {
                     isHumanPlayer: index == 0,
                     geometry: geometry
                 )
-                .frame(width: geometry.size.width, height: geometry.size.height)
                 .position(anchorPoint(for: position, in: geometry.size))
             }
         }
-        .frame(width: geometry.size.width, height: geometry.size.height)
+        .frame(width: max(0, geometry.size.width), height: max(0, geometry.size.height))
         .border(Color.red, width: 2) // DEBUG: Show players layout bounds
     }
 
     private func anchorPoint(for position: TablePosition, in size: CGSize) -> CGPoint {
+        let safeWidth = max(0, size.width)
+        let safeHeight = max(0, size.height)
+        
         switch position {
         case .bottom:
-            return CGPoint(x: size.width / 2, y: size.height * 0.75 - 50)
+            return CGPoint(x: safeWidth / 2, y: safeHeight * 0.75 - 50)
         case .top:
-            return CGPoint(x: size.width / 2, y: size.height * 0.25 - 50)
+            return CGPoint(x: safeWidth / 2, y: safeHeight * 0.25 - 50)
         case .left:
-            return CGPoint(x: size.width * 0.25, y: size.height / 2 - 50)
+            return CGPoint(x: safeWidth * 0.25, y: safeHeight / 2 - 50)
         case .right:
-            return CGPoint(x: size.width * 0.75, y: size.height / 2 - 50)
+            return CGPoint(x: safeWidth * 0.75, y: safeHeight / 2 - 50)
         }
     }
 }
