@@ -37,15 +37,33 @@ struct GamePlayersLayoutView: View {
         let safeWidth = max(0, size.width)
         let safeHeight = max(0, size.height)
         
-        switch position {
-        case .bottom:
-            return CGPoint(x: safeWidth / 2, y: safeHeight * 0.8 - 50)
-        case .top:
-            return CGPoint(x: safeWidth / 2, y: safeHeight * 0.2 - 50)
-        case .left:
-            return CGPoint(x: safeWidth * 0.2, y: safeHeight / 2 - 50)
-        case .right:
-            return CGPoint(x: safeWidth * 0.8, y: safeHeight / 2 - 50)
+        // Device detection: iPad is wider, iPhone is taller
+        let isIPad = safeWidth > safeHeight
+        
+        if isIPad {
+            // iPad (Landscape): Wide spread horizontally, compact vertically
+            switch position {
+            case .bottom:
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.85 - 50)
+            case .top:
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.15 - 50)
+            case .left:
+                return CGPoint(x: safeWidth * 0.15, y: safeHeight / 2 - 50)
+            case .right:
+                return CGPoint(x: safeWidth * 0.85, y: safeHeight / 2 - 50)
+            }
+        } else {
+            // iPhone (Portrait): Tall spread vertically, compact horizontally
+            switch position {
+            case .bottom:
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.9 - 50)
+            case .top:
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.1 - 50)
+            case .left:
+                return CGPoint(x: safeWidth * 0.2, y: safeHeight / 2 - 50)
+            case .right:
+                return CGPoint(x: safeWidth * 0.8, y: safeHeight / 2 - 50)
+            }
         }
     }
 }

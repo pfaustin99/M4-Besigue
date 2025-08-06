@@ -31,7 +31,9 @@ struct GameBoardCenterSection: View {
             // Floating draw pile - REMOVED: replaced with DrawPileLayerView in bottom section
             // FloatingDrawPileView(game: game)
         }
-        .frame(maxHeight: geometry.size.height * 0.6) // Limit center section height
+        .frame(maxHeight: geometry.size.width > geometry.size.height ? 
+               geometry.size.height * 0.5 : // iPad: compact vertically
+               geometry.size.height * 0.7) // iPhone: use more vertical space
     }
 }
 
