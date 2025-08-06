@@ -3,7 +3,7 @@ import SwiftUI
 /// BadgeLegendView2 - Clean badge legend view
 struct BadgeLegendView2: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var settings: GameSettings
+    let settings: GameSettings
     
     var body: some View {
         NavigationView {
@@ -69,8 +69,9 @@ struct BadgeLegendRow2: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
+            Text(icon)
                 .font(.title2)
+                .fontWeight(.bold)
                 .foregroundColor(.orange)
                 .frame(width: 30)
             

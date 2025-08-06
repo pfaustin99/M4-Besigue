@@ -4,18 +4,19 @@ import SwiftUI
 struct GameBoardFloatingButtons: View {
     let game: Game
     let viewState: GameBoardViewState2
+    let onEndGame: () -> Void
     
     var body: some View {
         VStack(spacing: 12) {
-            // Settings button
+            // End Game button
             Button(action: {
-                viewState.showSettings()
+                onEndGame()
             }) {
-                Image(systemName: "gearshape.fill")
+                Image(systemName: "xmark.circle.fill")
                     .font(.title2)
                     .foregroundColor(.white)
                     .frame(width: 44, height: 44)
-                    .background(Color.blue.opacity(0.8))
+                    .background(Color.red.opacity(0.8))
                     .clipShape(Circle())
                     .shadow(radius: 4)
             }

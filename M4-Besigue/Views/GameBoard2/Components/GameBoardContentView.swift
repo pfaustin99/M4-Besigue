@@ -10,6 +10,7 @@ struct GameBoardContentView: View {
     let gameRules: GameRules
     let viewState: GameBoardViewState2
     let geometry: GeometryProxy
+    let onEndGame: () -> Void
     
     var body: some View {
         VStack(spacing: 0) {
@@ -40,7 +41,8 @@ struct GameBoardContentView: View {
             // Floating action buttons
             GameBoardFloatingButtons(
                 game: game,
-                viewState: viewState
+                viewState: viewState,
+                onEndGame: onEndGame
             ),
             alignment: .topTrailing
         )

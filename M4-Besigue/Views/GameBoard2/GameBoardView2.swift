@@ -29,7 +29,8 @@ struct GameBoardView2: View {
                     settings: settings,
                     gameRules: gameRules,
                     viewState: viewState,
-                    geometry: geometry
+                    geometry: geometry,
+                    onEndGame: onEndGame
                 )
             }
         }
@@ -41,11 +42,8 @@ struct GameBoardView2: View {
                 selectedCards: $viewState.selectedCards
             )
         }
-        .sheet(isPresented: $viewState.showingSettings) {
-            SettingsView(settings: settings)
-        }
         .sheet(isPresented: $viewState.showingBadgeLegend) {
-            BadgeLegendView2()
+            BadgeLegendView2(settings: settings)
         }
     }
 }

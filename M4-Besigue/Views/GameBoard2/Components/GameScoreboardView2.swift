@@ -23,7 +23,7 @@ struct GameScoreboardView2: View {
             }
         }
         .padding()
-        .background(Color.black.opacity(0.8))
+        .background(Color.black.opacity(0.3))
         .cornerRadius(12)
     }
 }
