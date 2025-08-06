@@ -40,13 +40,13 @@ struct GamePlayersLayoutView: View {
         
         switch position {
         case .bottom:
-            return CGPoint(x: safeWidth / 2, y: safeHeight * 0.75 - 50)
+            return CGPoint(x: safeWidth / 2, y: safeHeight * 0.8 - 50)
         case .top:
-            return CGPoint(x: safeWidth / 2, y: safeHeight * 0.25 - 50)
+            return CGPoint(x: safeWidth / 2, y: safeHeight * 0.2 - 50)
         case .left:
-            return CGPoint(x: safeWidth * 0.25, y: safeHeight / 2 - 50)
+            return CGPoint(x: safeWidth * 0.2, y: safeHeight / 2 - 50)
         case .right:
-            return CGPoint(x: safeWidth * 0.75, y: safeHeight / 2 - 50)
+            return CGPoint(x: safeWidth * 0.8, y: safeHeight / 2 - 50)
         }
     }
 }
