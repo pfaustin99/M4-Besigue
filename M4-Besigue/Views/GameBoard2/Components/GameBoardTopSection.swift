@@ -5,12 +5,16 @@ struct GameBoardTopSection: View {
     let game: Game
     let settings: GameSettings
     let viewState: GameBoardViewState2
+    let geometry: GeometryProxy
     
     var body: some View {
         VStack(spacing: 8) {
             // Scoreboard
             GameScoreboardView2(game: game, settings: settings)
                 .padding(.horizontal)
+            
+            // Draw pile count label
+            DrawPileCountLabel(game: game, geometry: geometry)
             
             // Game status message
             if let message = getGameStatusMessage() {
@@ -27,6 +31,64 @@ struct GameBoardTopSection: View {
             return "\(game.currentPlayer.name)'s Turn"
         }
         return nil
+    }
+}
+
+/// DrawPileCountLabel - Shows draw pile count with blue background
+struct DrawPileCountLabel: View {
+    let game: Game
+    let geometry: GeometryProxy
+    
+    // MARK: - Device Detection
+    private var deviceType: DeviceType {
+        DeviceType.current(geometry: geometry)
+    }
+    
+    // MARK: - Computed Properties
+    private var remainingCount: Int {
+        game.deck.remainingCount
+    }
+    
+    private var playerCount: Int {
+        game.players.count
+    }
+    
+    private var roundsRemaining: Int {
+        playerCount > 0 ? remainingCount / playerCount : 0
+    }
+    
+    private var shouldShowRedText: Bool {
+        roundsRemaining <= 5
+    }
+    
+    var body: some View {
+        HStack {
+            Text("Draw Pile: \(remainingCount)")
+                .font(getDrawPileCountFont(for: deviceType))
+                .foregroundColor(shouldShowRedText ? .red : .white)
+                .fontWeight(.bold)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color(hex: "00209F"))
+                .cornerRadius(8)
+            
+            Spacer()
+        }
+        .padding(.horizontal)
+    }
+    
+    // MARK: - Responsive Font
+    private func getDrawPileCountFont(for deviceType: DeviceType) -> Font {
+        switch deviceType {
+        case .iPad:
+            return .system(size: 14, weight: .bold)
+        case .iPhonePlus:
+            return .system(size: 12, weight: .bold)
+        case .iPhoneRegular:
+            return .system(size: 11, weight: .bold)
+        case .iPhoneCompact:
+            return .system(size: 10, weight: .bold)
+        }
     }
 }
 

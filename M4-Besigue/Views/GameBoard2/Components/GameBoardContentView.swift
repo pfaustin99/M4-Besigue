@@ -18,7 +18,8 @@ struct GameBoardContentView: View {
             GameBoardTopSection(
                 game: game,
                 settings: settings,
-                viewState: viewState
+                viewState: viewState,
+                geometry: geometry
             )
             
             // Center section: Main game area
