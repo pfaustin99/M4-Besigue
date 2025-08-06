@@ -8,7 +8,7 @@ struct GameBoardTopSection: View {
     let geometry: GeometryProxy
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 4) {
             // Scoreboard
             GameScoreboardView2(game: game, settings: settings)
                 .padding(.horizontal)
@@ -21,7 +21,7 @@ struct GameBoardTopSection: View {
                 GameStatusMessageView(message: message)
             }
         }
-        .padding(.top, 8)
+        .padding(.top, 4)
     }
     
     private func getGameStatusMessage() -> String? {
