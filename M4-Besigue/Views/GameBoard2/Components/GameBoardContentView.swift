@@ -39,6 +39,7 @@ struct GameBoardContentView: View {
                 geometry: geometry
             )
         }
+        .border(Color.blue, width: 2) // DEBUG: Show content view bounds
         .overlay(
             // Floating action buttons
             GameBoardFloatingButtons(

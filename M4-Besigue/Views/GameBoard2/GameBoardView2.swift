@@ -34,6 +34,7 @@ struct GameBoardView2: View {
                 )
             }
         }
+        .border(Color.red, width: 3) // DEBUG: Show main container bounds
         .sheet(isPresented: $viewState.showingMeldOptions) {
             MeldOptionsView2(
                 game: game,

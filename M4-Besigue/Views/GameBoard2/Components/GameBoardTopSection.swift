@@ -22,6 +22,7 @@ struct GameBoardTopSection: View {
             }
         }
         .padding(.top, 4)
+        .border(Color.green, width: 2) // DEBUG: Show top section bounds
     }
     
     private func getGameStatusMessage() -> String? {

@@ -31,6 +31,7 @@ struct GameBoardCenterSection: View {
             // Floating draw pile - REMOVED: replaced with DrawPileLayerView in bottom section
             // FloatingDrawPileView(game: game)
         }
+        .border(Color.yellow, width: 2) // DEBUG: Show center section bounds
     }
 }
 
