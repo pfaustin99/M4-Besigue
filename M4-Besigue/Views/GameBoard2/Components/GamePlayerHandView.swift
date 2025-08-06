@@ -35,10 +35,10 @@ struct GamePlayerHandView: View {
         let cardCount = CGFloat(player.held.count)
         
         if isHorizontal {
-            let totalWidth = cardWidth + (spacing * (cardCount - 1))
+            let totalWidth = max(cardWidth, cardWidth + (spacing * (cardCount - 1)))
             return CGSize(width: totalWidth, height: cardHeight)
         } else {
-            let totalHeight = cardHeight + (spacing * (cardCount - 1))
+            let totalHeight = max(cardHeight, cardHeight + (spacing * (cardCount - 1)))
             return CGSize(width: cardWidth, height: totalHeight)
         }
     }
@@ -50,10 +50,10 @@ struct GamePlayerHandView: View {
         let cardCount = CGFloat(player.held.count)
         
         if isHorizontal {
-            let totalWidth = cardWidth + (spacing * (cardCount - 1))
+            let totalWidth = max(cardWidth, cardWidth + (spacing * (cardCount - 1)))
             return CGSize(width: totalWidth, height: cardHeight)
         } else {
-            let totalHeight = cardHeight + (spacing * (cardCount - 1))
+            let totalHeight = max(cardHeight, cardHeight + (spacing * (cardCount - 1)))
             return CGSize(width: cardWidth, height: totalHeight)
         }
     }
