@@ -28,8 +28,8 @@ struct GameBoardCenterSection: View {
                 gameRules: gameRules
             )
             
-            // Floating draw pile
-            FloatingDrawPileView(game: game)
+            // Floating draw pile - REMOVED: replaced with DrawPileLayerView in bottom section
+            // FloatingDrawPileView(game: game)
         }
     }
 }
