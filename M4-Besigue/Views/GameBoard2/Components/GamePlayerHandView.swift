@@ -20,7 +20,7 @@ struct GamePlayerHandView: View {
     
     // MARK: - Responsive Stacking
     private var humanCardSpacing: CGFloat {
-        geometry.size.width < 768 ? -30 : -20  // More overlap on iPhone
+        geometry.size.width < 768 ? -30 : -25  // More overlap on iPhone
     }
     
     private var aiCardSpacing: CGFloat {
@@ -79,11 +79,11 @@ struct GamePlayerHandView: View {
                     card: card,
                     isSelected: false, // Will be managed by parent
                     isPlayable: true,
-                    showHint: false
+                    showHint: false,
+                    size: humanCardSize
                 ) {
                     // Card selection will be handled by parent
                 }
-                .frame(width: humanCardSize.width, height: humanCardSize.height)
             }
         }
         .frame(width: humanContainerSize.width, height: humanContainerSize.height)

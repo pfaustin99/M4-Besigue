@@ -6,12 +6,14 @@ struct CardView: View {
     let isPlayable: Bool
     let showHint: Bool
     let onTap: () -> Void
+    let size: CGSize
     
-    init(card: PlayerCard, isSelected: Bool = false, isPlayable: Bool = true, showHint: Bool = false, onTap: @escaping () -> Void) {
+    init(card: PlayerCard, isSelected: Bool = false, isPlayable: Bool = true, showHint: Bool = false, size: CGSize = CGSize(width: 80, height: 112), onTap: @escaping () -> Void) {
         self.card = card
         self.isSelected = isSelected
         self.isPlayable = isPlayable
         self.showHint = showHint
+        self.size = size
         self.onTap = onTap
     }
     
@@ -21,7 +23,7 @@ struct CardView: View {
                 Image(card.imageName)
                     .resizable()
                     .aspectRatio(2.5/3.5, contentMode: .fit)
-                    .frame(width: 80, height: 112)
+                    .frame(width: size.width, height: size.height)
                     .background(Color.white)
                     .cornerRadius(8)
                     .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
