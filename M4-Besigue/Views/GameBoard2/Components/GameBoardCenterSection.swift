@@ -32,8 +32,6 @@ struct GameBoardCenterSection: View {
             // FloatingDrawPileView(game: game)
         }
         .frame(maxHeight: geometry.size.height * 0.6) // Limit center section height
-        .background(Color.blue.opacity(0.1)) // DEBUG: Show center section area
-        .border(Color.yellow, width: 2) // DEBUG: Show center section bounds
     }
 }
 

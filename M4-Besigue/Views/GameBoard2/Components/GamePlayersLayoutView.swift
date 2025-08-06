@@ -31,7 +31,6 @@ struct GamePlayersLayoutView: View {
             }
         }
         .frame(width: max(0, geometry.size.width), height: max(0, geometry.size.height))
-        .border(Color.red, width: 2) // DEBUG: Show players layout bounds
     }
 
     private func anchorPoint(for position: TablePosition, in size: CGSize) -> CGPoint {
