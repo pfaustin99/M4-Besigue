@@ -24,7 +24,8 @@ struct GamePlayersCircleView: View {
                     player: player,
                     position: position,
                     isCurrentTurn: index == game.currentPlayerIndex,
-                    isHumanPlayer: index == 0
+                    isHumanPlayer: index == 0,
+                    geometry: geometry
                 )
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .position(anchorPoint(for: position, in: geometry.size))

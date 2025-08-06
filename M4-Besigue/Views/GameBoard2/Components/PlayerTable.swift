@@ -10,6 +10,7 @@ struct PlayerTable: View {
     let position: TablePosition
     let isCurrentTurn: Bool
     let isHumanPlayer: Bool
+    let geometry: GeometryProxy
 
     var body: some View {
         ZStack {
@@ -21,7 +22,8 @@ struct PlayerTable: View {
                     isHuman: isHumanPlayer,
                     isCurrentTurn: isCurrentTurn,
                     angle: 0,
-                    isHorizontal: true
+                    isHorizontal: true,
+                    geometry: geometry
                 )
             }
             .rotationEffect(rotation(for: position))
@@ -43,8 +45,6 @@ struct PlayerTable: View {
         case .left: return .degrees(-90)
         }
     }
-
-
 
     private func nameOffset(for position: TablePosition) -> CGSize {
         let hasMelds = !player.meldsDeclared.isEmpty

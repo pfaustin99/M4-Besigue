@@ -7,6 +7,16 @@ struct GamePlayerHandView: View {
     let isCurrentTurn: Bool
     let angle: Double
     let isHorizontal: Bool
+    let geometry: GeometryProxy
+    
+    // MARK: - Responsive Stacking
+    private var humanCardSpacing: CGFloat {
+        geometry.size.width < 768 ? -25 : -15  // More overlap on iPhone
+    }
+    
+    private var aiCardSpacing: CGFloat {
+        geometry.size.width < 768 ? -30 : -20  // More overlap on iPhone
+    }
     
     var body: some View {
         Group {
@@ -23,7 +33,7 @@ struct GamePlayerHandView: View {
     // MARK: - Human Player Hand View
     
     private var humanPlayerHandView: some View {
-        HStack(spacing: -15) {
+        HStack(spacing: humanCardSpacing) {
             ForEach(player.held) { card in
                 CardView(
                     card: card,
@@ -42,7 +52,7 @@ struct GamePlayerHandView: View {
     // MARK: - AI Player Hand View
     
     private var aiPlayerHandView: some View {
-        HStack(spacing: -20) {
+        HStack(spacing: aiCardSpacing) {
             ForEach(player.held) { _ in
                 Image("card_back")
                     .resizable()
@@ -57,27 +67,31 @@ struct GamePlayerHandView: View {
 #if DEBUG
 struct GamePlayerHandView_Previews: PreviewProvider {
     static var previews: some View {
-        VStack(spacing: 20) {
-            // Human player hand
-            GamePlayerHandView(
-                player: Player(name: "Human", type: .human),
-                isHuman: true,
-                isCurrentTurn: true,
-                angle: 0,
-                isHorizontal: true
-            )
-            
-            // AI player hand
-            GamePlayerHandView(
-                player: Player(name: "AI", type: .ai),
-                isHuman: false,
-                isCurrentTurn: false,
-                angle: 0,
-                isHorizontal: true
-            )
+        GeometryReader { geometry in
+            VStack(spacing: 20) {
+                // Human player hand
+                GamePlayerHandView(
+                    player: Player(name: "Human", type: .human),
+                    isHuman: true,
+                    isCurrentTurn: true,
+                    angle: 0,
+                    isHorizontal: true,
+                    geometry: geometry
+                )
+                
+                // AI player hand
+                GamePlayerHandView(
+                    player: Player(name: "AI", type: .ai),
+                    isHuman: false,
+                    isCurrentTurn: false,
+                    angle: 0,
+                    isHorizontal: true,
+                    geometry: geometry
+                )
+            }
+            .padding()
+            .background(Color.green)
         }
-        .padding()
-        .background(Color.green)
     }
 }
 #endif 
