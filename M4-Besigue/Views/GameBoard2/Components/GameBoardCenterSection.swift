@@ -31,7 +31,6 @@ struct GameBoardCenterSection: View {
             // Floating draw pile
             FloatingDrawPileView(game: game)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
