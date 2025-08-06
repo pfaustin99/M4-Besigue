@@ -32,7 +32,6 @@ struct GameBoardBottomSection: View {
         }
         .padding(.horizontal)
         .padding(.bottom, 8)
-        .border(Color.purple, width: 2) // DEBUG: Show bottom section bounds
     }
 }
 
