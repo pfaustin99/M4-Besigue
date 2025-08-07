@@ -198,8 +198,9 @@ struct FloatingDrawButton: View {
     let geometry: GeometryProxy
     
     // MARK: - Device Detection
-    private var deviceType: DeviceType {
-        DeviceType.current(geometry: geometry)
+    private var isIPad: Bool {
+        let maxDimension = max(geometry.size.width, geometry.size.height)
+        return maxDimension >= 1024
     }
     
     var body: some View {
@@ -213,7 +214,7 @@ struct FloatingDrawButton: View {
                     .foregroundColor(.white)
                     .fontWeight(.bold)
             }
-            .font(getDrawButtonFont(for: deviceType))
+            .font(getDrawButtonFont(for: isIPad))
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(Color(hex: "00209F"))
@@ -223,16 +224,11 @@ struct FloatingDrawButton: View {
     }
     
     // MARK: - Responsive Font
-    private func getDrawButtonFont(for deviceType: DeviceType) -> Font {
-        switch deviceType {
-        case .iPad:
+    private func getDrawButtonFont(for isIPad: Bool) -> Font {
+        if isIPad {
             return .system(size: 16, weight: .bold)
-        case .iPhonePlus:
+        } else {
             return .system(size: 14, weight: .bold)
-        case .iPhoneRegular:
-            return .system(size: 13, weight: .bold)
-        case .iPhoneCompact:
-            return .system(size: 12, weight: .bold)
         }
     }
 } 

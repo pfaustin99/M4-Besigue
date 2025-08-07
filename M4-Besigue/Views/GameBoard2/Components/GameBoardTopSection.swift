@@ -40,8 +40,9 @@ struct DrawPileCountLabel: View {
     let geometry: GeometryProxy
     
     // MARK: - Device Detection
-    private var deviceType: DeviceType {
-        DeviceType.current(geometry: geometry)
+    private var isIPad: Bool {
+        let maxDimension = max(geometry.size.width, geometry.size.height)
+        return maxDimension >= 1024
     }
     
     // MARK: - Computed Properties
@@ -64,7 +65,7 @@ struct DrawPileCountLabel: View {
     var body: some View {
         HStack {
             Text("Draw Pile: \(remainingCount)")
-                .font(getDrawPileCountFont(for: deviceType))
+                .font(getDrawPileCountFont(for: isIPad))
                 .foregroundColor(shouldShowRedText ? .red : .white)
                 .fontWeight(.bold)
                 .padding(.horizontal, 12)
@@ -78,16 +79,11 @@ struct DrawPileCountLabel: View {
     }
     
     // MARK: - Responsive Font
-    private func getDrawPileCountFont(for deviceType: DeviceType) -> Font {
-        switch deviceType {
-        case .iPad:
+    private func getDrawPileCountFont(for isIPad: Bool) -> Font {
+        if isIPad {
             return .system(size: 14, weight: .bold)
-        case .iPhonePlus:
+        } else {
             return .system(size: 12, weight: .bold)
-        case .iPhoneRegular:
-            return .system(size: 11, weight: .bold)
-        case .iPhoneCompact:
-            return .system(size: 10, weight: .bold)
         }
     }
 }
