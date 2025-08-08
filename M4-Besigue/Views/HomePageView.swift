@@ -48,37 +48,34 @@ struct HomePageView: View {
                 // Gradient overlay with more depth
                 enhancedOverlay
                 
-                // Main content with improved animations - constrained to safe area
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .center, spacing: getSpacing(for: deviceType, geometry: geometry)) {
-                        Spacer()
-                            .frame(height: getTopSpacing(for: deviceType, geometry: geometry))
-                        
-                        // Enhanced title section
-                        enhancedTitleSection(deviceType: deviceType, geometry: geometry, isLandscape: isLandscape)
-                            .scaleEffect(titleScale)
-                            .opacity(titleOpacity)
-                        
-                        // Enhanced marriage cards section
-                        enhancedMarriageCardsSection(deviceType: deviceType, geometry: geometry)
-                            .offset(y: cardsOffset)
-                            .opacity(cardsOpacity)
-                        
-                        // Enhanced button tokens section
-                        enhancedButtonTokensSection(deviceType: deviceType, geometry: geometry)
-                        // Remove global animations - individual buttons handle their own entrance
-                        // .scaleEffect(buttonsScale)
-                        // .opacity(buttonsOpacity)
-                        
-                        Spacer()
-                            .frame(height: deviceType == .iPad ? 120 : 80) // Reduced to eliminate white space
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.horizontal, getHorizontalPadding(for: deviceType, geometry: geometry))
-                    .padding(.bottom, geometry.safeAreaInsets.bottom + 20)
+                // Main content with improved animations - vertically centered
+                VStack(alignment: .center, spacing: getSpacing(for: deviceType, geometry: geometry)) {
+                    // Flexible top spacer for vertical centering
+                    Spacer()
+                    
+                    // Enhanced title section
+                    enhancedTitleSection(deviceType: deviceType, geometry: geometry, isLandscape: isLandscape)
+                        .scaleEffect(titleScale)
+                        .opacity(titleOpacity)
+                    
+                    // Enhanced marriage cards section
+                    enhancedMarriageCardsSection(deviceType: deviceType, geometry: geometry)
+                        .offset(y: cardsOffset)
+                        .opacity(cardsOpacity)
+                    
+                    // Enhanced button tokens section
+                    enhancedButtonTokensSection(deviceType: deviceType, geometry: geometry)
+                    // Remove global animations - individual buttons handle their own entrance
+                    // .scaleEffect(buttonsScale)
+                    // .opacity(buttonsOpacity)
+                    
+                    // Flexible bottom spacer for vertical centering
+                    Spacer()
                 }
-                .safeAreaInset(edge: .top) { Color.clear.frame(height: 0) }
-                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 0) }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .padding(.horizontal, getHorizontalPadding(for: deviceType, geometry: geometry))
+                .padding(.top, geometry.safeAreaInsets.top + 20)
+                .padding(.bottom, geometry.safeAreaInsets.bottom + 20)
                 
                 // Enhanced configuration overlay
                 enhancedConfigurationOverlay
