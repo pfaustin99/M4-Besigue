@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct HomePageView: View {
     @StateObject private var gameRules = GameRules()
@@ -17,12 +18,23 @@ struct HomePageView: View {
     @State private var titleOpacity: Double = 0
     @State private var cardsOffset: CGFloat = 100
     @State private var cardsOpacity: Double = 0
-    @State private var buttonsScale: CGFloat = 0.8
-    @State private var buttonsOpacity: Double = 0
     
     // Background animation states
     @State private var animatedGradientRotation: Double = 0
     @State private var animatedGradientScale: CGFloat = 1.0
+    
+    // Animation states for entrance effects
+    @State private var entranceIndex = 0
+    @State private var isEntranceComplete = false
+    @State private var entranceTimer: Timer?
+    
+    // Ripple effect state
+    @State private var rippleOrigin: CGPoint? = nil
+    @State private var rippleRadius: CGFloat = 0
+    
+    // Shimmer effect state
+    @State private var shimmerBoost = false
+    @State private var shimmerOrigin: CGPoint = .zero
     
     var body: some View {
         GeometryReader { geometry in
@@ -54,8 +66,9 @@ struct HomePageView: View {
                         
                         // Enhanced button tokens section
                         enhancedButtonTokensSection(deviceType: deviceType, geometry: geometry)
-                            .scaleEffect(buttonsScale)
-                            .opacity(buttonsOpacity)
+                        // Remove global animations - individual buttons handle their own entrance
+                        // .scaleEffect(buttonsScale)
+                        // .opacity(buttonsOpacity)
                         
                         Spacer()
                             .frame(height: deviceType == .iPad ? 120 : 80) // Reduced to eliminate white space
@@ -69,6 +82,17 @@ struct HomePageView: View {
                 
                 // Enhanced configuration overlay
                 enhancedConfigurationOverlay
+                
+                // Global ripple effect overlay
+                if let origin = rippleOrigin {
+                    RippleEffectView(origin: origin, maxRadius: rippleRadius)
+                        .transition(.opacity)
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                                rippleOrigin = nil
+                            }
+                        }
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
            // .overlay(enhancedFooterOverlay(geometry: geometry, deviceType: deviceType), alignment: .bottom)
@@ -78,6 +102,11 @@ struct HomePageView: View {
             )
             .onAppear {
                 startEntranceAnimations()
+            }
+            .onDisappear {
+                // Clean up timer
+                entranceTimer?.invalidate()
+                entranceTimer = nil
             }
         }
         .sheet(isPresented: $showingConfiguration) {
@@ -111,7 +140,7 @@ struct HomePageView: View {
     @ViewBuilder
     private var animatedGradientBackground: some View {
         ZStack {
-            // Primary animated gradient
+            // Primary gradient
             LinearGradient(
                 colors: [
                     Color(red: 241/255, green: 181/255, blue: 23/255).opacity(0.1),
@@ -121,11 +150,11 @@ struct HomePageView: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             .rotationEffect(.degrees(animatedGradientRotation))
             .animation(.linear(duration: 20).repeatForever(autoreverses: false), value: animatedGradientRotation)
-            
-            // Secondary animated gradient
+
+            // Secondary gradient
             RadialGradient(
                 colors: [
                     Color.clear,
@@ -139,6 +168,31 @@ struct HomePageView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .scaleEffect(animatedGradientScale)
             .animation(.easeInOut(duration: 15).repeatForever(autoreverses: true), value: animatedGradientScale)
+
+            // 🔥 REACTIVE SHIMMER BOOST
+            if shimmerBoost {
+                GeometryReader { proxy in
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                gradient: Gradient(colors: [
+                                    Color(hex: "F1B517").opacity(0.5),
+                                    Color(hex: "F1B517").opacity(0.2),
+                                    .clear
+                                ]),
+                                center: .center,
+                                startRadius: 10,
+                                endRadius: 400
+                            )
+                        )
+                        .frame(width: shimmerBoost ? 800 : 0, height: shimmerBoost ? 800 : 0)
+                        .position(x: shimmerOrigin.x, y: shimmerOrigin.y)
+                        .scaleEffect(shimmerBoost ? 1.0 : 0.1)
+                        .blendMode(.screen)
+                        .animation(.easeOut(duration: 0.8), value: shimmerBoost)
+                        .transition(.opacity)
+                }
+            }
         }
     }
     
@@ -216,11 +270,11 @@ struct HomePageView: View {
             HStack(spacing: 2) {
                 ForEach(Array("Bésigue".enumerated()), id: \.offset) { index, character in
                     Text(String(character))
-                        .font(.system(
-                            size: getTitleFontSize(for: deviceType, geometry: geometry, isLandscape: isLandscape),
-                            weight: .black,
-                            design: .serif
-                        ))
+                .font(.system(
+                    size: getTitleFontSize(for: deviceType, geometry: geometry, isLandscape: isLandscape),
+                    weight: .black,
+                    design: .serif
+                ))
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [
@@ -237,7 +291,7 @@ struct HomePageView: View {
                         .animation(.spring(response: 1.0, dampingFraction: 0.8).delay(Double(index) * 0.1), value: titleOpacity)
                 }
             }
-            .minimumScaleFactor(0.5)
+                .minimumScaleFactor(0.5)
             .lineLimit(1)
 
             // Enhanced subtitle with refined styling
@@ -298,9 +352,9 @@ struct HomePageView: View {
             ].enumerated()), id: \.offset) { index, button in
                 enhancedButtonColumn(
                     button.0, button.1, button.2, button.3,
-                    buttonSize, iconSize, labelFontSize
+                    buttonSize, iconSize, labelFontSize, index
                 )
-                .animation(.spring(response: 1.0, dampingFraction: 0.8).delay(Double(index) * 0.15), value: buttonsOpacity)
+                .animation(.spring(response: 1.0, dampingFraction: 0.8).delay(Double(index) * 0.15), value: entranceIndex)
             }
         }
         .frame(maxWidth: .infinity)
@@ -308,15 +362,33 @@ struct HomePageView: View {
     }
     
     @ViewBuilder
-    private func enhancedButtonColumn(_ icon: String, _ label: String, _ color: Color, _ action: @escaping () -> Void, _ buttonSize: CGFloat, _ iconSize: CGFloat, _ labelFontSize: CGFloat) -> some View {
+    private func enhancedButtonColumn(_ icon: String, _ label: String, _ color: Color, _ action: @escaping () -> Void, _ buttonSize: CGFloat, _ iconSize: CGFloat, _ labelFontSize: CGFloat, _ buttonIndex: Int) -> some View {
         VStack(spacing: 12) {
-            EnhancedCircularButtonView(
+                            EnhancedCircularButtonView(
                 icon: icon,
                 outlineColor: color,
                 action: action,
                 buttonSize: buttonSize,
-                iconFontSize: iconSize
-            )
+                    iconFontSize: iconSize,
+                    buttonIndex: buttonIndex,
+                    entranceIndex: entranceIndex,
+                    onRippleTrigger: {
+                        // entrance ripple size — tweak multiplier if you want more/less splash
+                        rippleRadius = buttonSize * 4.0
+                    },
+                    onGlobalRipple: { globalOrigin in
+                        rippleOrigin = nil
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                            // Use the actual global coordinates from the button
+                            rippleOrigin = globalOrigin
+                            shimmerOrigin = globalOrigin
+                            shimmerBoost = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                            shimmerBoost = false
+                        }
+                    }
+                )
             
             Text(label)
                 .font(.system(size: labelFontSize, weight: .bold, design: .serif))
@@ -367,12 +439,12 @@ struct HomePageView: View {
                                 )
                                 .frame(width: 80, height: 80)
                         }
-                        
-                        Text(configurationMessage)
+                    
+                    Text(configurationMessage)
                             .font(.title2.bold())
-                            .foregroundColor(.white)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
                             .shadow(color: .black.opacity(0.5), radius: 2, x: 1, y: 1)
                     }
                 }
@@ -422,7 +494,8 @@ struct HomePageView: View {
             animatedGradientScale = 1.2
         }
         
-        withAnimation(.easeOut(duration: 1.2)) {
+        // Title and cards animations
+        withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
             titleScale = 1.0
             titleOpacity = 1.0
         }
@@ -432,9 +505,30 @@ struct HomePageView: View {
             cardsOpacity = 1.0
         }
         
-        withAnimation(.spring(response: 1.0, dampingFraction: 0.8).delay(0.6)) {
-            buttonsScale = 1.0
-            buttonsOpacity = 1.0
+        // Start button entrance sequence
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            startButtonEntranceSequence()
+        }
+    }
+    
+    private func startButtonEntranceSequence() {
+        guard !isEntranceComplete else { return }
+        
+        // Reset entrance state
+        entranceIndex = 0
+        
+        // Create a timer that triggers every 0.15 seconds
+        entranceTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { timer in
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+                entranceIndex += 1
+            }
+            
+            // Stop after all buttons have entered
+            if entranceIndex >= 4 {
+                timer.invalidate()
+                entranceTimer = nil
+                isEntranceComplete = true
+            }
         }
     }
     
@@ -667,14 +761,14 @@ struct EnhancedMarriageCardView: View {
                     .shadow(color: .black.opacity(0.3), radius: shadowRadius, x: 4, y: 6)
                     .shadow(color: getSuitColor().opacity(0.2), radius: 4, x: 0, y: 0)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 3)
                             .stroke(
                                 LinearGradient(
                                     colors: [getSuitColor(), getSuitColor().opacity(0.5)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
-                                lineWidth: 2
+                                lineWidth: 1
                             )
                     )
             }
@@ -689,7 +783,7 @@ struct EnhancedMarriageCardView: View {
                     .aspectRatio(2.5/3.5, contentMode: .fit)
                     .frame(maxWidth: cardSize.width, maxHeight: cardSize.height)
                     .background(Color.white)
-                    .cornerRadius(6)
+                    .cornerRadius(3)
                     .shadow(color: .black.opacity(0.3), radius: shadowRadius, x: 4, y: 6)
                     .shadow(color: getSuitColor().opacity(0.2), radius: 4, x: 0, y: 0)
                     .overlay(
@@ -700,7 +794,7 @@ struct EnhancedMarriageCardView: View {
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
-                                lineWidth: 2
+                                lineWidth: 1
                             )
                     )
             }
@@ -754,101 +848,179 @@ struct EnhancedCircularButtonView: View {
     let action: () -> Void
     var buttonSize: CGFloat = 100
     var iconFontSize: CGFloat = 40
+    let buttonIndex: Int // For sequential rippling
+    let entranceIndex: Int // Current entrance animation index
+    let onRippleTrigger: () -> Void // Callback for ripple coordination
+    let onGlobalRipple: (CGPoint) -> Void
     
     @State private var isPressed = false
-    @State private var pulseScale: CGFloat = 1.0
+    
+    // Audio state
+    @State private var audioPlayer: AVAudioPlayer?
+    
+    // Dropping animation state
+    @State private var dropOffset: CGFloat = 0
+    @State private var dropScale: CGFloat = 1.0
+    @State private var isDropping = false
+    
+    // Entrance animation state
+    @State private var hasEntered = false
+    @State private var wobbleAngle: Double = 0
     
     var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                isPressed = true
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        GeometryReader { geo in
+            Button(action: {
+                let center = CGPoint(
+                    x: geo.frame(in: .global).midX,
+                    y: geo.frame(in: .global).midY
+                )
+                
+                // Start dropping animation
+                withAnimation(.easeIn(duration: 0.3)) {
+                    isDropping = true
+                    dropOffset = 20 // Fall down 20 points
+                    dropScale = 0.9 // Slightly shrink as it falls
+                }
+                
+                // Reset drop animation after delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    // Reset drop animation
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                        isDropping = false
+                        dropOffset = 0
+                        dropScale = 1.0
+                    }
+                }
+                
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    isPressed = false
+                    isPressed = true
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                        isPressed = false
+                    }
+                }
+                
+                action()
+            }) {
+                ZStack {
+                    // Main button background with enhanced depth
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white,
+                                    Color.white.opacity(0.95),
+                                    Color.white.opacity(0.9)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: buttonSize, height: buttonSize)
+                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                        .shadow(color: .black.opacity(0.1), radius: 16, x: 0, y: 8)
+                        .shadow(color: outlineColor.opacity(0.3), radius: 6, x: 0, y: 0)
+                        .shadow(color: .black.opacity(isDropping ? 0.4 : 0.15), radius: isDropping ? 12 : 8, x: 0, y: isDropping ? 8 : 4)
+                        .overlay(
+                            Circle()
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [Color.gray.opacity(0.1), Color.gray.opacity(0.3)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+
+                    // Icon with enhanced styling
+                    Image(systemName: icon)
+                        .font(.system(size: iconFontSize, weight: .bold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [outlineColor, outlineColor.opacity(0.8)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: outlineColor.opacity(0.4), radius: 3, x: 1, y: 1)
+                }
+                .offset(y: dropOffset)
+                .scaleEffect(dropScale)
+                .rotationEffect(.degrees(wobbleAngle))
+            }
+            .scaleEffect(isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+        }
+        .frame(width: buttonSize, height: buttonSize) // Limit GeometryReader to button bounds
+        // Apply entrance animation based on entranceIndex
+        .offset(y: entranceIndex > buttonIndex ? 0 : -50)
+        .opacity(entranceIndex > buttonIndex ? 1 : 0)
+        .onChange(of: entranceIndex) { newIndex in
+            if newIndex == buttonIndex + 1 {
+                // Button's turn to enter
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+                    isDropping = true
+                    dropOffset = 22
+                    dropScale = 0.9
+                }
+                
+                // Trigger splash effect
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    onRippleTrigger()
+                    
+                    // Use relative positioning for ripple
+                    let center = CGPoint(
+                        x: UIScreen.main.bounds.width / 2,
+                        y: UIScreen.main.bounds.height / 2 - CGFloat(buttonIndex) * 100
+                    )
+                    onGlobalRipple(center)
+                    
+                    // Wobble sequence
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.45)) {
+                        isDropping = false
+                        dropOffset = 0
+                        dropScale = 1.0
+                        wobbleAngle = 6
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.55)) {
+                            wobbleAngle = -4
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            withAnimation(.spring(response: 0.5, dampingFraction: 0.65)) {
+                                wobbleAngle = 0
+                            }
+                        }
+                    }
                 }
             }
-            action()
-        }) {
-            ZStack {
-                // Intensified outer glow ring
-                Circle()
-                    .stroke(
-                        LinearGradient(
-                            colors: [outlineColor.opacity(0.8), outlineColor.opacity(0.4)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 6
-                    )
-                    .frame(width: buttonSize + 30, height: buttonSize + 30)
-                    .scaleEffect(pulseScale)
-                    .opacity(0.9)
-                
-                // Secondary glow ring
-                Circle()
-                    .stroke(
-                        LinearGradient(
-                            colors: [outlineColor.opacity(0.6), outlineColor.opacity(0.2)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 4
-                    )
-                    .frame(width: buttonSize + 20, height: buttonSize + 20)
-                    .scaleEffect(pulseScale * 1.1)
-                    .opacity(0.7)
-                
-                // Main button background with enhanced depth
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white,
-                                Color.white.opacity(0.95),
-                                Color.white.opacity(0.9)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: buttonSize, height: buttonSize)
-                    .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-                    .shadow(color: .black.opacity(0.1), radius: 16, x: 0, y: 8)
-                    .shadow(color: outlineColor.opacity(0.3), radius: 6, x: 0, y: 0)
-                    .overlay(
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.gray.opacity(0.1), Color.gray.opacity(0.3)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1
-                            )
-                    )
+        }
+    }
+    
+    func playNote(for index: Int) {
+        let noteFiles = ["note_g", "note_eb", "note_c", "note_b", "chord_c_minor"]
+        guard index < noteFiles.count else { return }
 
-                // Icon with enhanced styling
-                Image(systemName: icon)
-                    .font(.system(size: iconFontSize, weight: .bold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [outlineColor, outlineColor.opacity(0.8)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: outlineColor.opacity(0.4), radius: 3, x: 1, y: 1)
+        if let url = Bundle.main.url(forResource: noteFiles[index], withExtension: "mp3") {
+            do {
+                audioPlayer = try AVAudioPlayer(contentsOf: url)
+                audioPlayer?.prepareToPlay()
+                audioPlayer?.play()
+            } catch {
+                print("❌ Failed to play note: \(error)")
             }
         }
-        .scaleEffect(isPressed ? 0.95 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                pulseScale = 1.15
-            }
-        }
+    }
+}
+
+// MARK: - Helper Extensions
+extension CGRect {
+    var center: CGPoint {
+        CGPoint(x: self.midX, y: self.midY)
     }
 }
 
@@ -1028,13 +1200,13 @@ struct HowToPlayView: View {
 struct AboutView: View {
     var body: some View {
         VStack(spacing: 20) {
-            Text("About Bésigue")
+                Text("About Bésigue")
                 .font(.title.bold())
                 .foregroundColor(.white)
             
             Text("A modern implementation of the classic card game...")
                 .foregroundColor(.white)
-                .multilineTextAlignment(.center)
+                        .multilineTextAlignment(.center)
                 .padding()
             
             Spacer()
@@ -1055,9 +1227,9 @@ struct PrivacyPolicyView: View {
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .padding()
-            
-            Spacer()
-        }
+                
+                Spacer()
+            }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.opacity(0.9))
     }
