@@ -51,7 +51,7 @@ struct HomePageView: View {
                 // Main content with improved animations - vertically centered
                 VStack(alignment: .center, spacing: getSpacing(for: deviceType, geometry: geometry)) {
                     // Flexible top spacer for vertical centering
-                    Spacer()
+                  //  Spacer()
                     
                     // Enhanced title section
                     enhancedTitleSection(deviceType: deviceType, geometry: geometry, isLandscape: isLandscape)
@@ -74,8 +74,8 @@ struct HomePageView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .padding(.horizontal, getHorizontalPadding(for: deviceType, geometry: geometry))
-                .padding(.top, geometry.safeAreaInsets.top + 20)
-                .padding(.bottom, geometry.safeAreaInsets.bottom + 20)
+                .padding(.top, geometry.safeAreaInsets.top + (deviceType == .iPad ? 0 : 20))
+                .padding(.bottom, geometry.safeAreaInsets.bottom + 10)
                 
                 // Enhanced configuration overlay
                 enhancedConfigurationOverlay
@@ -321,11 +321,12 @@ struct HomePageView: View {
         
         HStack(spacing: spacing) {
             ForEach(Array([CardSuit.hearts, .clubs, .diamonds, .spades].enumerated()), id: \.offset) { index, suit in
-                EnhancedMarriageCardView(
-                    suit: suit,
-                    angle: [10, 20, -10, -20][index],
-                    cardSize: cardSize
-                )
+                            EnhancedMarriageCardView(
+                suit: suit,
+                angle: [10, 20, -10, -20][index],
+                cardSize: cardSize,
+                deviceType: deviceType
+            )
                 .animation(.spring(response: 1.2, dampingFraction: 0.7).delay(Double(index) * 0.2), value: cardsOpacity)
             }
         }
@@ -597,9 +598,9 @@ struct HomePageView: View {
         
         switch deviceType {
         case .iPad: maxSize = 36
-        case .iPhonePlus: maxSize = 20
-        case .iPhoneRegular: maxSize = 18
-        case .iPhoneCompact: maxSize = 16
+        case .iPhonePlus: maxSize = 24 // Increased from 20
+        case .iPhoneRegular: maxSize = 20 // Increased from 18
+        case .iPhoneCompact: maxSize = 16 // Increased from 16
         }
         
         return min(geometry.size.width * multiplier, maxSize)
@@ -742,6 +743,7 @@ struct EnhancedMarriageCardView: View {
     let suit: CardSuit
     let angle: Double
     var cardSize: CGSize = CGSize(width: 120, height: 168)
+    let deviceType: DeviceType
     @State private var hoverScale: CGFloat = 1.0
     @State private var shadowRadius: CGFloat = 8
     
@@ -765,7 +767,7 @@ struct EnhancedMarriageCardView: View {
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
-                                lineWidth: 1
+                                lineWidth: deviceType == .iPad ? 1 : 0.5
                             )
                     )
             }
@@ -791,7 +793,7 @@ struct EnhancedMarriageCardView: View {
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
-                                lineWidth: 1
+                                lineWidth: deviceType == .iPad ? 1 : 0.5
                             )
                     )
             }
