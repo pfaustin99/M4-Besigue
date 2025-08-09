@@ -13,6 +13,9 @@ struct HomePageView: View {
     @State private var isConfiguringGame = false
     @State private var configurationMessage = ""
     
+    // Audio manager
+    @Environment(\.audioManager) private var audioManager
+    
     // Animation states
     @State private var titleScale: CGFloat = 0.8
     @State private var titleOpacity: Double = 0
@@ -346,7 +349,8 @@ struct HomePageView: View {
                 ("play.fill", "Play", Color(hex: "016A16"), { startGame() }),
                 ("gearshape.fill", "Settings", Color(hex: "D21034"), { showingConfiguration = true }),
                 ("questionmark", "Help", Color(hex: "00209F"), { showingHowToPlay = true }),
-                ("info.circle.fill", "About", Color(hex: "F1B517"), { showingAbout = true })
+                ("info.circle.fill", "About", Color(hex: "F1B517"), { showingAbout = true }),
+                ("speaker.wave.3.fill", "Test Sounds", Color(hex: "8A2BE2"), { testMeldSounds() })
             ].enumerated()), id: \.offset) { index, button in
                 enhancedButtonColumn(
                     button.0, button.1, button.2, button.3,
@@ -521,8 +525,8 @@ struct HomePageView: View {
                 entranceIndex += 1
             }
             
-            // Stop after all buttons have entered
-            if entranceIndex >= 4 {
+            // Stop after all buttons have entered (5 buttons total)
+            if entranceIndex >= 5 {
                 timer.invalidate()
                 entranceTimer = nil
                 isEntranceComplete = true
@@ -571,7 +575,7 @@ struct HomePageView: View {
     
     private func getHorizontalPadding(for deviceType: DeviceType, geometry: GeometryProxy) -> CGFloat {
         switch deviceType {
-        case .iPad: return geometry.size.width * 0.08
+        case .iPad: return geometry.size.width * 0.06 // Reduced from 0.08 to accommodate 5 buttons
         case .iPhonePlus: return geometry.size.width * 0.02 // Reduced from 0.04
         case .iPhoneRegular: return geometry.size.width * 0.015 // Reduced from 0.035
         case .iPhoneCompact: return geometry.size.width * 0.01 // Reduced from 0.03
@@ -662,7 +666,7 @@ struct HomePageView: View {
     
     private func getButtonSpacing(for deviceType: DeviceType, geometry: GeometryProxy) -> CGFloat {
         switch deviceType {
-        case .iPad: return geometry.size.width * 0.06
+        case .iPad: return geometry.size.width * 0.04 // Reduced from 0.06 to accommodate 5 buttons better
         case .iPhonePlus: return geometry.size.width * 0.02
         case .iPhoneRegular: return geometry.size.width * 0.015
         case .iPhoneCompact: return geometry.size.width * 0.01
@@ -716,6 +720,22 @@ struct HomePageView: View {
     
     private func startGame() {
         print("🎮 startGame() called")
+        
+        // Always play game start sound first
+        audioManager.playGameStart()
+        
+        // Then play player count specific sound
+        switch gameRules.playerCount {
+        case 2:
+            audioManager.playGameStart2Players()
+        case 3:
+            audioManager.playGameStart3Players()
+        case 4:
+            audioManager.playGameStart4Players()
+        default:
+            audioManager.playGameStart2Players() // fallback
+        }
+        
         isConfiguringGame = true
         configurationMessage = "Configuring game for \(gameRules.playerCount) players..."
         
@@ -730,6 +750,32 @@ struct HomePageView: View {
             isConfiguringGame = false
             isGameActive = true
         }
+    }
+    
+    private func testMeldSounds() {
+        print("🔊 Testing all sounds...")
+        
+        // Test all meld sounds with delays
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.0) { audioManager.playMeld250() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { audioManager.playMeld100() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { audioManager.playMeld80() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { audioManager.playMeld60() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { audioManager.playRoyalMarriage() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { audioManager.playBesigueMeld() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { audioManager.playMeld40() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) { audioManager.playMeld20() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { audioManager.playMeld10() }
+        
+        // Test dog sounds with delays
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) { audioManager.playDog1() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.5) { audioManager.playDog2() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) { audioManager.playDog3() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6.5) { audioManager.playDog4() }
+        
+        // Test player count sounds with delays
+        DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) { audioManager.playGameStart2Players() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 7.5) { audioManager.playGameStart3Players() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8.0) { audioManager.playGameStart4Players() }
     }
     
     private func restorePurchase() {
@@ -857,6 +903,9 @@ struct EnhancedCircularButtonView: View {
     // Audio state
     @State private var audioPlayer: AVAudioPlayer?
     
+    // Audio manager
+    @Environment(\.audioManager) private var audioManager
+    
     // Dropping animation state
     @State private var dropOffset: CGFloat = 0
     @State private var dropScale: CGFloat = 1.0
@@ -873,6 +922,9 @@ struct EnhancedCircularButtonView: View {
                     x: geo.frame(in: .global).midX,
                     y: geo.frame(in: .global).midY
                 )
+                
+                // Play button tap sound
+                audioManager.playButtonTap()
                 
                 // Start dropping animation
                 withAnimation(.easeIn(duration: 0.3)) {
@@ -958,8 +1010,8 @@ struct EnhancedCircularButtonView: View {
         .offset(y: entranceIndex > buttonIndex ? 0 : -50)
         .opacity(entranceIndex > buttonIndex ? 1 : 0)
         .onChange(of: entranceIndex) { newIndex in
-            if newIndex == buttonIndex + 1 {
-                // Button's turn to enter
+            if newIndex > buttonIndex {
+                // Button's turn to enter (when entranceIndex exceeds buttonIndex)
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
                     isDropping = true
                     dropOffset = 22
