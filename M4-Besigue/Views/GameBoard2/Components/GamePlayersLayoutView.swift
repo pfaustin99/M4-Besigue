@@ -25,7 +25,9 @@ struct GamePlayersLayoutView: View {
                     position: position,
                     isCurrentTurn: index == game.currentPlayerIndex,
                     isHumanPlayer: index == 0,
-                    geometry: geometry
+                    geometry: geometry,
+                    game: game,
+                    viewState: viewState
                 )
                 .position(anchorPoint(for: position, in: geometry.size))
             }

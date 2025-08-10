@@ -42,18 +42,6 @@ struct GameActionButtonsView: View {
     
     var body: some View {
         HStack(spacing: 15) {
-            // Play Card button
-            if shouldShowPlayButton {
-                Button("Play Card") {
-                    if let cardToPlay = viewState.selectedCards.first {
-                        game.playCard(cardToPlay, from: game.currentPlayer)
-                        viewState.clearSelectedCards()
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .font(.headline)
-            }
-            
             // Declare Meld button
             if shouldShowMeldButton {
                 Button("Declare Meld") {
@@ -65,14 +53,6 @@ struct GameActionButtonsView: View {
                 .animation(.easeInOut(duration: 0.1), value: viewState.shakeMeldButton)
             }
         }
-    }
-    
-    private var shouldShowPlayButton: Bool {
-        game.currentPhase == .playing &&
-        game.currentPlayer.type == .human &&
-        !game.awaitingMeldChoice &&
-        !viewState.selectedCards.isEmpty &&
-        game.canPlayCard()
     }
     
     private var shouldShowMeldButton: Bool {
@@ -136,10 +116,47 @@ struct GamePlayerMeldedCardsView: View {
                                 card: card,
                                 isSelected: viewState.selectedCards.contains(card),
                                 isPlayable: game.getPlayableCards().contains { $0.id == card.id },
+                                isDragTarget: viewState.draggedOverCard?.id == card.id,
                                 onTap: { handleCardTap(card) },
                                 onDoubleTap: { handleCardDoubleTap(card) },
                                 settings: settings
                             )
+                            .onDrag {
+                                // Track drag start
+                                viewState.setDragging(true)
+                                // Create drag item with card ID for reordering
+                                return NSItemProvider(object: card.id.uuidString as NSString)
+                            } preview: {
+                                // Show a preview of the card being dragged
+                                GameMeldedCardView(
+                                    card: card,
+                                    isSelected: false,
+                                    isPlayable: false,
+                                    isDragTarget: false,
+                                    onTap: {},
+                                    onDoubleTap: {},
+                                    settings: settings
+                                )
+                                .scaleEffect(0.8)
+                                .opacity(0.8)
+                            }
+                            .onDrop(of: [.text], delegate: EnhancedCardDropDelegate(
+                                card: card,
+                                cards: meldedCards,
+                                onReorder: { newOrder in
+                                    handleMeldedCardsReorder(newOrder)
+                                },
+                                onDragEnter: { card in
+                                    viewState.setDraggedOverCard(card)
+                                },
+                                onDragExit: { _ in
+                                    viewState.clearDraggedOverCard()
+                                },
+                                onDragEnd: {
+                                    viewState.setDragging(false)
+                                    viewState.clearDraggedOverCard()
+                                }
+                            ))
                         }
                     }
                 }
@@ -163,6 +180,61 @@ struct GamePlayerMeldedCardsView: View {
             viewState.clearSelectedCards()
         }
     }
+    
+    private func handleMeldedCardsReorder(_ newOrder: [PlayerCard]) {
+        // Update the melded cards order in the data model
+        let newOrderIds = newOrder.map { $0.id }
+        player.updateMeldedOrder(newOrderIds)
+        print("🔄 Melded cards reordered: \(newOrder.map { $0.displayName })")
+    }
+}
+
+// MARK: - Melded Card Drop Delegate for Drag and Drop
+struct MeldedCardDropDelegate: DropDelegate {
+    let card: PlayerCard
+    let cards: [PlayerCard]
+    let onReorder: ([PlayerCard]) -> Void
+    
+    func performDrop(info: DropInfo) -> Bool {
+        // Get the dragged card ID
+        guard let itemProvider = info.itemProviders(for: [.text]).first else { return false }
+        
+        itemProvider.loadObject(ofClass: NSString.self) { string, _ in
+            guard let cardIdString = string as? String,
+                  let draggedCardId = UUID(uuidString: cardIdString),
+                  let draggedCard = cards.first(where: { $0.id == draggedCardId }),
+                  let draggedIndex = cards.firstIndex(where: { $0.id == draggedCardId }),
+                  let dropIndex = cards.firstIndex(where: { $0.id == card.id }) else { return }
+            
+            // Don't reorder if dropping on the same card
+            guard draggedIndex != dropIndex else { return }
+            
+            DispatchQueue.main.async {
+                // Create new order by moving the dragged card to the drop position
+                var newOrder = cards
+                newOrder.remove(at: draggedIndex)
+                newOrder.insert(draggedCard, at: dropIndex)
+                
+                // Call the reorder callback
+                onReorder(newOrder)
+            }
+        }
+        
+        return true
+    }
+    
+    func dropEntered(info: DropInfo) {
+        // Visual feedback when dragging over a drop target
+    }
+    
+    func dropExited(info: DropInfo) {
+        // Clear visual feedback when leaving drop target
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        // Allow the drop
+        return DropProposal(operation: .move)
+    }
 }
 
 /// GameMeldedCardView - Individual melded card view
@@ -170,6 +242,7 @@ struct GameMeldedCardView: View {
     let card: PlayerCard
     let isSelected: Bool
     let isPlayable: Bool
+    let isDragTarget: Bool
     let onTap: () -> Void
     let onDoubleTap: () -> Void
     let settings: GameSettings
@@ -179,6 +252,7 @@ struct GameMeldedCardView: View {
             card: card,
             isSelected: isSelected,
             isPlayable: isPlayable,
+            isDragTarget: isDragTarget,
             onTap: onTap
         )
             .scaleEffect(isSelected ? 1.1 : 1.0)
@@ -203,32 +277,51 @@ struct FloatingDrawButton: View {
         return maxDimension >= 1024
     }
     
+    // MARK: - Button State
+    private var shouldShowButton: Bool {
+        game.mustDrawCard && 
+        game.currentPlayer.type == .human && 
+        game.currentPlayer.id == game.currentPlayer.id &&
+        !game.deck.isEmpty
+    }
+    
     var body: some View {
-        Button(action: {
-            game.drawCardForCurrentPlayer()
-        }) {
-            HStack(spacing: 4) {
-                Image(systemName: "arrow.down.circle")
-                    .foregroundColor(Color(hex: "F1B517"))
-                Text("Draw Card")
-                    .foregroundColor(.white)
-                    .fontWeight(.bold)
+        if shouldShowButton {
+            Button(action: {
+                game.drawCardForCurrentPlayer()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .foregroundColor(Color(hex: "F1B517"))
+                        .font(.title2)
+                    Text("Draw Card")
+                        .foregroundColor(.white)
+                        .fontWeight(.bold)
+                }
+                .font(getDrawButtonFont(for: isIPad))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(hex: "00209F"))
+                        .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color(hex: "F1B517"), lineWidth: 2)
+                )
             }
-            .font(getDrawButtonFont(for: isIPad))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color(hex: "00209F"))
-            .cornerRadius(12)
-            .shadow(radius: 4)
+            .scaleEffect(1.0)
+            .animation(.easeInOut(duration: 0.2), value: shouldShowButton)
         }
     }
     
     // MARK: - Responsive Font
     private func getDrawButtonFont(for isIPad: Bool) -> Font {
         if isIPad {
-            return .system(size: 16, weight: .bold)
+            return .system(size: 18, weight: .bold)
         } else {
-            return .system(size: 14, weight: .bold)
+            return .system(size: 16, weight: .bold)
         }
     }
 } 

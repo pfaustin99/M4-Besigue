@@ -11,6 +11,8 @@ struct PlayerTable: View {
     let isCurrentTurn: Bool
     let isHumanPlayer: Bool
     let geometry: GeometryProxy
+    let game: Game
+    let viewState: GameBoardViewState2
 
     var body: some View {
         ZStack {
@@ -23,7 +25,9 @@ struct PlayerTable: View {
                     isCurrentTurn: isCurrentTurn,
                     angle: 0,
                     isHorizontal: true,
-                    geometry: geometry
+                    geometry: geometry,
+                    game: game,
+                    viewState: viewState
                 )
             }
             .rotationEffect(rotation(for: position))

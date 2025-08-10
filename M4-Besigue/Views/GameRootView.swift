@@ -14,7 +14,7 @@ struct GameRootView: View {
             tableColor
                 .ignoresSafeArea()
 
-            GameBoardView(
+            GameBoardView2(
                 game: game, 
                 settings: game.settings, 
                 gameRules: game.gameRules,

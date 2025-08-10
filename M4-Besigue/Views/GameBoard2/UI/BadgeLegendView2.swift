@@ -50,9 +50,8 @@ struct BadgeLegendView2: View {
             }
             .padding()
             .navigationTitle("Badge Legend")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Button("Done") {
                         dismiss()
                     }

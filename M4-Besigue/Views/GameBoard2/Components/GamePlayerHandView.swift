@@ -8,6 +8,8 @@ struct GamePlayerHandView: View {
     let angle: Double
     let isHorizontal: Bool
     let geometry: GeometryProxy
+    let game: Game
+    let viewState: GameBoardViewState2
     
     // MARK: - Responsive Card Sizing
     private var humanCardSize: CGSize {
@@ -77,13 +79,56 @@ struct GamePlayerHandView: View {
             ForEach(player.held) { card in
                 CardView(
                     card: card,
-                    isSelected: false, // Will be managed by parent
-                    isPlayable: true,
+                    isSelected: viewState.selectedCards.contains(card),
+                    isPlayable: game.canPlayCard() && game.currentPlayer.id == player.id,
                     showHint: false,
+                    isDragTarget: viewState.draggedOverCard?.id == card.id,
                     size: humanCardSize
                 ) {
-                    // Card selection will be handled by parent
+                    // Single tap - select/deselect for melding
+                    handleCardTap(card)
                 }
+                .onTapGesture(count: 2) {
+                    // Double tap - play the card
+                    handleCardDoubleTap(card)
+                }
+                .onDrag {
+                    // Track drag start
+                    viewState.setDragging(true)
+                    // Create drag item with card ID for reordering
+                    return NSItemProvider(object: card.id.uuidString as NSString)
+                } preview: {
+                    // Show a preview of the card being dragged
+                    CardView(
+                        card: card,
+                        isSelected: false,
+                        isPlayable: true,
+                        showHint: false,
+                        isDragTarget: false,
+                        size: humanCardSize
+                    ) {
+                        // Empty action for preview
+                    }
+                    .scaleEffect(0.8)
+                    .opacity(0.8)
+                }
+                .onDrop(of: [.text], delegate: EnhancedCardDropDelegate(
+                    card: card,
+                    cards: player.held,
+                    onReorder: { newOrder in
+                        handleHandReorder(newOrder)
+                    },
+                    onDragEnter: { card in
+                        viewState.setDraggedOverCard(card)
+                    },
+                    onDragExit: { _ in
+                        viewState.clearDraggedOverCard()
+                    },
+                    onDragEnd: {
+                        viewState.setDragging(false)
+                        viewState.clearDraggedOverCard()
+                    }
+                ))
             }
         }
         .frame(width: humanContainerSize.width, height: humanContainerSize.height)
@@ -101,6 +146,37 @@ struct GamePlayerHandView: View {
         }
         .frame(width: aiContainerSize.width, height: aiContainerSize.height)
     }
+    
+    // MARK: - Card Interaction Methods
+    
+    private func handleCardTap(_ card: PlayerCard) {
+        // Single tap - select/deselect for melding
+        if game.awaitingMeldChoice && 
+           game.currentPlayer.type == .human && 
+           game.canPlayerMeld && 
+           game.currentPlayer.id == game.trickWinnerId {
+            
+            if viewState.selectedCards.contains(card) {
+                viewState.deselectCard(card)
+            } else {
+                viewState.selectCard(card)
+            }
+        }
+    }
+    
+    private func handleCardDoubleTap(_ card: PlayerCard) {
+        // Double tap - play the card immediately
+        if game.currentPlayer.id == player.id && game.canPlayCard() {
+            game.playCard(card, from: player)
+            viewState.clearSelectedCards()
+        }
+    }
+    
+    private func handleHandReorder(_ newOrder: [PlayerCard]) {
+        // Update the player's hand order in the data model
+        player.updateHeldOrder(newOrder)
+        print("🔄 Hand reordered: \(newOrder.map { $0.displayName })")
+    }
 }
 
 // MARK: - Preview
@@ -116,7 +192,9 @@ struct GamePlayerHandView_Previews: PreviewProvider {
                     isCurrentTurn: true,
                     angle: 0,
                     isHorizontal: true,
-                    geometry: geometry
+                    geometry: geometry,
+                    game: Game(gameRules: GameRules(), isOnline: false),
+                    viewState: GameBoardViewState2()
                 )
                 
                 // AI player hand
@@ -126,7 +204,9 @@ struct GamePlayerHandView_Previews: PreviewProvider {
                     isCurrentTurn: false,
                     angle: 0,
                     isHorizontal: true,
-                    geometry: geometry
+                    geometry: geometry,
+                    game: Game(gameRules: GameRules(), isOnline: false),
+                    viewState: GameBoardViewState2()
                 )
             }
             .padding()

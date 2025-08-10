@@ -731,8 +731,9 @@ struct HomePageView: View {
         // Always play game start sound first
         audioManager.playGameStart()
         
-        // Then play player count specific sound
-        switch gameRules.playerCount {
+        // Then play player count specific sound based on total players in the game
+        let totalPlayers = gameRules.totalPlayerCount
+        switch totalPlayers {
         case 2:
             audioManager.playGameStart2Players()
         case 3:
@@ -744,7 +745,8 @@ struct HomePageView: View {
         }
         
         isConfiguringGame = true
-        configurationMessage = "Configuring game for \(gameRules.playerCount) players..."
+        let playerDescription = gameRules.playerCount == 1 ? "1 human + \(gameRules.aiPlayerCount) AI" : "\(gameRules.playerCount) players"
+        configurationMessage = "Configuring game for \(playerDescription)..."
         
         if game == nil {
             game = Game(gameRules: gameRules)

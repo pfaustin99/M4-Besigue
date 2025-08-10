@@ -1,5 +1,11 @@
 import SwiftUI
 
+// TODO: ENSURE CONFIGURATION SHEET ENFORCES SINGLE PLAYER HUMAN PLAYER LIMITATION
+// - This view should prevent users from changing human player count in single player mode
+// - The stepper is already disabled for single player games, but verify all validation logic
+// - Ensure consistency with GameRules.updateHumanPlayerCount() method
+// - Consider adding additional validation to prevent any single player games from having >1 human players
+
 struct GameSettingsView: View {
     @ObservedObject var gameRules: GameRules
     @Environment(\.dismiss) private var dismiss
@@ -44,9 +50,9 @@ struct GameSettingsView: View {
                                 Text("Number of Players")
                                 Spacer()
                                 Text("\(gameRules.playerCount)")
-                                Stepper("", value: $gameRules.playerCount, in: 2...4)
+                                Stepper("", value: $gameRules.playerCount, in: 1...4)  // Changed from 2...4 to 1...4
                             }
-                            .onChange(of: gameRules.playerCount) { _ in
+                            .onChange(of: gameRules.playerCount) {
                                 gameRules.updatePlayerCount(gameRules.playerCount)
                             }
                             
@@ -94,15 +100,35 @@ struct GameSettingsView: View {
                                 Spacer()
                                 Text("\(gameRules.humanPlayerCount)")
                                 Stepper("", value: $gameRules.humanPlayerCount, in: 1...gameRules.playerCount)
+                                    .disabled(gameRules.playerCount == 1) // Disable for single player games
                             }
-                            .onChange(of: gameRules.humanPlayerCount) { _ in
+                            .onChange(of: gameRules.humanPlayerCount) {
+                                // TODO: Add validation to ensure single player games always have exactly 1 human player
+                                // This should be consistent with GameRules.updateHumanPlayerCount() method
                                 gameRules.updateHumanPlayerCount(gameRules.humanPlayerCount)
+                            }
+                            if gameRules.playerCount == 1 {
+                                Text("Single player games must have 1 human player")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .italic()
                             }
                             
                             HStack {
                                 Text("AI Players")
                                 Spacer()
                                 Text("\(gameRules.aiPlayerCount)")
+                                if gameRules.playerCount == 1 {
+                                    Stepper("", value: $gameRules.aiPlayerCount, in: 1...3)  // Allow 1-3 AI players for single player
+                                        .onChange(of: gameRules.aiPlayerCount) {
+                                            gameRules.updateAIPlayerCount(gameRules.aiPlayerCount)  // Use the new method
+                                        }
+                                }
+                            }
+                            
+                            if gameRules.playerCount == 1 {
+                                Text("Single player: 1 human + \(gameRules.aiPlayerCount) AI = \(gameRules.totalPlayerCount) total players")
+                                    .font(.caption)
                                     .foregroundColor(.secondary)
                             }
                             

@@ -5,14 +5,16 @@ struct CardView: View {
     let isSelected: Bool
     let isPlayable: Bool
     let showHint: Bool
+    let isDragTarget: Bool
     let onTap: () -> Void
     let size: CGSize
     
-    init(card: PlayerCard, isSelected: Bool = false, isPlayable: Bool = true, showHint: Bool = false, size: CGSize = CGSize(width: 80, height: 112), onTap: @escaping () -> Void) {
+    init(card: PlayerCard, isSelected: Bool = false, isPlayable: Bool = true, showHint: Bool = false, isDragTarget: Bool = false, size: CGSize = CGSize(width: 80, height: 112), onTap: @escaping () -> Void) {
         self.card = card
         self.isSelected = isSelected
         self.isPlayable = isPlayable
         self.showHint = showHint
+        self.isDragTarget = isDragTarget
         self.size = size
         self.onTap = onTap
     }
@@ -29,11 +31,21 @@ struct CardView: View {
                     .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(isSelected ? Color.blue : (showHint ? Color.yellow : Color.clear), lineWidth: isSelected ? 3 : (showHint ? 4 : 0))
+                            .stroke(
+                                isSelected ? Color.blue : 
+                                (isDragTarget ? Color.green : 
+                                 (showHint ? Color.yellow : Color.clear)), 
+                                lineWidth: isSelected ? 3 : (isDragTarget ? 4 : (showHint ? 4 : 0))
+                            )
                     )
-                    .scaleEffect(isSelected ? 1.1 : 1.0)
-                    .shadow(color: isSelected ? .blue.opacity(0.5) : .clear, radius: isSelected ? 8 : 0)
+                    .scaleEffect(isSelected ? 1.1 : (isDragTarget ? 1.05 : 1.0))
+                    .shadow(
+                        color: isSelected ? .blue.opacity(0.5) : 
+                               (isDragTarget ? .green.opacity(0.6) : .clear), 
+                        radius: isSelected ? 8 : (isDragTarget ? 6 : 0)
+                    )
                     .animation(.easeInOut(duration: 0.2), value: isSelected)
+                    .animation(.easeInOut(duration: 0.15), value: isDragTarget)
             }
         }
         .disabled(!isPlayable)
@@ -65,8 +77,9 @@ struct HandView: View {
     let onCardTap: (PlayerCard) -> Void
     let onDoubleTap: (PlayerCard) -> Void
     let onReorder: (([PlayerCard]) -> Void)?
+    let onDragEnd: () -> Void
     
-    init(cards: [PlayerCard], playableCards: [PlayerCard], selectedCards: [PlayerCard], showHintFor: Set<UUID> = [], onCardTap: @escaping (PlayerCard) -> Void, onDoubleTap: @escaping (PlayerCard) -> Void, onReorder: (([PlayerCard]) -> Void)? = nil) {
+    init(cards: [PlayerCard], playableCards: [PlayerCard], selectedCards: [PlayerCard], showHintFor: Set<UUID> = [], onCardTap: @escaping (PlayerCard) -> Void, onDoubleTap: @escaping (PlayerCard) -> Void, onReorder: (([PlayerCard]) -> Void)? = nil, onDragEnd: @escaping () -> Void = {}) {
         self.cards = cards
         self.playableCards = playableCards
         self.selectedCards = selectedCards
@@ -74,6 +87,7 @@ struct HandView: View {
         self.onCardTap = onCardTap
         self.onDoubleTap = onDoubleTap
         self.onReorder = onReorder
+        self.onDragEnd = onDragEnd
     }
     
     var body: some View {
@@ -87,7 +101,8 @@ struct HandView: View {
                         card: card,
                         isSelected: isSelected,
                         isPlayable: isPlayable,
-                        showHint: showHint
+                        showHint: showHint,
+                        isDragTarget: false
                     ) {
                         onCardTap(card)
                     }
@@ -97,11 +112,25 @@ struct HandView: View {
                     .onDrag {
                         // Create drag item with card ID
                         NSItemProvider(object: card.id.uuidString as NSString)
+                    } preview: {
+                        // Show a preview of the card being dragged
+                        CardView(
+                            card: card,
+                            isSelected: false,
+                            isPlayable: true,
+                            showHint: false,
+                            isDragTarget: false
+                        ) {
+                            // Empty action for preview
+                        }
+                        .scaleEffect(0.8)
+                        .opacity(0.8)
                     }
                     .onDrop(of: [.text], delegate: CardDropDelegate(
                         card: card,
                         cards: cards,
-                        onReorder: onReorder
+                        onReorder: onReorder,
+                        onDragEnd: onDragEnd
                     ))
                     .scaleEffect(isSelected ? 1.1 : 1.0)
                     .shadow(color: isSelected ? .blue.opacity(0.5) : .clear, radius: isSelected ? 8 : 0)
@@ -119,6 +148,7 @@ struct CardDropDelegate: DropDelegate {
     let card: PlayerCard
     let cards: [PlayerCard]
     let onReorder: (([PlayerCard]) -> Void)?
+    let onDragEnd: () -> Void
     
     func performDrop(info: DropInfo) -> Bool {
         guard let onReorder = onReorder else { return false }
@@ -133,6 +163,9 @@ struct CardDropDelegate: DropDelegate {
                   let draggedIndex = cards.firstIndex(where: { $0.id == draggedCardId }),
                   let dropIndex = cards.firstIndex(where: { $0.id == card.id }) else { return }
             
+            // Don't reorder if dropping on the same card
+            guard draggedIndex != dropIndex else { return }
+            
             DispatchQueue.main.async {
                 // Create new order by moving the dragged card to the drop position
                 var newOrder = cards
@@ -141,6 +174,11 @@ struct CardDropDelegate: DropDelegate {
                 
                 // Call the reorder callback
                 onReorder(newOrder)
+                
+                // Call onDragEnd after a short delay to ensure the drop is complete
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    onDragEnd()
+                }
             }
         }
         
@@ -149,11 +187,75 @@ struct CardDropDelegate: DropDelegate {
     
     func dropEntered(info: DropInfo) {
         // Visual feedback when dragging over a drop target
-        // This could be enhanced with more visual cues
+        // This will be handled by the view's state
     }
     
     func dropExited(info: DropInfo) {
         // Clear visual feedback when leaving drop target
+        // This will be handled by the view's state
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        // Allow the drop
+        return DropProposal(operation: .move)
+    }
+}
+
+// MARK: - Enhanced Card Drop Delegate with Visual Feedback
+struct EnhancedCardDropDelegate: DropDelegate {
+    let card: PlayerCard
+    let cards: [PlayerCard]
+    let onReorder: (([PlayerCard]) -> Void)?
+    let onDragEnter: (PlayerCard) -> Void
+    let onDragExit: (PlayerCard) -> Void
+    let onDragEnd: () -> Void
+    
+    func performDrop(info: DropInfo) -> Bool {
+        guard let onReorder = onReorder else { return false }
+        
+        // Get the dragged card ID
+        guard let itemProvider = info.itemProviders(for: [.text]).first else { return false }
+        
+        itemProvider.loadObject(ofClass: NSString.self) { string, _ in
+            guard let cardIdString = string as? String,
+                  let draggedCardId = UUID(uuidString: cardIdString),
+                  let draggedCard = cards.first(where: { $0.id == draggedCardId }),
+                  let draggedIndex = cards.firstIndex(where: { $0.id == draggedCardId }),
+                  let dropIndex = cards.firstIndex(where: { $0.id == card.id }) else { return }
+            
+            // Don't reorder if dropping on the same card
+            guard draggedIndex != dropIndex else { return }
+            
+            DispatchQueue.main.async {
+                // Create new order by moving the dragged card to the drop position
+                var newOrder = cards
+                newOrder.remove(at: draggedIndex)
+                newOrder.insert(draggedCard, at: dropIndex)
+                
+                // Call the reorder callback
+                onReorder(newOrder)
+                
+                // Call onDragEnd after a short delay to ensure the drop is complete
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    onDragEnd()
+                }
+            }
+        }
+        
+        return true
+    }
+    
+    func dropEntered(info: DropInfo) {
+        onDragEnter(card)
+    }
+    
+    func dropExited(info: DropInfo) {
+        onDragExit(card)
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        // Allow the drop
+        return DropProposal(operation: .move)
     }
 }
 
@@ -183,6 +285,9 @@ struct CardDropDelegate: DropDelegate {
             },
             onDoubleTap: { card in
                 print("Card double tapped: \(card.displayName)")
+            },
+            onDragEnd: {
+                print("Drag ended")
             }
         )
     }

@@ -36,7 +36,6 @@ struct TestTableLayoutView: View {
             }
         }
         .preferredColorScheme(.light)
-        .statusBarHidden()
     }
 
     private func getColor(for size: CGFloat) -> Color {

@@ -318,4 +318,6 @@ extension Notification.Name {
     static let gameStateUpdated = Notification.Name("gameStateUpdated")
     static let playerActionReceived = Notification.Name("playerActionReceived")
     static let cardActionReceived = Notification.Name("cardActionReceived")
+    static let cardPlayed = Notification.Name("cardPlayed")
+    static let cardDrawn = Notification.Name("cardDrawn")
 } 

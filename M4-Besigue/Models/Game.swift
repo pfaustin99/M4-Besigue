@@ -320,7 +320,7 @@ class Game: ObservableObject {
     init(gameRules: GameRules, isOnline: Bool = false) {
         self.gameRules = gameRules
         self.settings = GameSettings()
-        self.playerCount = gameRules.playerCount
+        self.playerCount = gameRules.totalPlayerCount  // Use totalPlayerCount for actual game player count
         self.isOnline = isOnline
         self.deck = Deck()
         self.aiService = AIService(difficulty: .medium)
@@ -333,7 +333,7 @@ class Game: ObservableObject {
     // Initialize game from configuration
     func initializeFromConfiguration() {
         print("🎮 Initializing game from configuration...")
-        print("🎮 Configuration - playerCount: \(gameRules.playerCount)")
+        print("🎮 Configuration - playerCount: \(gameRules.playerCount), totalPlayerCount: \(gameRules.totalPlayerCount)")
         print("🎮 Configuration - playerConfigurations.count: \(gameRules.playerConfigurations.count)")
         
         // Generate configuration if empty (for default games)
@@ -636,6 +636,12 @@ class Game: ObservableObject {
         // Start card play animation
         isPlayingCard = true
         playedCard = card
+        
+        // Post notification for view state to trigger animation
+        NotificationCenter.default.post(
+            name: .cardPlayed,
+            object: card
+        )
         
         // Animate card play
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -1032,6 +1038,12 @@ class Game: ObservableObject {
                 currentPlayer.addCards([card])
                 print("✅ DRAW SUCCESS - \(currentPlayer.name) drew \(card.displayName)")
                 print("   Player held count after draw: \(currentPlayer.held.count)")
+                
+                // Post notification for view state to trigger draw animation
+                NotificationCenter.default.post(
+                    name: .cardDrawn,
+                    object: card
+                )
                 
                 // Mark that this player has drawn for the next trick
                 hasDrawnForNextTrick[currentPlayer.id] = true

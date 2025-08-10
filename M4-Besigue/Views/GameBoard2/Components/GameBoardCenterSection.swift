@@ -51,31 +51,54 @@ struct GameTrickAreaView: View {
     let gameRules: GameRules
     
     var body: some View {
-        Group {
-            if game.currentTrick.isEmpty {
-                // Empty trick area
-                VStack(spacing: 4) {
-                    Text("TRICK AREA")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(GameBoardConstants.Colors.primaryGreen)
-                    Text("Cards played here")
-                        .font(.caption2)
-                        .foregroundColor(GameBoardConstants.Colors.primaryGreen)
-                }
-                .frame(width: 100)
-                .fixedSize()
-            } else {
-                // Show actual trick cards
-                TrickView(
-                    cards: game.currentTrick,
-                    game: game,
-                    settings: settings,
-                    gameRules: gameRules
-                )
-                .frame(width: 200, height: 120)
+        if game.currentTrick.isEmpty {
+            // Empty trick area
+            VStack(spacing: 4) {
+                Text("TRICK AREA")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(GameBoardConstants.Colors.primaryGreen)
+                Text("Cards played here")
+                    .font(.caption2)
+                    .foregroundColor(GameBoardConstants.Colors.primaryGreen)
+            }
+            .frame(width: 100)
+            .fixedSize()
+        } else {
+            // Show actual trick cards
+            TrickView(
+                cards: game.currentTrick,
+                game: game,
+                settings: settings,
+                gameRules: gameRules
+            )
+            .frame(width: 200, height: 120)
+        }
+    }
+}
+
+/// TrickView - Displays the current trick cards
+struct TrickView: View {
+    let cards: [PlayerCard]
+    let game: Game
+    let settings: GameSettings
+    let gameRules: GameRules
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(cards, id: \.id) { card in
+                CardView(
+                    card: card,
+                    isSelected: false,
+                    isPlayable: false,
+                    showHint: false,
+                    size: CGSize(width: 60, height: 90)
+                ) { }
             }
         }
+        .padding(8)
+        .background(Color.black.opacity(0.1))
+        .cornerRadius(8)
     }
 }
 

@@ -53,6 +53,12 @@ struct PlayerConfiguration: Identifiable, Codable {
 class GameRules: ObservableObject, Codable, Equatable {
     // TODO: After gameplay is complete, revisit and improve the 'draw jacks' dealer determination logic and UI as discussed with the user.
     
+    // TODO: ENSURE SINGLE PLAYER GAMES ARE LIMITED TO EXACTLY 1 HUMAN PLAYER
+    // - Single player mode (playerCount == 1) should ALWAYS have humanPlayerCount = 1
+    // - The UI should prevent users from changing human player count in single player mode
+    // - The updatePlayerCount() method already enforces this, but verify UI consistency
+    // - Consider adding validation in updateHumanPlayerCount() to prevent single player games from having >1 human players
+    
     // Haitian cities for AI names
     static let haitianCities = [
         "Port-au-Prince", "Cap-Haïtien", "Gonaïves", "Les Cayes", "Petion-Ville",
@@ -66,14 +72,25 @@ class GameRules: ObservableObject, Codable, Equatable {
     ]
     
     // Game rules
-    @Published var playerCount: Int = 2
-    @Published var humanPlayerCount: Int = 2
-    @Published var aiPlayerCount: Int = 0
+    @Published var playerCount: Int = 1  // Changed from 2 to 1 for single player default
+    @Published var humanPlayerCount: Int = 1  // Changed from 2 to 1 for single player default
+    @Published var aiPlayerCount: Int = 1  // Changed from 0 to 1 for single player default
     @Published var playerConfigurations: [PlayerConfiguration] = []
     @Published var winningScore: Int = 1000
     @Published var handSize: Int = 9
     @Published var playDirection: PlayDirection = .right
     @Published var gameLevel: GameLevel = .pro
+    
+    // Computed property for total players in the game
+    var totalPlayerCount: Int {
+        if playerCount == 1 {
+            // Single player mode: 1 human + AI players
+            return 1 + aiPlayerCount
+        } else {
+            // Multiplayer mode: use playerCount directly
+            return playerCount
+        }
+    }
     
     // Scoring
     @Published var besiguePoints: Int = 40
@@ -274,16 +291,37 @@ class GameRules: ObservableObject, Codable, Equatable {
     /// Update player count and recalculate AI count
     func updatePlayerCount(_ count: Int) {
         playerCount = count
-        humanPlayerCount = min(humanPlayerCount, count)
-        aiPlayerCount = count - humanPlayerCount
+        
+        // For single player games, force human player count to 1
+        if count == 1 {
+            humanPlayerCount = 1
+            // Keep the current AI player count for single player games
+        } else {
+            humanPlayerCount = min(humanPlayerCount, count)
+            aiPlayerCount = count - humanPlayerCount
+        }
+        
         generatePlayerConfigurations()
     }
     
     /// Update human player count and recalculate AI count
     func updateHumanPlayerCount(_ count: Int) {
-        humanPlayerCount = min(count, playerCount)
+        // For single player games, always ensure exactly 1 human player
+        if playerCount == 1 {
+            humanPlayerCount = 1
+        } else {
+            humanPlayerCount = min(count, playerCount)
+        }
         aiPlayerCount = playerCount - humanPlayerCount
         generatePlayerConfigurations()
+    }
+    
+    /// Update AI player count for single player games
+    func updateAIPlayerCount(_ count: Int) {
+        if playerCount == 1 {
+            aiPlayerCount = count
+            generatePlayerConfigurations()
+        }
     }
     
     /// Generate player configurations with proper seating

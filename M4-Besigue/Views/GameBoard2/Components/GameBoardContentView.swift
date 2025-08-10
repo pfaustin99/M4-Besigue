@@ -48,5 +48,97 @@ struct GameBoardContentView: View {
             ),
             alignment: .topTrailing
         )
+        .overlay(
+            // Card animation overlay
+            CardAnimationOverlay(viewState: viewState),
+            alignment: .center
+        )
+    }
+}
+
+// MARK: - Card Animation Overlay
+
+/// CardAnimationOverlay - Shows animations for card playing and drawing
+struct CardAnimationOverlay: View {
+    let viewState: GameBoardViewState2
+    
+    var body: some View {
+        ZStack {
+            // Card play animation
+            if viewState.isPlayingCard, let card = viewState.playedCard {
+                CardPlayAnimation(card: card)
+                    .transition(.asymmetric(
+                        insertion: .scale.combined(with: .opacity),
+                        removal: .scale.combined(with: .opacity)
+                    ))
+            }
+            
+            // Card draw animation
+            if viewState.isDrawingCard, let card = viewState.drawnCard {
+                CardDrawAnimation(card: card)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .bottom).combined(with: .opacity)
+                    ))
+            }
+        }
+        .animation(.easeInOut(duration: viewState.cardAnimationDuration), value: viewState.isPlayingCard)
+        .animation(.easeInOut(duration: viewState.cardAnimationDuration), value: viewState.isDrawingCard)
+    }
+}
+
+/// CardPlayAnimation - Animation for when a card is played
+struct CardPlayAnimation: View {
+    let card: PlayerCard
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(card.imageName)
+                .resizable()
+                .aspectRatio(2.5/3.5, contentMode: .fit)
+                .frame(width: 120, height: 168)
+                .background(Color.white)
+                .cornerRadius(12)
+                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+            
+            Text("Card Played!")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.blue)
+                .cornerRadius(20)
+        }
+        .scaleEffect(1.2)
+        .shadow(color: .blue.opacity(0.5), radius: 20)
+    }
+}
+
+/// CardDrawAnimation - Animation for when a card is drawn
+struct CardDrawAnimation: View {
+    let card: PlayerCard
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(card.imageName)
+                .resizable()
+                .aspectRatio(2.5/3.5, contentMode: .fit)
+                .frame(width: 120, height: 168)
+                .background(Color.white)
+                .cornerRadius(12)
+                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+            
+            Text("Card Drawn!")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.green)
+                .cornerRadius(20)
+        }
+        .scaleEffect(1.2)
+        .shadow(color: .green.opacity(0.5), radius: 20)
     }
 } 
