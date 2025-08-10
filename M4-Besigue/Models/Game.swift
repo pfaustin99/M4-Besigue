@@ -1,14 +1,14 @@
 import Foundation
 
 // MARK: - Game Phase
-enum GamePhase {
-    case setup
-    case dealing
-    case dealerDetermination // Added for dealer selection phase
-    case playing
-    case endgame // No more cards to draw, stricter rules
-    case scoring
-    case gameOver
+enum GamePhase: String {
+    case setup = "setup"
+    case dealing = "dealing"
+    case dealerDetermination = "dealer_determination" // Added for dealer selection phase
+    case playing = "playing"
+    case endgame = "endgame" // No more cards to draw, stricter rules
+    case scoring = "scoring"
+    case gameOver = "game_over"
 }
 
 // MARK: - Game Model

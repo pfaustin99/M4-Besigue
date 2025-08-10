@@ -15,6 +15,7 @@ struct M4_BesigueApp: App {
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environment(\.audioManager, AudioManager.shared)
         }
     }
 }

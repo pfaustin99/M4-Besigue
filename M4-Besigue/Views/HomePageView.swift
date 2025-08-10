@@ -8,6 +8,7 @@ struct HomePageView: View {
     @State private var showingConfiguration = false
     @State private var showingHowToPlay = false
     @State private var showingAbout = false
+    @State private var showingMultiplayer = false
     @State private var isGameActive = false
     @State private var showingPrivacyPolicy = false
     @State private var isConfiguringGame = false
@@ -121,6 +122,11 @@ struct HomePageView: View {
         .sheet(isPresented: $showingAbout) {
             AboutView()
                 .presentationDetents(getSheetDetents(for: getDeviceType(from: UIScreen.main.bounds.size)))
+        }
+        .sheet(isPresented: $showingMultiplayer) {
+            MultiplayerLobbyView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .presentationDetents([.height(1200), .large, .medium])
         }
         .sheet(isPresented: $showingPrivacyPolicy) {
             PrivacyPolicyView()
@@ -344,12 +350,13 @@ struct HomePageView: View {
         let labelFontSize = getButtonLabelFontSize(for: deviceType)
         let spacing = getButtonSpacing(for: deviceType, geometry: geometry)
         
-        HStack(spacing: spacing) {
+        LazyHGrid(rows: [GridItem(.flexible())], spacing: spacing) {
             ForEach(Array([
                 ("play.fill", "Play", Color(hex: "016A16"), { startGame() }),
                 ("gearshape.fill", "Settings", Color(hex: "D21034"), { showingConfiguration = true }),
                 ("questionmark", "Help", Color(hex: "00209F"), { showingHowToPlay = true }),
                 ("info.circle.fill", "About", Color(hex: "F1B517"), { showingAbout = true }),
+                ("network", "Multiplayer", Color(hex: "0066CC"), { showingMultiplayer = true }),
                 ("speaker.wave.3.fill", "Test Sounds", Color(hex: "8A2BE2"), { testMeldSounds() })
             ].enumerated()), id: \.offset) { index, button in
                 enhancedButtonColumn(
@@ -525,8 +532,8 @@ struct HomePageView: View {
                 entranceIndex += 1
             }
             
-            // Stop after all buttons have entered (5 buttons total)
-            if entranceIndex >= 5 {
+            // Stop after all buttons have entered (6 buttons total)
+            if entranceIndex >= 6 {
                 timer.invalidate()
                 entranceTimer = nil
                 isEntranceComplete = true
@@ -575,10 +582,10 @@ struct HomePageView: View {
     
     private func getHorizontalPadding(for deviceType: DeviceType, geometry: GeometryProxy) -> CGFloat {
         switch deviceType {
-        case .iPad: return geometry.size.width * 0.06 // Reduced from 0.08 to accommodate 5 buttons
-        case .iPhonePlus: return geometry.size.width * 0.02 // Reduced from 0.04
-        case .iPhoneRegular: return geometry.size.width * 0.015 // Reduced from 0.035
-        case .iPhoneCompact: return geometry.size.width * 0.01 // Reduced from 0.03
+        case .iPad: return geometry.size.width * 0.04 // Reduced to accommodate 6 buttons
+        case .iPhonePlus: return geometry.size.width * 0.015 // Reduced to accommodate 6 buttons
+        case .iPhoneRegular: return geometry.size.width * 0.012 // Reduced to accommodate 6 buttons
+        case .iPhoneCompact: return geometry.size.width * 0.008 // Reduced to accommodate 6 buttons
         }
     }
     
@@ -666,10 +673,10 @@ struct HomePageView: View {
     
     private func getButtonSpacing(for deviceType: DeviceType, geometry: GeometryProxy) -> CGFloat {
         switch deviceType {
-        case .iPad: return geometry.size.width * 0.04 // Reduced from 0.06 to accommodate 5 buttons better
-        case .iPhonePlus: return geometry.size.width * 0.02
-        case .iPhoneRegular: return geometry.size.width * 0.015
-        case .iPhoneCompact: return geometry.size.width * 0.01
+        case .iPad: return geometry.size.width * 0.025 // Reduced to accommodate 6 buttons
+        case .iPhonePlus: return geometry.size.width * 0.015
+        case .iPhoneRegular: return geometry.size.width * 0.01
+        case .iPhoneCompact: return geometry.size.width * 0.008
         }
     }
     

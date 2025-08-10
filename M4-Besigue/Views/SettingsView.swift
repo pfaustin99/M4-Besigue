@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var settings: GameSettings
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.audioManager) private var audioManager
     
     var body: some View {
         NavigationView {
@@ -19,6 +20,65 @@ struct SettingsView: View {
                                 Text("Center Right").tag(DrawPilePosition.centerRight)
                             }
                             .pickerStyle(SegmentedPickerStyle())
+                        }
+                    }
+                    
+                    // Audio Settings Section
+                    SettingsSection(title: "Audio Settings") {
+                        VStack(alignment: .leading, spacing: 16) {
+                            // Background Music Toggle
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Background Music")
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    Text("Play ambient background music during gameplay")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Toggle("", isOn: Binding(
+                                    get: { audioManager.isMusicEnabled },
+                                    set: { _ in audioManager.toggleMusic() }
+                                ))
+                                .toggleStyle(SwitchToggleStyle(tint: Color(hex: "00209F")))
+                            }
+                            
+                            // Special Effects Toggle
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Special Effects")
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    Text("Play sound effects for game actions and melds")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Toggle("", isOn: Binding(
+                                    get: { audioManager.isSoundEnabled },
+                                    set: { _ in audioManager.toggleSound() }
+                                ))
+                                .toggleStyle(SwitchToggleStyle(tint: Color(hex: "00209F")))
+                            }
+                            
+                            // Dog Sounds Toggle
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Dog Sounds")
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    Text("Play dog sounds for last place player events")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Toggle("", isOn: Binding(
+                                    get: { audioManager.isDogSoundsEnabled },
+                                    set: { _ in audioManager.toggleDogSounds() }
+                                ))
+                                .toggleStyle(SwitchToggleStyle(tint: Color(hex: "F1B517")))
+                            }
                         }
                     }
                 }

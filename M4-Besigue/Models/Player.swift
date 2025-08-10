@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Player Model
 class Player: ObservableObject, Identifiable {
-    let id = UUID()
+    var id = UUID()
     let name: String
     let type: PlayerType
     @Published var held: [PlayerCard] = []
