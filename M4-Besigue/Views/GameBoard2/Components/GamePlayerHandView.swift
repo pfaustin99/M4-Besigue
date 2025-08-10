@@ -62,11 +62,12 @@ struct GamePlayerHandView: View {
     
     var body: some View {
         Group {
-            if isHuman && isCurrentTurn {
-                // Human player's hand - show actual cards
+            if isHuman {
+                // Human player's hand - ALWAYS show actual cards
+                // Note: Cards are always visible but interaction is controlled by game logic
                 humanPlayerHandView
             } else {
-                // AI player or non-current human - show card backs
+                // AI player - show card backs
                 aiPlayerHandView
             }
         }
@@ -80,7 +81,7 @@ struct GamePlayerHandView: View {
                 CardView(
                     card: card,
                     isSelected: viewState.selectedCards.contains(card),
-                    isPlayable: game.canPlayCard() && game.currentPlayer.id == player.id,
+                    isPlayable: true, // Human player cards are always playable for visual purposes
                     showHint: false,
                     isDragTarget: viewState.draggedOverCard?.id == card.id,
                     size: humanCardSize
@@ -132,6 +133,13 @@ struct GamePlayerHandView: View {
             }
         }
         .frame(width: humanContainerSize.width, height: humanContainerSize.height)
+        .overlay(
+            // Visual indicator when it's the human player's turn
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isCurrentTurn ? Color.blue : Color.clear, lineWidth: 2)
+                .opacity(isCurrentTurn ? 0.6 : 0.0)
+        )
+        .animation(.easeInOut(duration: 0.3), value: isCurrentTurn)
     }
     
     // MARK: - AI Player Hand View

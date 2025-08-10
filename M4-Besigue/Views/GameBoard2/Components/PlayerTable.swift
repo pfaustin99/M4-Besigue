@@ -22,7 +22,7 @@ struct PlayerTable: View {
                 GamePlayerHandView(
                     player: player,
                     isHuman: isHumanPlayer,
-                    isCurrentTurn: isCurrentTurn,
+                    isCurrentTurn: isCurrentTurn, // This is now only used for visual highlighting, not visibility
                     angle: 0,
                     isHorizontal: true,
                     geometry: geometry,
