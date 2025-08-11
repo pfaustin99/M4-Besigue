@@ -279,10 +279,17 @@ struct FloatingDrawButton: View {
     
     // MARK: - Button State
     private var shouldShowButton: Bool {
+        // Only show if:
+        // 1. Player must draw a card
+        // 2. Current player is human
+        // 3. Deck is not empty
+        // 4. Player hasn't already drawn for this trick
+        // 5. Player doesn't already have 9 cards
         game.mustDrawCard && 
         game.currentPlayer.type == .human && 
-        game.currentPlayer.id == game.currentPlayer.id &&
-        !game.deck.isEmpty
+        !game.deck.isEmpty &&
+        !game.hasDrawnForNextTrick[game.currentPlayer.id, default: false] &&
+        game.currentPlayer.hand.count < 9
     }
     
     var body: some View {

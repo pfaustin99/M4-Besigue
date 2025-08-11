@@ -5,7 +5,7 @@ import SwiftUI
 /// This view handles the layout coordination and delegates to specialized components
 struct GameBoardContentView: View {
     // MARK: - Dependencies
-    let game: Game
+    @ObservedObject var game: Game
     let settings: GameSettings
     let gameRules: GameRules
     let viewState: GameBoardViewState2
@@ -26,9 +26,7 @@ struct GameBoardContentView: View {
             GameBoardCenterSection(
                 game: game,
                 settings: settings,
-                gameRules: gameRules,
-                viewState: viewState,
-                geometry: geometry
+                gameRules: gameRules
             )
             
             // Bottom section: Player hand and actions
@@ -52,6 +50,15 @@ struct GameBoardContentView: View {
             // Card animation overlay
             CardAnimationOverlay(viewState: viewState),
             alignment: .center
+        )
+        .overlay(
+            // Player hands layout overlay
+            GamePlayersLayoutView(
+                game: game,
+                settings: settings,
+                viewState: viewState,
+                geometry: geometry
+            )
         )
     }
 }

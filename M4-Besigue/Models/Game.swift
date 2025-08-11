@@ -442,6 +442,9 @@ class Game: ObservableObject {
         // Check endgame state
         checkEndgame()
         
+        // Determine dealer and first player for the new game
+        determineDealer()
+        
         print("🎮 New game started with \(players.count) players")
     }
     
@@ -558,6 +561,56 @@ class Game: ObservableObject {
     func processAITurn() {
         guard currentPlayer.type == .ai else { return }
         
+        // AI needs to draw a card first if it hasn't drawn for this trick
+        if mustDrawCard && !hasDrawnForNextTrick[currentPlayer.id, default: false] && !deck.isEmpty {
+            print("🤖 AI \(currentPlayer.name) needs to draw a card first")
+            
+            // AI draws a card
+            if let card = deck.drawCard() {
+                currentPlayer.addCards([card])
+                hasDrawnForNextTrick[currentPlayer.id] = true
+                print("🤖 AI \(currentPlayer.name) drew \(card.displayName)")
+                
+                // Post notification for view state to trigger draw animation
+                NotificationCenter.default.post(
+                    name: .cardDrawn,
+                    object: card
+                )
+                
+                // Check if ALL players have drawn for this trick
+                let allHaveDrawn = players.allSatisfy { hasDrawnForNextTrick[$0.id, default: false] }
+                
+                if allHaveDrawn {
+                    print("🔄 All players have drawn - starting new trick")
+                    // All players have drawn, start new trick
+                    startNewTrick()
+                } else {
+                    print("🔄 Not all players have drawn yet - continuing draw cycle")
+                    // Move to next player who needs to draw
+                    currentDrawIndex = (currentDrawIndex + 1) % playerCount
+                    currentPlayerIndex = currentDrawIndex
+                    currentPlayer.isCurrentPlayer = true
+                    
+                    // Clear previous player's current status
+                    for (index, player) in players.enumerated() {
+                        if index != currentPlayerIndex {
+                            player.isCurrentPlayer = false
+                        }
+                    }
+                    
+                    print("🔄 Moved to next player: \(currentPlayer.name) (index: \(currentPlayerIndex))")
+                    
+                    // If next player is AI, trigger AI turn
+                    if currentPlayer.type == .ai {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            self.processAITurn()
+                        }
+                    }
+                }
+                return
+            }
+        }
+        
         // If AI can meld (it just won a trick), it decides on melds first.
         if canPlayerMeld {
             let meldsToDeclare = aiService.decideMeldsToDeclare(for: currentPlayer, in: self)
@@ -579,12 +632,18 @@ class Game: ObservableObject {
         print("   Current player index: \(currentPlayerIndex)")
         print("   Current player name: \(currentPlayer.name)")
         print("   Current player type: \(currentPlayer.type)")
+        print("   Current trick count before clear: \(currentTrick.count)")
+        print("   Current trick cards before clear: \(currentTrick.map { $0.displayName })")
+        print("   Is showing completed trick: \(isShowingCompletedTrick)")
+        print("   Completed trick count: \(completedTrick.count)")
         
         currentTrick.removeAll()
         currentTrickLeader = currentPlayerIndex
         
         print("   New trick leader set to: \(currentTrickLeader)")
         print("   New trick leader name: \(players[currentTrickLeader].name)")
+        print("   Current trick count after clear: \(currentTrick.count)")
+        print("   Is showing completed trick: \(isShowingCompletedTrick)")
         
         currentPhase = .playing
         
@@ -602,12 +661,8 @@ class Game: ObservableObject {
         print("🔄 Draw cycle initialized - \(currentPlayer.name) can draw a card")
         print("🔄 Must draw card: \(mustDrawCard)")
         
-        // If AI is leading, make AI decision
-        if currentPlayer.type == .ai {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.processAITurn()
-            }
-        }
+        // Don't immediately trigger AI turn - let the draw cycle proceed naturally
+        // The AI will draw when it's their turn in the draw cycle
     }
     
     // Play a card (synchronous version for testing)
@@ -659,9 +714,14 @@ class Game: ObservableObject {
             self.currentTrick.append(card)
             self.aiService.cardMemory.addPlayedCard(card)
             
-            print("   Card added to trick. New trick count: \(self.currentTrick.count)")
-            print("   Current trick cards: \(self.currentTrick.map { $0.displayName })")
-            print("   Cards in order: \(self.currentTrick.enumerated().map { "\($0): \($1.displayName) by \(self.players[(self.currentTrickLeader + $0) % self.playerCount].name)" })")
+            print("   🎴 CARD ADDED TO TRICK:")
+            print("      Card: \(card.displayName)")
+            print("      Player: \(player.name)")
+            print("      New trick count: \(self.currentTrick.count)")
+            print("      Current trick cards: \(self.currentTrick.map { $0.displayName })")
+            print("      Cards in order: \(self.currentTrick.enumerated().map { "\($0): \($1.displayName) by \(self.players[(self.currentTrickLeader + $0) % self.playerCount].name)" })")
+            print("      Is showing completed trick: \(self.isShowingCompletedTrick)")
+            print("      Completed trick count: \(self.completedTrick.count)")
             
             if self.currentTrick.count == self.playerCount {
                 print("   🎯 Trick complete, determining winner...")
@@ -728,18 +788,6 @@ class Game: ObservableObject {
         self.winningCardIndex = winningCardIndex
         self.trickWinnerId = winner.id
         
-        // Store completed trick for display
-        completedTrick = currentTrick
-        completedTrickWinnerIndex = winningCardIndex
-        isShowingCompletedTrick = true
-        
-        // Show completed trick for 2 seconds before clearing
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.isShowingCompletedTrick = false
-            self.completedTrick.removeAll()
-            self.completedTrickWinnerIndex = nil
-        }
-        
         // Complete the trick evaluation with minimal delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             self.finalizeTrickCompletion(winner: winner)
@@ -758,8 +806,50 @@ class Game: ObservableObject {
         print("   Must draw card before: \(mustDrawCard)")
         print("   Current trick count before: \(currentTrick.count)")
         
-        // Clear the trick area first
-        clearTrickArea()
+        // Store the completed trick before clearing
+        if !currentTrick.isEmpty {
+            print("🏆 STORING COMPLETED TRICK:")
+            print("   Current trick count: \(currentTrick.count)")
+            print("   Current trick cards: \(currentTrick.map { $0.displayName })")
+            print("   Winning card index: \(winningCardIndex ?? -1)")
+            
+            completedTrick = currentTrick
+            completedTrickWinnerIndex = winningCardIndex
+            
+            print("   Completed trick stored:")
+            print("   Completed trick count: \(completedTrick.count)")
+            print("   Completed trick cards: \(completedTrick.map { $0.displayName })")
+            print("   Completed trick winner index: \(completedTrickWinnerIndex ?? -1)")
+            
+            // Add a small delay before showing completed trick so current trick is visible
+            print("   Setting up async delays...")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                print("🏆 Setting isShowingCompletedTrick to true after 0.8s delay")
+                self.isShowingCompletedTrick = true
+                print("   isShowingCompletedTrick is now: \(self.isShowingCompletedTrick)")
+                print("   completedTrick count is now: \(self.completedTrick.count)")
+            }
+            
+            // Clear the completed trick after 3 seconds to allow proper display
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                print("🏆 Clearing completed trick after 3.0s delay")
+                self.completedTrick.removeAll()
+                self.completedTrickWinnerIndex = nil
+                self.isShowingCompletedTrick = false
+                print("   completedTrick cleared, count: \(self.completedTrick.count)")
+                print("   isShowingCompletedTrick is now: \(self.isShowingCompletedTrick)")
+            }
+        }
+        
+        // Clear the trick area after the completed trick display is finished
+        // This ensures the completed trick is visible for the full 3 seconds
+        print("   Setting up clearTrickArea delay for 3.2s...")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
+            print("🏆 Calling clearTrickArea after 3.2s delay")
+            self.clearTrickArea()
+            // After clearing the trick area, we can start a new trick
+            // The currentTrick array will be cleared in startNewTrick when it's actually called
+        }
         
         // Set the winner as the current player
         if let winnerIndex = players.firstIndex(where: { $0.id == winner.id }) {
@@ -810,13 +900,25 @@ class Game: ObservableObject {
     func clearTrickArea() {
         print("🧹 Clearing trick area")
         print("   Current trick count before clear: \(currentTrick.count)")
-        currentTrick.removeAll()
+        print("   Current trick cards before clear: \(currentTrick.map { $0.displayName })")
+        print("   Is showing completed trick: \(isShowingCompletedTrick)")
+        print("   Completed trick count: \(completedTrick.count)")
+        print("   Completed trick cards: \(completedTrick.map { $0.displayName })")
+        
+        // Only clear currentTrick if we're not in the middle of displaying a completed trick
+        // This prevents clearing the current trick while the completed trick is being shown
+        if !isShowingCompletedTrick {
+            currentTrick.removeAll()
+        }
+        
         isShowingTrickResult = false
         lastTrickWinner = nil
         winningCardIndex = nil
         // Note: completedTrick is cleared separately after display delay
+        
         print("   Current trick count after clear: \(currentTrick.count)")
         print("   Is showing trick result: \(isShowingTrickResult)")
+        print("   🧹 TRICK AREA CLEARED")
     }
     
     // Draw card for the current draw turn player
@@ -1041,6 +1143,13 @@ class Game: ObservableObject {
         print("   Is first trick: \(isFirstTrick)")
         print("   Is showing trick result: \(isShowingTrickResult)")
         print("   Last trick winner: \(lastTrickWinner ?? "none")")
+        print("   Current hand size: \(currentPlayer.hand.count) (held: \(currentPlayer.held.count), melded: \(currentPlayer.melded.count))")
+        
+        // Check 9-card limit (held + melded)
+        if currentPlayer.hand.count >= 9 {
+            print("❌ DRAW FAILED - Player already has 9 cards (limit reached)")
+            return
+        }
         
         // Clear meld choice state when player draws
         awaitingMeldChoice = false
@@ -1048,8 +1157,8 @@ class Game: ObservableObject {
         // Clear can player meld state when player draws
         canPlayerMeld = false
         
-        // Clear the trick area when winner takes action
-        clearTrickArea()
+        // Note: Don't clear trick area here - it's already cleared in finalizeTrickCompletion
+        // The trick area should show the completed trick until it's cleared by the timer
         
         if !deck.isEmpty {
             if let card = deck.drawCard() {
@@ -1067,20 +1176,33 @@ class Game: ObservableObject {
                 hasDrawnForNextTrick[currentPlayer.id] = true
                 print("   Updated has drawn for next trick: \(hasDrawnForNextTrick[currentPlayer.id, default: false])")
                 
-                // Check if we should start a new trick
-                if currentTrick.isEmpty {
-                    print("🔄 Starting new trick after draw")
+                // Check if ALL players have drawn for this trick
+                let allHaveDrawn = players.allSatisfy { hasDrawnForNextTrick[$0.id, default: false] }
+                
+                if allHaveDrawn {
+                    print("🔄 All players have drawn - starting new trick")
+                    // All players have drawn, start new trick
                     startNewTrick()
                 } else {
-                    print("🔄 Continuing current trick after draw")
-                    // Continue with current trick
-                    currentPlayerIndex = currentPlayIndex
+                    print("🔄 Not all players have drawn yet - continuing draw cycle")
+                    // Move to next player who needs to draw
+                    currentDrawIndex = (currentDrawIndex + 1) % playerCount
+                    currentPlayerIndex = currentDrawIndex
                     currentPlayer.isCurrentPlayer = true
                     
                     // Clear previous player's current status
                     for (index, player) in players.enumerated() {
                         if index != currentPlayerIndex {
                             player.isCurrentPlayer = false
+                        }
+                    }
+                    
+                    print("🔄 Moved to next player: \(currentPlayer.name) (index: \(currentPlayerIndex))")
+                    
+                    // If next player is AI, trigger AI turn
+                    if currentPlayer.type == .ai {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            self.processAITurn()
                         }
                     }
                 }
@@ -1384,8 +1506,7 @@ class Game: ObservableObject {
         print("   Current round: \(self.roundNumber)")
         
         if canDeclareMeld(meld, by: player) {
-            // Clear the trick area when winner takes action (declares meld)
-            clearTrickArea()
+            // Don't clear the trick area when declaring meld - it interferes with trick display
             
             // Reset meld state after declaring meld
             canPlayerMeld = false

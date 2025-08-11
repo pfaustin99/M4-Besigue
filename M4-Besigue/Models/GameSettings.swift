@@ -119,6 +119,9 @@ class GameSettings: ObservableObject, Codable, Equatable {
 
     // Badge Icons
     @Published var badgeIcons: MeldBadgeIcons = MeldBadgeIcons()
+    
+    // Debug Configuration
+    @Published var showDebugInfo: Bool = true // Enable debug overlays by default
 
     // Equatable conformance
     static func == (lhs: GameSettings, rhs: GameSettings) -> Bool {
@@ -155,12 +158,13 @@ class GameSettings: ObservableObject, Codable, Equatable {
             lhs.playerCount == rhs.playerCount &&
             lhs.cardSizeMultiplier == rhs.cardSizeMultiplier &&
             lhs.drawPilePosition == rhs.drawPilePosition &&
-            lhs.badgeIcons == rhs.badgeIcons
+            lhs.badgeIcons == rhs.badgeIcons &&
+            lhs.showDebugInfo == rhs.showDebugInfo
     }
 
     // Codable conformance
     enum CodingKeys: String, CodingKey {
-        case besiguePoints, royalMarriagePoints, commonMarriagePoints, fourAcesPoints, fourKingsPoints, fourQueensPoints, fourJacksPoints, fourJokersPoints, sequencePoints, trumpFourAcesMultiplier, trumpFourKingsMultiplier, trumpFourQueensMultiplier, trumpFourJacksMultiplier, trumpSequenceMultiplier, brisqueValue, finalTrickBonus, penalty, brisqueCutoff, minScoreForBrisques, winningScore, trickWithSevenTrumpPoints, finalTrickPoints, penaltyBelow100, penaltyFewBrisques, penaltyOutOfTurn, minBrisques, playerCount, playDirection, gameLevel, handSize, numPlayers, cardSizeMultiplier, drawPilePosition, badgeIcons, cardPlayDelay, cardPlayDuration, dealerDeterminationDelay, trickAreaCardSize, playerHandCardSize, trickAreaHeightPercentage, trickAreaSize
+        case besiguePoints, royalMarriagePoints, commonMarriagePoints, fourAcesPoints, fourKingsPoints, fourQueensPoints, fourJacksPoints, fourJokersPoints, sequencePoints, trumpFourAcesMultiplier, trumpFourKingsMultiplier, trumpFourQueensMultiplier, trumpFourJacksMultiplier, trumpSequenceMultiplier, brisqueValue, finalTrickBonus, penalty, brisqueCutoff, minScoreForBrisques, winningScore, trickWithSevenTrumpPoints, finalTrickPoints, penaltyBelow100, penaltyFewBrisques, penaltyOutOfTurn, minBrisques, playerCount, playDirection, gameLevel, handSize, numPlayers, cardSizeMultiplier, drawPilePosition, badgeIcons, cardPlayDelay, cardPlayDuration, dealerDeterminationDelay, trickAreaCardSize, playerHandCardSize, trickAreaHeightPercentage, trickAreaSize, showDebugInfo
     }
 
     required init(from decoder: Decoder) throws {
@@ -206,6 +210,7 @@ class GameSettings: ObservableObject, Codable, Equatable {
         playerHandCardSize = try container.decode(CardSizeMultiplier.self, forKey: .playerHandCardSize)
         trickAreaHeightPercentage = try container.decode(Double.self, forKey: .trickAreaHeightPercentage)
         trickAreaSize = try container.decode(TrickAreaSize.self, forKey: .trickAreaSize)
+        showDebugInfo = try container.decode(Bool.self, forKey: .showDebugInfo)
     }
 
     init() {
@@ -255,6 +260,7 @@ class GameSettings: ObservableObject, Codable, Equatable {
         try container.encode(playerHandCardSize, forKey: .playerHandCardSize)
         try container.encode(trickAreaHeightPercentage, forKey: .trickAreaHeightPercentage)
         try container.encode(trickAreaSize, forKey: .trickAreaSize)
+        try container.encode(showDebugInfo, forKey: .showDebugInfo)
     }
 }
 
