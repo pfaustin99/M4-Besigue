@@ -169,7 +169,7 @@ struct TrickView: View {
                         Image(card.imageName)
                             .resizable()
                             .aspectRatio(2.5/3.5, contentMode: .fit)
-                            .frame(width: 60, height: 90)
+                            .frame(width: 60, height: 90) // TODO: Make this dynamic based on human card size
                             .background(Color.white)
                             .cornerRadius(4)
                             .overlay(

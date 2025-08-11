@@ -22,12 +22,16 @@ struct GameBoardContentView: View {
                 geometry: geometry
             )
             
+            Spacer()  // Push center section down from top
+            
             // Center section: Main game area
             GameBoardCenterSection(
                 game: game,
                 settings: settings,
                 gameRules: gameRules
             )
+            
+            Spacer()  // Push center section up from bottom
             
             // Bottom section: Player hand and actions
             GameBoardBottomSection(
