@@ -20,13 +20,14 @@ struct GameRootView: View {
                 gameRules: game.gameRules,
                 onEndGame: {}
             )
-            .padding()
+            .padding(.horizontal)
+            .padding(.bottom)
+            .padding(.top, 4) // Minimal top padding to keep header at top
             .background(
                 RoundedRectangle(cornerRadius: 25)
                     .fill(.ultraThinMaterial)
                     .shadow(radius: 10)
             )
-            .padding()
         }
     }
 }

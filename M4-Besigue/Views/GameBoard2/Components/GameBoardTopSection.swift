@@ -21,7 +21,7 @@ struct GameBoardTopSection: View {
                 GameStatusMessageView(message: message)
             }
         }
-        .padding(.top, geometry.size.width > geometry.size.height ? 2 : 8) // iPad: higher, iPhone: more padding
+        .padding(.top, 2) // Minimal top padding to keep header at top
     }
     
     private func getGameStatusMessage() -> String? {

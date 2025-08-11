@@ -54,6 +54,11 @@ class Game: ObservableObject {
     @Published var isShowingTrickResult: Bool = false
     var lastTrickWinner: String? = nil
     
+    // Completed trick display state
+    @Published var completedTrick: [PlayerCard] = []
+    @Published var completedTrickWinnerIndex: Int? = nil
+    @Published var isShowingCompletedTrick: Bool = false
+    
     // Card play animation state
     @Published var isPlayingCard: Bool = false
     @Published var playedCard: PlayerCard? = nil
@@ -723,6 +728,18 @@ class Game: ObservableObject {
         self.winningCardIndex = winningCardIndex
         self.trickWinnerId = winner.id
         
+        // Store completed trick for display
+        completedTrick = currentTrick
+        completedTrickWinnerIndex = winningCardIndex
+        isShowingCompletedTrick = true
+        
+        // Show completed trick for 2 seconds before clearing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.isShowingCompletedTrick = false
+            self.completedTrick.removeAll()
+            self.completedTrickWinnerIndex = nil
+        }
+        
         // Complete the trick evaluation with minimal delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             self.finalizeTrickCompletion(winner: winner)
@@ -797,6 +814,7 @@ class Game: ObservableObject {
         isShowingTrickResult = false
         lastTrickWinner = nil
         winningCardIndex = nil
+        // Note: completedTrick is cleared separately after display delay
         print("   Current trick count after clear: \(currentTrick.count)")
         print("   Is showing trick result: \(isShowingTrickResult)")
     }

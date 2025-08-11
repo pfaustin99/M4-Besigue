@@ -51,7 +51,26 @@ struct GameTrickAreaView: View {
     let gameRules: GameRules
     
     var body: some View {
-        if game.currentTrick.isEmpty {
+        if game.isShowingCompletedTrick && !game.completedTrick.isEmpty {
+            // Show completed trick with winning card animation
+            CompletedTrickView(
+                cards: game.completedTrick,
+                winningCardIndex: game.completedTrickWinnerIndex,
+                game: game,
+                settings: settings,
+                gameRules: gameRules
+            )
+            .frame(width: 200, height: 120)
+        } else if !game.currentTrick.isEmpty {
+            // Show actual trick cards
+            TrickView(
+                cards: game.currentTrick,
+                game: game,
+                settings: settings,
+                gameRules: gameRules
+            )
+            .frame(width: 200, height: 120)
+        } else {
             // Empty trick area
             VStack(spacing: 4) {
                 Text("TRICK AREA")
@@ -64,16 +83,44 @@ struct GameTrickAreaView: View {
             }
             .frame(width: 100)
             .fixedSize()
-        } else {
-            // Show actual trick cards
-            TrickView(
-                cards: game.currentTrick,
-                game: game,
-                settings: settings,
-                gameRules: gameRules
-            )
-            .frame(width: 200, height: 120)
         }
+    }
+}
+
+/// CompletedTrickView - Displays the completed trick with winning card animation
+struct CompletedTrickView: View {
+    let cards: [PlayerCard]
+    let winningCardIndex: Int?
+    let game: Game
+    let settings: GameSettings
+    let gameRules: GameRules
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                let isWinningCard = index == winningCardIndex
+                
+                CardView(
+                    card: card,
+                    isSelected: false,
+                    isPlayable: false,
+                    showHint: false,
+                    size: CGSize(width: 60, height: 90)
+                ) { }
+                .offset(y: isWinningCard ? -10 : 0) // Winning card rises to the top
+                .animation(.easeInOut(duration: 0.5), value: isWinningCard)
+                .overlay(
+                    // Highlight winning card
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(isWinningCard ? Color.yellow : Color.clear, lineWidth: 2)
+                        .opacity(isWinningCard ? 0.8 : 0.0)
+                        .animation(.easeInOut(duration: 0.3), value: isWinningCard)
+                )
+            }
+        }
+        .padding(8)
+        .background(Color.black.opacity(0.1))
+        .cornerRadius(8)
     }
 }
 
