@@ -277,22 +277,7 @@ class NetworkGame: Game {
         print("🌐 Queued network action: \(action.type)")
     }
     
-    override func drawCardForCurrentDrawTurn() {
-        // Call the original implementation
-        super.drawCardForCurrentDrawTurn()
-        
-        // Create and queue network action for the current player
-        let currentPlayer = players[currentDrawIndex]
-        let action = NetworkAction(
-            type: .cardDrawn,
-            playerId: currentPlayer.id,
-            sequenceNumber: getNextSequenceNumber(),
-            data: nil
-        )
-        
-        pendingActions.append(action)
-        print("🌐 Queued network action: \(action.type)")
-    }
+
     
     // MARK: - Private Methods
     
