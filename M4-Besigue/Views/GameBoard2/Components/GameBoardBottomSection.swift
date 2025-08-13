@@ -57,40 +57,50 @@ struct GameActionButtonsView: View {
         }
     }
     
+    /**
+     * Determines if the meld button should be shown for the current player.
+     * 
+     * This computed property now delegates to the Game Engine for all rule validation,
+     * ensuring consistent meld button visibility logic across the application.
+     * 
+     * @return Bool indicating if the meld button should be visible
+     * 
+     * @note This property replaces the previous UI-level rule enforcement
+     * @note All validation logic is now handled by the Game Engine
+     * @note UI is responsible only for display, not rule enforcement
+     */
     private var shouldShowMeldButton: Bool {
         guard let human = game.players.first(where: { $0.type == .human }) else { return false }
-        return game.awaitingMeldChoice &&
-               game.canPlayerMeld &&
-               viewState.selectedCards.count >= 2 &&
-               viewState.selectedCards.count <= 4 &&
-               game.trickWinnerId == human.id
+        return game.shouldShowMeldButton(for: human, selectedCards: viewState.selectedCards)
     }
     
+    /**
+     * Handles meld declaration from UI interaction.
+     * 
+     * This method now delegates all meld validation and processing to the Game Engine,
+     * ensuring consistent rule enforcement and proper error handling. The UI is only
+     * responsible for displaying the results and managing view state.
+     * 
+     * @note This method replaces the previous UI-level meld declaration logic
+     * @note All validation and processing is now handled by the Game Engine
+     * @note UI is responsible only for user interaction and display feedback
+     */
     private func handleMeldDeclaration() {
-        let humanPlayer = game.currentPlayer
-        if humanPlayer.type == .human, viewState.selectedCards.count >= 2, viewState.selectedCards.count <= 4 {
-            let uniqueSelectedCards = Array(Set(viewState.selectedCards))
+        guard let humanPlayer = game.players.first(where: { $0.type == .human }) else { return }
+        
+        // Delegate all meld validation and processing to the Game Engine
+        let result = game.declareMeldFromUI(player: humanPlayer, selectedCards: viewState.selectedCards)
+        
+        if result.success {
+            // Meld declared successfully - clear selection and continue
+            viewState.clearSelectedCards()
+        } else {
+            // Meld declaration failed - show error feedback
+            viewState.triggerMeldButtonShake()
+            viewState.showInvalidMeldMessage()
             
-            if let meldType = game.getMeldTypeForCards(uniqueSelectedCards, trumpSuit: game.trumpSuit) {
-                let pointValue = game.getPointValueForMeldType(meldType)
-                let meld = Meld(
-                    cardIDs: uniqueSelectedCards.map { $0.id },
-                    type: meldType,
-                    pointValue: pointValue,
-                    roundNumber: game.roundNumber
-                )
-                
-                if game.canDeclareMeld(meld, by: humanPlayer) {
-                    game.declareMeld(meld, by: humanPlayer)
-                    viewState.clearSelectedCards()
-                } else {
-                    viewState.triggerMeldButtonShake()
-                    viewState.showInvalidMeldMessage()
-                }
-            } else {
-                viewState.triggerMeldButtonShake()
-                viewState.showInvalidMeldMessage()
-            }
+            // Log the failure reason for debugging
+            print("❌ Meld declaration failed: \(result.reason)")
         }
     }
 }
@@ -166,8 +176,21 @@ struct GamePlayerMeldedCardsView: View {
         }
     }
     
+    /**
+     * Handles single tap on a melded card for selection/deselection.
+     * 
+     * This method now delegates card selection validation to the Game Engine,
+     * ensuring consistent rule enforcement across all card interactions.
+     * The UI is only responsible for managing selection state.
+     * 
+     * @param card The card that was tapped
+     * 
+     * @note This method replaces the previous UI-level card selection validation
+     * @note All validation logic is now handled by the Game Engine
+     * @note UI is responsible only for selection state management
+     */
     private func handleCardTap(_ card: PlayerCard) {
-        if game.awaitingMeldChoice && game.currentPlayer.type == .human && game.canPlayerMeld && game.currentPlayer.id == game.trickWinnerId {
+        if game.canPlayerSelectCardForMeld(game.currentPlayer) {
             if viewState.selectedCards.contains(card) {
                 viewState.deselectCard(card)
             } else {
@@ -176,8 +199,21 @@ struct GamePlayerMeldedCardsView: View {
         }
     }
     
+    /**
+     * Handles double tap on a melded card for immediate play.
+     * 
+     * This method now delegates card play validation to the Game Engine,
+     * ensuring consistent rule enforcement across all card interactions.
+     * The UI is only responsible for managing view state after the action.
+     * 
+     * @param card The card that was double-tapped
+     * 
+     * @note This method replaces the previous UI-level card play validation
+     * @note All validation logic is now handled by the Game Engine
+     * @note UI is responsible only for view state management
+     */
     private func handleCardDoubleTap(_ card: PlayerCard) {
-        if game.currentPlayer.id == player.id && game.canPlayCard() {
+        if game.canPlayerPlayCardFromHand(player, card: card) {
             game.playCard(card, from: player)
             viewState.clearSelectedCards()
         }
@@ -272,32 +308,39 @@ struct HumanActionButtonsView: View {
     
     // MARK: - Button States
     
+    /**
+     * Determines if the draw button should be enabled for the current player.
+     * 
+     * This computed property now delegates to the Game Engine for all rule validation,
+     * ensuring consistent drawing logic across the application. The UI is only
+     * responsible for displaying the button state, not enforcing game rules.
+     * 
+     * @return Bool indicating if the draw button should be enabled
+     * 
+     * @note This property replaces the previous UI-level rule enforcement
+     * @note All validation logic is now handled by the Game Engine
+     * @note UI is responsible only for display, not rule enforcement
+     */
     private var canDraw: Bool {
-        // Only the current player may draw, and only if they are the human
-        let current = game.currentPlayer
-        guard current.type == .human,
-              let playerIndex = game.players.firstIndex(where: { $0.id == current.id }) else {
-            return false
-        }
-
-        // Block drawing while a meld decision is pending
-        guard !game.awaitingMeldChoice else { return false }
-
-        // Enforce draw order and per-player draw gating
-        let hasAlreadyDrawn = game.hasDrawnForNextTrick[current.id, default: false]
-        return playerIndex == game.currentDrawIndex &&
-               !hasAlreadyDrawn &&
-               !game.deck.isEmpty &&
-               current.hand.count < 9
+        return game.canPlayerDraw(game.currentPlayer)
     }
     
+    /**
+     * Determines if the meld button should be enabled for the current player.
+     * 
+     * This computed property now delegates to the Game Engine for all rule validation,
+     * ensuring consistent melding logic across the application. The UI is only
+     * responsible for displaying the button state, not enforcing game rules.
+     * 
+     * @return Bool indicating if the meld button should be enabled
+     * 
+     * @note This property replaces the previous UI-level rule enforcement
+     * @note All validation logic is now handled by the Game Engine
+     * @note UI is responsible only for display, not rule enforcement
+     */
     private var canMeld: Bool {
         guard let human = game.players.first(where: { $0.type == .human }) else { return false }
-        return game.awaitingMeldChoice &&
-               game.canPlayerMeld &&
-               viewState.selectedCards.count >= 2 &&
-               viewState.selectedCards.count <= 4 &&
-               game.trickWinnerId == human.id
+        return game.canPlayerMeld(human, selectedCards: viewState.selectedCards)
     }
     
     // MARK: - Button Colors
@@ -328,34 +371,33 @@ struct HumanActionButtonsView: View {
     
     // MARK: - Meld Declaration
     
+    /**
+     * Handles meld declaration from the permanent meld button.
+     * 
+     * This method now delegates all meld validation and processing to the Game Engine,
+     * ensuring consistent rule enforcement and proper error handling. The UI is only
+     * responsible for displaying the results and managing view state.
+     * 
+     * @note This method replaces the previous UI-level meld declaration logic
+     * @note All validation and processing is now handled by the Game Engine
+     * @note UI is responsible only for user interaction and display feedback
+     */
     private func handleMeldDeclaration() {
-        guard let humanPlayer = game.players.first(where: { $0.type == .human }),
-              viewState.selectedCards.count >= 2,
-              viewState.selectedCards.count <= 4 else {
-            return
-        }
+        guard let humanPlayer = game.players.first(where: { $0.type == .human }) else { return }
         
-        let uniqueSelectedCards = Array(Set(viewState.selectedCards))
+        // Delegate all meld validation and processing to the Game Engine
+        let result = game.declareMeldFromUI(player: humanPlayer, selectedCards: viewState.selectedCards)
         
-        if let meldType = game.getMeldTypeForCards(uniqueSelectedCards, trumpSuit: game.trumpSuit) {
-            let pointValue = game.getPointValueForMeldType(meldType)
-            let meld = Meld(
-                cardIDs: uniqueSelectedCards.map { $0.id },
-                type: meldType,
-                pointValue: pointValue,
-                roundNumber: game.roundNumber
-            )
-            
-            if game.canDeclareMeld(meld, by: humanPlayer) {
-                game.declareMeld(meld, by: humanPlayer)
-                viewState.clearSelectedCards()
-            } else {
-                viewState.triggerMeldButtonShake()
-                viewState.showInvalidMeldMessage()
-            }
+        if result.success {
+            // Meld declared successfully - clear selection and continue
+            viewState.clearSelectedCards()
         } else {
+            // Meld declaration failed - show error feedback
             viewState.triggerMeldButtonShake()
             viewState.showInvalidMeldMessage()
+            
+            // Log the failure reason for debugging
+            print("❌ Meld declaration failed: \(result.reason)")
         }
     }
 }

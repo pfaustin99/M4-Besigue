@@ -160,13 +160,22 @@ struct GamePlayerHandView: View {
     
 
     
+    /**
+     * Handles single tap on a hand card for selection/deselection.
+     * 
+     * This method now delegates card selection validation to the Game Engine,
+     * ensuring consistent rule enforcement across all card interactions.
+     * The UI is only responsible for managing selection state.
+     * 
+     * @param card The card that was tapped
+     * 
+     * @note This method replaces the previous UI-level card selection validation
+     * @note All validation logic is now handled by the Game Engine
+     * @note UI is responsible only for selection state management
+     */
     private func handleCardTap(_ card: PlayerCard) {
         // Single tap - select/deselect for melding
-        if game.awaitingMeldChoice && 
-           game.currentPlayer.type == .human && 
-           game.canPlayerMeld && 
-           game.currentPlayer.id == game.trickWinnerId {
-            
+        if game.canPlayerSelectCardForMeld(game.currentPlayer) {
             if viewState.selectedCards.contains(card) {
                 viewState.deselectCard(card)
             } else {
@@ -175,9 +184,22 @@ struct GamePlayerHandView: View {
         }
     }
     
+    /**
+     * Handles double tap on a hand card for immediate play.
+     * 
+     * This method now delegates card play validation to the Game Engine,
+     * ensuring consistent rule enforcement across all card interactions.
+     * The UI is only responsible for managing view state after the action.
+     * 
+     * @param card The card that was double-tapped
+     * 
+     * @note This method replaces the previous UI-level card play validation
+     * @note All validation logic is now handled by the Game Engine
+     * @note UI is responsible only for view state management
+     */
     private func handleCardDoubleTap(_ card: PlayerCard) {
         // Double tap - play the card immediately
-        if game.currentPlayer.id == player.id && game.canPlayCard() {
+        if game.canPlayerPlayCardFromHand(player, card: card) {
             game.playCard(card, from: player)
             viewState.clearSelectedCards()
         }

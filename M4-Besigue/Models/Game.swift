@@ -11,6 +11,25 @@ enum GamePhase: String {
     case gameOver = "game_over"
 }
 
+/**
+ * Result of a meld declaration attempt.
+ * 
+ * This struct provides detailed feedback about meld declaration operations,
+ * including success/failure status and explanatory reasons.
+ * 
+ * @note Used by the new centralized meld declaration system
+ * @note Provides consistent error reporting across all meld interactions
+ */
+struct MeldResult {
+    let success: Bool
+    let reason: String
+    
+    init(success: Bool, reason: String) {
+        self.success = success
+        self.reason = reason
+    }
+}
+
 // MARK: - Game Model
 class Game: ObservableObject {
     @Published var players: [Player] = []
@@ -1819,14 +1838,27 @@ class Game: ObservableObject {
         return currentPhase != .dealerDetermination
     }
     
-    // Check if current player can draw a card
+    /**
+     * Check if current player can draw a card during the current game state.
+     * 
+     * This method provides backward compatibility while leveraging the new
+     * comprehensive rule enforcement system. It checks if drawing is globally
+     * enabled and then delegates to the detailed validation method.
+     * 
+     * @return Bool indicating if the current player can draw
+     * 
+     * @note This method maintains backward compatibility with existing code
+     * @note For detailed validation, use canPlayerDraw(_:) instead
+     * @note Called by AI decision logic and legacy UI components
+     */
     func canCurrentPlayerDraw() -> Bool {
+        // Check if drawing is globally enabled
         let mustDraw = mustDrawCard
         let deckNotEmpty = !deck.isEmpty
         let hasNotDrawn = !hasDrawnForNextTrick[currentPlayer.id, default: false]
         let canDraw = mustDraw && deckNotEmpty && hasNotDrawn
         
-        print("🔍 CAN DRAW CHECK:")
+        print("🔍 CAN DRAW CHECK (Legacy):")
         print("   Player: \(currentPlayer.name)")
         print("   Must draw card: \(mustDraw)")
         print("   Deck empty: \(deck.isEmpty)")
@@ -1838,6 +1870,11 @@ class Game: ObservableObject {
         print("   Current trick count: \(currentTrick.count)")
         print("   Can player meld: \(canPlayerMeld)")
         print("   Result: \(canDraw)")
+        
+        // For human players, also check detailed validation rules
+        if currentPlayer.type == .human {
+            return canDraw && canPlayerDraw(currentPlayer)
+        }
         
         return canDraw
     }
@@ -2125,4 +2162,269 @@ class Game: ObservableObject {
     #if DEBUG
         var test_aiService: AIService { aiService }
     #endif
+    
+    // MARK: - Game Rule Enforcement Methods
+    
+    /**
+     * Validates if a player can draw a card during the current game state.
+     * 
+     * This method enforces all drawing rules including:
+     * - Player type verification (human vs AI)
+     * - Draw order enforcement (currentDrawIndex)
+     * - Meld choice blocking (awaitingMeldChoice)
+     * - Per-player draw gating (hasDrawnForNextTrick)
+     * - Deck availability and hand size limits
+     * 
+     * @param player The player attempting to draw
+     * @return Bool indicating if drawing is allowed
+     * 
+     * @note This method replaces the previous UI-level validation logic
+     * @note Called by both UI components and AI decision logic
+     * @note Ensures consistent rule enforcement across all game interactions
+     */
+    func canPlayerDraw(_ player: Player) -> Bool {
+        // Only human players can draw through UI (AI draws automatically)
+        guard player.type == .human else { return false }
+        
+        // Block drawing while a meld decision is pending
+        guard !awaitingMeldChoice else { return false }
+        
+        // Find player index for draw order enforcement
+        guard let playerIndex = players.firstIndex(where: { $0.id == player.id }) else { return false }
+        
+        // Enforce draw order - only the player at currentDrawIndex can draw
+        guard playerIndex == currentDrawIndex else { return false }
+        
+        // Check if player has already drawn for this trick
+        let hasAlreadyDrawn = hasDrawnForNextTrick[player.id, default: false]
+        guard !hasAlreadyDrawn else { return false }
+        
+        // Verify deck has cards available
+        guard !deck.isEmpty else { return false }
+        
+        // Check hand size limit (9 cards maximum)
+        guard player.hand.count < 9 else { return false }
+        
+        return true
+    }
+    
+    /**
+     * Validates if a player can meld cards during the current game state.
+     * 
+     * This method enforces all melding rules including:
+     * - Meld choice state verification
+     * - Player meld capability
+     * - Card count validation (2-4 cards)
+     * - Trick winner verification
+     * - Player type verification
+     * 
+     * @param player The player attempting to meld
+     * @param selectedCards The cards selected for melding
+     * @return Bool indicating if melding is allowed
+     * 
+     * @note This method replaces the previous UI-level validation logic
+     * @note Ensures consistent meld validation across all game interactions
+     */
+    func canPlayerMeld(_ player: Player, selectedCards: [PlayerCard]) -> Bool {
+        // Only human players can meld through UI
+        guard player.type == .human else { return false }
+        
+        // Check if meld choice is currently allowed
+        guard awaitingMeldChoice else { return false }
+        
+        // Verify player has meld capability
+        guard self.canPlayerMeld else { return false }
+        
+        // Validate card count (2-4 cards required for melding)
+        guard selectedCards.count >= 2 && selectedCards.count <= 4 else { return false }
+        
+        // Verify player is the trick winner (only trick winner can meld)
+        guard player.id == trickWinnerId else { return false }
+        
+        return true
+    }
+    
+    /**
+     * Determines if the meld button should be shown for a player.
+     * 
+     * This method consolidates all meld button visibility logic:
+     * - Player type verification
+     * - Meld choice state
+     * - Player meld capability
+     * - Card count validation
+     * - Trick winner verification
+     * 
+     * @param player The player to check meld button visibility for
+     * @param selectedCards The currently selected cards
+     * @return Bool indicating if meld button should be visible
+     * 
+     * @note This method replaces the previous UI-level shouldShowMeldButton logic
+     * @note Provides single source of truth for meld button state
+     */
+    func shouldShowMeldButton(for player: Player, selectedCards: [PlayerCard]) -> Bool {
+        // Only human players see meld buttons
+        guard player.type == .human else { return false }
+        
+        // Check if meld choice is currently allowed
+        guard awaitingMeldChoice else { return false }
+        
+        // Verify player has meld capability
+        guard canPlayerMeld else { return false }
+        
+        // Validate card count (2-4 cards required for melding)
+        guard selectedCards.count >= 2 && selectedCards.count <= 4 else { return false }
+        
+        // Verify player is the trick winner (only trick winner can meld)
+        guard player.id == trickWinnerId else { return false }
+        
+        return true
+    }
+    
+    /**
+     * Validates if a player can select a card for melding.
+     * 
+     * This method enforces card selection rules:
+     * - Meld choice state verification
+     * - Player type verification
+     * - Player meld capability
+     * - Trick winner verification
+     * 
+     * @param player The player attempting to select a card
+     * @return Bool indicating if card selection is allowed
+     * 
+     * @note This method replaces the previous UI-level card selection validation
+     * @note Ensures consistent card selection rules across all game interactions
+     */
+    func canPlayerSelectCardForMeld(_ player: Player) -> Bool {
+        // Only human players can select cards for melding
+        guard player.type == .human else { return false }
+        
+        // Check if meld choice is currently allowed
+        guard awaitingMeldChoice else { return false }
+        
+        // Verify player has meld capability
+        guard canPlayerMeld else { return false }
+        
+        // Verify player is the trick winner (only trick winner can select cards for melding)
+        guard player.id == trickWinnerId else { return false }
+        
+        return true
+    }
+    
+    /**
+     * Validates if a player can play a card from their hand.
+     * 
+     * This method enforces card play rules:
+     * - Player turn verification
+     * - Play capability check
+     * - Player ownership verification
+     * 
+     * @param player The player attempting to play a card
+     * @param card The card being played
+     * @return Bool indicating if card play is allowed
+     * 
+     * @note This method replaces the previous UI-level card play validation
+     * @note Ensures consistent card play rules across all game interactions
+     */
+    func canPlayerPlayCardFromHand(_ player: Player, card: PlayerCard) -> Bool {
+        // Verify player is the current player (turn enforcement)
+        guard player.id == currentPlayer.id else { return false }
+        
+        // Check if card play is currently allowed
+        guard canPlayCard() else { return false }
+        
+        // Verify the card belongs to the player
+        guard player.held.contains(where: { $0.id == card.id }) else { return false }
+        
+        return true
+    }
+    
+    /**
+     * Validates card count for melding operations.
+     * 
+     * This method enforces meld card count rules:
+     * - Minimum 2 cards required
+     * - Maximum 4 cards allowed
+     * 
+     * @param cards The cards to validate
+     * @return Bool indicating if card count is valid for melding
+     * 
+     * @note This method provides centralized card count validation
+     * @note Used by both UI components and game logic
+     */
+    func validateMeldCardCount(_ cards: [PlayerCard]) -> Bool {
+        return cards.count >= 2 && cards.count <= 4
+    }
+    
+    /**
+     * Validates hand size limit for a player.
+     * 
+     * This method enforces hand size rules:
+     * - Maximum 9 cards allowed (held + melded)
+     * 
+     * @param player The player to check hand size for
+     * @return Bool indicating if hand size is within limits
+     * 
+     * @note This method provides centralized hand size validation
+     * @note Used by both UI components and game logic
+     */
+    func validateHandSizeLimit(for player: Player) -> Bool {
+        return player.hand.count < 9
+    }
+    
+    /**
+     * Declares a meld from UI interaction with full validation.
+     * 
+     * This method handles the complete meld declaration process:
+     * - Validates all meld requirements
+     * - Creates and declares the meld
+     * - Handles success/failure responses
+     * 
+     * @param player The player declaring the meld
+     * @param selectedCards The cards selected for the meld
+     * @return MeldResult indicating success/failure and details
+     * 
+     * @note This method replaces the previous UI-level meld declaration logic
+     * @note Provides centralized meld processing with consistent validation
+     */
+    func declareMeldFromUI(player: Player, selectedCards: [PlayerCard]) -> MeldResult {
+        // Validate player can meld
+        guard canPlayerMeld(player, selectedCards: selectedCards) else {
+            return MeldResult(success: false, reason: "Player cannot meld at this time")
+        }
+        
+        // Validate card count
+        guard validateMeldCardCount(selectedCards) else {
+            return MeldResult(success: false, reason: "Invalid card count for melding")
+        }
+        
+        // Get unique cards (remove duplicates)
+        let uniqueSelectedCards = Array(Set(selectedCards))
+        
+        // Determine meld type
+        guard let meldType = getMeldTypeForCards(uniqueSelectedCards, trumpSuit: trumpSuit) else {
+            return MeldResult(success: false, reason: "Invalid meld combination")
+        }
+        
+        // Calculate point value
+        let pointValue = getPointValueForMeldType(meldType)
+        
+        // Create meld object
+        let meld = Meld(
+            cardIDs: uniqueSelectedCards.map { $0.id },
+            type: meldType,
+            pointValue: pointValue,
+            roundNumber: roundNumber
+        )
+        
+        // Validate meld can be declared
+        guard canDeclareMeld(meld, by: player) else {
+            return MeldResult(success: false, reason: "Meld validation failed")
+        }
+        
+        // Declare the meld
+        declareMeld(meld, by: player)
+        
+        return MeldResult(success: true, reason: "Meld declared successfully")
+    }
 }
