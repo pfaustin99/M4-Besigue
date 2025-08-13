@@ -322,7 +322,9 @@ struct HumanActionButtonsView: View {
      * @note UI is responsible only for display, not rule enforcement
      */
     private var canDraw: Bool {
-        return game.canPlayerDraw(game.currentPlayer)
+        // Get the human player, not the current player (which might be AI)
+        guard let humanPlayer = game.players.first(where: { $0.type == .human }) else { return false }
+        return game.canPlayerDraw(humanPlayer)
     }
     
     /**
