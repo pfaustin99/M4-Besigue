@@ -257,7 +257,9 @@ struct HumanActionButtonsView: View {
         HStack(spacing: buttonSpacing) {
             // Draw Button
             Button(action: {
-                game.drawCardForCurrentPlayer()
+                // Get the human player and draw for them
+                guard let humanPlayer = game.players.first(where: { $0.type == .human }) else { return }
+                _ = game.drawCard(for: humanPlayer)
             }) {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.down.circle.fill")

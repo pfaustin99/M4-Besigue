@@ -175,7 +175,7 @@ class Game: ObservableObject {
         let initialDeckSize = deck.cards.count
         
         // Winner draws a card
-        drawCardForCurrentPlayer()
+        _ = drawCard(for: winner)
         
         // Verify card was drawn
         guard winner.hand.count > 0 else {
@@ -222,7 +222,7 @@ class Game: ObservableObject {
             
             // Verify winner can still draw
             let initialHandSize = winner.hand.count
-            drawCardForCurrentPlayer()
+            _ = drawCard(for: winner)
             
             guard winner.hand.count > initialHandSize else {
                 print("❌ FAIL: Winner couldn't draw after melding")
@@ -1111,7 +1111,7 @@ class Game: ObservableObject {
         let player = players[currentDrawIndex]
         if player.type == .ai && !hasDrawnForNextTrick[player.id, default: false] && !deck.isEmpty {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.drawCardForCurrentDrawTurn()
+                _ = self.drawCard(for: player)
             }
         }
     }
@@ -2164,6 +2164,114 @@ class Game: ObservableObject {
     #endif
     
     // MARK: - Game Rule Enforcement Methods
+    
+    /**
+     * Draws a card for a specific player.
+     * 
+     * This method consolidates all card drawing logic into a single, well-tested method.
+     * It handles all validation, card addition, and game state updates.
+     * 
+     * @param player The player who should draw a card
+     * @return Bool indicating if the draw was successful
+     * 
+     * @note This method replaces the previous duplicate draw methods
+     * @note All draw operations should use this method for consistency
+     */
+    func drawCard(for player: Player) -> Bool {
+        print("🎴 DRAW ATTEMPT for \(player.name):")
+        print("   Player: \(player.name)")
+        print("   Has drawn: \(hasDrawnForNextTrick[player.id, default: false])")
+        print("   Deck empty: \(deck.isEmpty)")
+        print("   Must draw card: \(mustDrawCard)")
+        print("   Current hand size: \(player.hand.count) (held: \(player.hand.count), melded: \(player.melded.count))")
+        
+        // Check 9-card limit (held + melded)
+        if player.hand.count >= 9 {
+            print("❌ DRAW FAILED - Player already has 9 cards (limit reached)")
+            return false
+        }
+        
+        // Check if player has already drawn for this trick
+        guard hasDrawnForNextTrick[player.id] == false else { 
+            print("❌ DRAW FAILED - Player has already drawn for this trick")
+            return false 
+        }
+        
+        // Check if deck has cards available
+        guard !deck.isEmpty else { 
+            print("❌ DRAW FAILED - Deck is empty")
+            return false 
+        }
+        
+        // Check if drawing is currently allowed
+        guard mustDrawCard else {
+            print("❌ DRAW FAILED - Drawing is not currently allowed")
+            return false
+        }
+        
+        // Reset meld state when any player draws during draw cycle
+        canPlayerMeld = false
+        awaitingMeldChoice = false
+        
+        if let card = deck.drawCard() {
+            player.addCards([card])
+            hasDrawnForNextTrick[player.id] = true
+            print("✅ DRAW SUCCESS - \(player.name) drew \(card.displayName)")
+            
+            // Post notification for view state to trigger draw animation
+            NotificationCenter.default.post(
+                name: .cardDrawn,
+                object: card
+            )
+            
+            // Check if ALL players have drawn for this trick
+            let allHaveDrawn = players.allSatisfy { hasDrawnForNextTrick[$0.id, default: false] }
+            
+            if allHaveDrawn {
+                // All players have drawn, switch to play cycle
+                print("🔄 All players have drawn - switching to play cycle")
+                mustDrawCard = false
+                currentPlayIndex = currentTrickLeader
+                currentPlayerIndex = currentTrickLeader
+                currentPlayer.isCurrentPlayer = true
+                
+                // Clear previous player's current status
+                for (index, p) in players.enumerated() {
+                    if index != currentPlayerIndex {
+                        p.isCurrentPlayer = false
+                    }
+                }
+            } else {
+                // Move to next player who needs to draw
+                currentDrawIndex = (currentDrawIndex + 1) % playerCount
+                
+                // Set current player to the next player who needs to draw
+                currentPlayerIndex = currentDrawIndex
+                currentPlayer.isCurrentPlayer = true
+                
+                // Clear all player current status first
+                for (index, p) in players.enumerated() {
+                    if index != currentPlayerIndex {
+                        p.isCurrentPlayer = false
+                    }
+                }
+                
+                print("🔄 Draw turn moved to: \(currentPlayer.name) (index: \(currentPlayerIndex))")
+                
+                // If next player is AI, trigger AI turn
+                if currentPlayer.type == .ai {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        self.processAITurn()
+                    }
+                }
+            }
+            
+            return true
+        } else {
+            print("❌ DRAW FAILED - Could not draw card from deck")
+            return false
+        }
+    }
     
     /**
      * Validates if a player can draw a card during the current game state.
