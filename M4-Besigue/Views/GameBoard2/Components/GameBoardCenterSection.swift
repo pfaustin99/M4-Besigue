@@ -5,6 +5,7 @@ struct GameBoardCenterSection: View {
     @ObservedObject var game: Game
     let settings: GameSettings
     let gameRules: GameRules
+    let geometry: GeometryProxy
     
     var body: some View {
         VStack {
@@ -14,9 +15,10 @@ struct GameBoardCenterSection: View {
                     cards: game.completedTrick,
                     game: game,
                     settings: settings,
-                    gameRules: gameRules
+                    gameRules: gameRules,
+                    geometry: geometry
                 )
-                .frame(width: 200, height: 120)
+                .frame(width: 400, height: 300) // Increased to accommodate larger cards
                 .transition(.asymmetric(
                     insertion: .scale.combined(with: .opacity),
                     removal: .scale.combined(with: .opacity)
@@ -27,9 +29,10 @@ struct GameBoardCenterSection: View {
                     cards: game.currentTrick,
                     game: game,
                     settings: settings,
-                    gameRules: gameRules
+                    gameRules: gameRules,
+                    geometry: geometry
                 )
-                .frame(width: 200, height: 120)
+                .frame(width: 400, height: 300) // Increased to accommodate larger cards
                 .transition(.asymmetric(
                     insertion: .move(edge: .bottom).combined(with: .opacity),
                     removal: .move(edge: .top).combined(with: .opacity)
@@ -38,7 +41,7 @@ struct GameBoardCenterSection: View {
             } else {
                 // Empty state - minimal and clean
                 Color.clear
-                    .frame(width: 200, height: 120)
+                    .frame(width: 400, height: 300) // Increased to match
             }
             
             Spacer()
@@ -67,150 +70,85 @@ struct CompletedTrickView: View {
     let game: Game
     let settings: GameSettings
     let gameRules: GameRules
+    let geometry: GeometryProxy
+    
+    // Animation state for winning card
+    @State private var winningCardVisible = false
+    @State private var animationTimer: Timer?
     
     var body: some View {
-        VStack(spacing: 8) {
-            // Debug info block (conditional on settings.showDebugInfo)
-            if settings.showDebugInfo {
-                VStack(spacing: 2) {
-                    Text("CompletedTrickView Debug:")
-                    Text("Cards count: \(cards.count)")
-                    ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                        Text("Card \(index): \(card.displayName)")
-                    }
-                }
-                .padding(4)
-                .background(Color.black.opacity(0.7))
-                .cornerRadius(4)
-            }
-            
-            // Actual cards display
-            HStack(spacing: 8) {
-                ForEach(cards, id: \.id) { card in
-                    VStack(spacing: 4) {
-                        // Try to show the card image first
-                        Image(card.imageName)
-                            .resizable()
-                            .aspectRatio(2.5/3.5, contentMode: .fit)
-                            .frame(width: 60, height: 90)
-                            .background(Color.white)
-                            .cornerRadius(4)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.black, lineWidth: 1)
-                            )
-                            .onAppear {
-                                print("🎯 Loading image for card: \(card.displayName) with imageName: \(card.imageName)")
-                            }
-                        
-                        // Fallback text display if image fails
-                        VStack(spacing: 2) {
-                            Text(card.displayName)
-                                .font(.caption2)
-                                .foregroundColor(.white)
-                                .multilineTextAlignment(.center)
-                            
-                            Text("ID: \(card.id)")
-                                .font(.caption2)
-                                .foregroundColor(.gray)
-                        }
-                        .frame(width: 60)
-                        .padding(4)
-                        .background(Color.black.opacity(0.7))
-                        .cornerRadius(4)
-                    }
+        VStack(spacing: 0) {
+            // Main card display - natural stacking like real cards on a table
+            ZStack {
+                // Display cards in natural stacked order (winning card on top)
+                ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                    CardView(card: card, onTap: {}) // No-op for display-only cards
+                        .frame(width: trickCardSize.width, height: trickCardSize.height)
+                        .rotationEffect(.degrees(naturalCardRotation(for: index)))
+                        .offset(naturalCardOffset(for: index))
+                        .zIndex(Double(cards.count - index)) // Winning card (last played) on top
+                        .animation(.easeInOut(duration: 0.6), value: cards.count)
                 }
             }
-            .padding(8)
-            .background(Color.black.opacity(0.1))
-            .cornerRadius(8)
         }
         .onAppear {
-            print("🎯 CompletedTrickView appeared with \(cards.count) cards:")
-            for (index, card) in cards.enumerated() {
-                print("   Card \(index): \(card.displayName) (ID: \(card.id))")
-            }
+            // Start winning card visibility timer
+            startWinningCardTimer()
         }
         .onChange(of: cards.count) { _, newCount in
-            print("🎯 CompletedTrickView cards count changed to: \(newCount)")
-            print("   Cards: \(cards.map { $0.displayName })")
+            // Reset timer when new cards are added
+            startWinningCardTimer()
+        }
+        .onDisappear {
+            // Clean up timer
+            animationTimer?.invalidate()
         }
     }
-}
-
-/// TrickView - Displays the current trick
-struct TrickView: View {
-    let cards: [PlayerCard]
-    let game: Game
-    let settings: GameSettings
-    let gameRules: GameRules
     
-    var body: some View {
-        VStack(spacing: 8) {
-            // Debug info block (conditional on settings.showDebugInfo)
-            if settings.showDebugInfo {
-                VStack(spacing: 2) {
-                    Text("TrickView Debug:")
-                    Text("Cards count: \(cards.count)")
-                    ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                        Text("Card \(index): \(card.displayName)")
-                    }
-                }
-                .padding(4)
-                .background(Color.black.opacity(0.7))
-                .cornerRadius(4)
-            }
-            
-            // Actual cards display
-            HStack(spacing: 8) {
-                ForEach(cards, id: \.id) { card in
-                    VStack(spacing: 4) {
-                        // Try to show the card image first
-                        Image(card.imageName)
-                            .resizable()
-                            .aspectRatio(2.5/3.5, contentMode: .fit)
-                            .frame(width: 60, height: 90) // TODO: Make this dynamic based on human card size
-                            .background(Color.white)
-                            .cornerRadius(4)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.black, lineWidth: 1)
-                            )
-                            .onAppear {
-                                print("🎯 Loading image for card: \(card.displayName) with imageName: \(card.imageName)")
-                            }
-                        
-                        // Fallback text display if image fails
-                        VStack(spacing: 2) {
-                            Text(card.displayName)
-                                .font(.caption2)
-                                .foregroundColor(.white)
-                                .multilineTextAlignment(.center)
-                            
-                            Text("ID: \(card.id)")
-                                .font(.caption2)
-                                .foregroundColor(.gray)
-                        }
-                        .frame(width: 60)
-                        .padding(4)
-                        .background(Color.black.opacity(0.7))
-                        .cornerRadius(4)
-                    }
-                }
-            }
-            .padding(8)
-            .background(Color.black.opacity(0.1))
-            .cornerRadius(8)
-        }
-        .onAppear {
-            print("🎯 TrickView appeared with \(cards.count) cards:")
-            for (index, card) in cards.enumerated() {
-                print("   Card \(index): \(card.displayName) (ID: \(card.id))")
-            }
-        }
-        .onChange(of: cards.count) { _, newCount in
-            print("🎯 TrickView cards count changed to: \(newCount)")
-            print("   Cards: \(cards.map { $0.displayName })")
+    // Use larger card sizes for trick area - more prominent and easier to see
+    private var humanCardSize: CGSize {
+        geometry.size.width < 768 ? CGSize(width: 70, height: 105) : CGSize(width: 140, height: 210)
+    }
+    
+    // Trick area cards are larger than human hand cards for better visibility
+    private var trickCardSize: CGSize {
+        let baseSize = humanCardSize
+        return CGSize(width: baseSize.width * 1.25, height: baseSize.height * 1.25)
+    }
+    
+    // Natural card rotation - like real cards thrown on a table with larger differences
+    private func naturalCardRotation(for index: Int) -> Double {
+        let baseRotation = -25.0 // Increased base rotation for more dramatic look
+        let rotationVariation = Double(index) * 12.0 // Much larger variation per card
+        let winningCardBonus = index == cards.count - 1 ? 15.0 : 0.0 // Winning card much more upright
+        
+        return baseRotation + rotationVariation + winningCardBonus
+    }
+    
+    // Natural card offset - realistic stacking like cards on a table
+    private func naturalCardOffset(for index: Int) -> CGSize {
+        let baseOffset: CGFloat = 18.0 // Increased base stacking offset for larger cards
+        let cardSpacing = baseOffset * CGFloat(index)
+        
+        // Add slight horizontal variation for natural look
+        let horizontalVariation = CGFloat(index) * 3.0 // Increased variation
+        let verticalVariation = CGFloat(index) * 1.8 // Increased variation
+        
+        return CGSize(
+            width: cardSpacing + horizontalVariation,
+            height: cardSpacing + verticalVariation
+        )
+    }
+    
+    // Timer to control winning card visibility
+    private func startWinningCardTimer() {
+        // Cancel existing timer
+        animationTimer?.invalidate()
+        
+        // Set new timer for 0.75 seconds (between 0.5-1.0 as requested)
+        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: false) { _ in
+            // This will be handled by the game logic when clearing the trick
+            // The timer ensures the winning card stays visible for the specified duration
         }
     }
 }

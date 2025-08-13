@@ -139,6 +139,7 @@ struct GamePlayerHandView: View {
                 .stroke(isCurrentTurn ? Color.blue : Color.clear, lineWidth: 2)
                 .opacity(isCurrentTurn ? 0.6 : 0.0)
         )
+                            // Draw button moved to permanent location in GameBoardBottomSection
         .animation(.easeInOut(duration: 0.3), value: isCurrentTurn)
     }
     
@@ -156,6 +157,8 @@ struct GamePlayerHandView: View {
     }
     
     // MARK: - Card Interaction Methods
+    
+
     
     private func handleCardTap(_ card: PlayerCard) {
         // Single tap - select/deselect for melding
@@ -186,6 +189,8 @@ struct GamePlayerHandView: View {
         print("🔄 Hand reordered: \(newOrder.map { $0.displayName })")
     }
 }
+
+
 
 // MARK: - Preview
 #if DEBUG

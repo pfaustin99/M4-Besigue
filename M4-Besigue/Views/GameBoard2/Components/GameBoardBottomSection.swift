@@ -25,10 +25,12 @@ struct GameBoardBottomSection: View {
                 )
             }
             
-            // Floating draw button (only when needed)
-            if game.mustDrawCard && game.currentPlayer.type == .human {
-                FloatingDrawButton(game: game, geometry: geometry)
-            }
+            // Permanent Draw and Meld buttons below human hand
+            HumanActionButtonsView(
+                game: game,
+                viewState: viewState,
+                geometry: geometry
+            )
         }
         .padding(.horizontal)
         .padding(.bottom, 8)
@@ -56,12 +58,12 @@ struct GameActionButtonsView: View {
     }
     
     private var shouldShowMeldButton: Bool {
-        game.awaitingMeldChoice &&
-        game.currentPlayer.type == .human &&
-        game.canPlayerMeld &&
-        viewState.selectedCards.count >= 2 &&
-        viewState.selectedCards.count <= 4 &&
-        game.currentPlayer.id == game.trickWinnerId
+        guard let human = game.players.first(where: { $0.type == .human }) else { return false }
+        return game.awaitingMeldChoice &&
+               game.canPlayerMeld &&
+               viewState.selectedCards.count >= 2 &&
+               viewState.selectedCards.count <= 4 &&
+               game.trickWinnerId == human.id
     }
     
     private func handleMeldDeclaration() {
@@ -189,6 +191,175 @@ struct GamePlayerMeldedCardsView: View {
     }
 }
 
+/// HumanActionButtonsView - Permanent Draw and Meld buttons for human player
+struct HumanActionButtonsView: View {
+    let game: Game
+    let viewState: GameBoardViewState2
+    let geometry: GeometryProxy
+    
+    // MARK: - Responsive Sizing
+    private var buttonSpacing: CGFloat {
+        geometry.size.width < 768 ? 20 : 30
+    }
+    
+    private var iconSize: CGFloat {
+        geometry.size.width < 768 ? 18 : 22
+    }
+    
+    private var textSize: CGFloat {
+        geometry.size.width < 768 ? 14 : 16
+    }
+    
+    private var buttonPadding: CGFloat {
+        geometry.size.width < 768 ? 12 : 16
+    }
+    
+    var body: some View {
+        // UI rule:
+        // - While a meld decision is pending (awaitingMeldChoice == true), enable Meld and disable Draw.
+        // - After meld resolution (awaitingMeldChoice == false), enable Draw for the player at currentDrawIndex.
+        HStack(spacing: buttonSpacing) {
+            // Draw Button
+            Button(action: {
+                game.drawCardForCurrentPlayer()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: iconSize))
+                    Text("Draw")
+                        .font(.system(size: textSize, weight: .bold))
+                }
+                .padding(.horizontal, buttonPadding)
+                .padding(.vertical, buttonPadding)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(drawButtonColor)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(drawButtonBorderColor, lineWidth: 2)
+                )
+            }
+            .disabled(!canDraw)
+            .foregroundColor(drawButtonTextColor)
+            
+            // Declare Meld Button
+            Button(action: {
+                handleMeldDeclaration()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "star.circle.fill")
+                        .font(.system(size: iconSize))
+                    Text("Meld")
+                        .font(.system(size: textSize, weight: .bold))
+                }
+                .padding(.horizontal, buttonPadding)
+                .padding(.vertical, buttonPadding)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(meldButtonColor)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(meldButtonBorderColor, lineWidth: 2)
+                )
+            }
+            .disabled(!canMeld)
+            .foregroundColor(meldButtonTextColor)
+        }
+       // .padding(.top, 20)
+    }
+    
+    // MARK: - Button States
+    
+    private var canDraw: Bool {
+        // Only the current player may draw, and only if they are the human
+        let current = game.currentPlayer
+        guard current.type == .human,
+              let playerIndex = game.players.firstIndex(where: { $0.id == current.id }) else {
+            return false
+        }
+
+        // Block drawing while a meld decision is pending
+        guard !game.awaitingMeldChoice else { return false }
+
+        // Enforce draw order and per-player draw gating
+        let hasAlreadyDrawn = game.hasDrawnForNextTrick[current.id, default: false]
+        return playerIndex == game.currentDrawIndex &&
+               !hasAlreadyDrawn &&
+               !game.deck.isEmpty &&
+               current.hand.count < 9
+    }
+    
+    private var canMeld: Bool {
+        guard let human = game.players.first(where: { $0.type == .human }) else { return false }
+        return game.awaitingMeldChoice &&
+               game.canPlayerMeld &&
+               viewState.selectedCards.count >= 2 &&
+               viewState.selectedCards.count <= 4 &&
+               game.trickWinnerId == human.id
+    }
+    
+    // MARK: - Button Colors
+    
+    private var drawButtonColor: Color {
+        canDraw ? Color(hex: "00209F") : Color.gray.opacity(0.3)
+    }
+    
+    private var drawButtonBorderColor: Color {
+        canDraw ? Color(hex: "F1B517") : Color.gray.opacity(0.5)
+    }
+    
+    private var drawButtonTextColor: Color {
+        canDraw ? .white : .gray
+    }
+    
+    private var meldButtonColor: Color {
+        canMeld ? Color.green : Color.gray.opacity(0.3)
+    }
+    
+    private var meldButtonBorderColor: Color {
+        canMeld ? Color(hex: "F1B517") : Color.gray.opacity(0.5)
+    }
+    
+    private var meldButtonTextColor: Color {
+        canMeld ? .white : .gray
+    }
+    
+    // MARK: - Meld Declaration
+    
+    private func handleMeldDeclaration() {
+        guard let humanPlayer = game.players.first(where: { $0.type == .human }),
+              viewState.selectedCards.count >= 2,
+              viewState.selectedCards.count <= 4 else {
+            return
+        }
+        
+        let uniqueSelectedCards = Array(Set(viewState.selectedCards))
+        
+        if let meldType = game.getMeldTypeForCards(uniqueSelectedCards, trumpSuit: game.trumpSuit) {
+            let pointValue = game.getPointValueForMeldType(meldType)
+            let meld = Meld(
+                cardIDs: uniqueSelectedCards.map { $0.id },
+                type: meldType,
+                pointValue: pointValue,
+                roundNumber: game.roundNumber
+            )
+            
+            if game.canDeclareMeld(meld, by: humanPlayer) {
+                game.declareMeld(meld, by: humanPlayer)
+                viewState.clearSelectedCards()
+            } else {
+                viewState.triggerMeldButtonShake()
+                viewState.showInvalidMeldMessage()
+            }
+        } else {
+            viewState.triggerMeldButtonShake()
+            viewState.showInvalidMeldMessage()
+        }
+    }
+}
+
 // MARK: - Melded Card Drop Delegate for Drag and Drop
 struct MeldedCardDropDelegate: DropDelegate {
     let card: PlayerCard
@@ -265,70 +436,3 @@ struct GameMeldedCardView: View {
             }
     }
 }
-
-/// FloatingDrawButton - Floating draw button that appears when player needs to draw
-struct FloatingDrawButton: View {
-    let game: Game
-    let geometry: GeometryProxy
-    
-    // MARK: - Device Detection
-    private var isIPad: Bool {
-        let maxDimension = max(geometry.size.width, geometry.size.height)
-        return maxDimension >= 1024
-    }
-    
-    // MARK: - Button State
-    private var shouldShowButton: Bool {
-        // Only show if:
-        // 1. Player must draw a card
-        // 2. Current player is human
-        // 3. Deck is not empty
-        // 4. Player hasn't already drawn for this trick
-        // 5. Player doesn't already have 9 cards
-        game.mustDrawCard && 
-        game.currentPlayer.type == .human && 
-        !game.deck.isEmpty &&
-        !game.hasDrawnForNextTrick[game.currentPlayer.id, default: false] &&
-        game.currentPlayer.hand.count < 9
-    }
-    
-    var body: some View {
-        if shouldShowButton {
-            Button(action: {
-                game.drawCardForCurrentPlayer()
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .foregroundColor(Color(hex: "F1B517"))
-                        .font(.title2)
-                    Text("Draw Card")
-                        .foregroundColor(.white)
-                        .fontWeight(.bold)
-                }
-                .font(getDrawButtonFont(for: isIPad))
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(hex: "00209F"))
-                        .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color(hex: "F1B517"), lineWidth: 2)
-                )
-            }
-            .scaleEffect(1.0)
-            .animation(.easeInOut(duration: 0.2), value: shouldShowButton)
-        }
-    }
-    
-    // MARK: - Responsive Font
-    private func getDrawButtonFont(for isIPad: Bool) -> Font {
-        if isIPad {
-            return .system(size: 18, weight: .bold)
-        } else {
-            return .system(size: 16, weight: .bold)
-        }
-    }
-} 

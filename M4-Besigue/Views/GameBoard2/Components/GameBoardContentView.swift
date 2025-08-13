@@ -22,13 +22,14 @@ struct GameBoardContentView: View {
                 geometry: geometry
             )
             
-            Spacer()  // Push center section down from top
+            Spacer(minLength: 200)  // Push center section down with minimum 50 points
             
             // Center section: Main game area
             GameBoardCenterSection(
                 game: game,
                 settings: settings,
-                gameRules: gameRules
+                gameRules: gameRules,
+                geometry: geometry
             )
             
             Spacer()  // Push center section up from bottom
@@ -54,6 +55,11 @@ struct GameBoardContentView: View {
             // Card animation overlay
             CardAnimationOverlay(viewState: viewState),
             alignment: .center
+        )
+        .overlay(
+            // Floating message overlay for game messages
+            FloatingMessageOverlay(game: game),
+            alignment: .top
         )
         .overlay(
             // Player hands layout overlay
@@ -153,3 +159,39 @@ struct CardDrawAnimation: View {
         .shadow(color: .green.opacity(0.5), radius: 20)
     }
 } 
+
+// MARK: - Floating Message Overlay
+
+/// FloatingMessageOverlay - Displays floating game messages
+struct FloatingMessageOverlay: View {
+    let game: Game
+    
+    var body: some View {
+        if let message = game.userMessage {
+            VStack(spacing: 8) {
+                Text(message)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.blue.opacity(0.9))
+                            .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.white, lineWidth: 2)
+                    )
+            }
+            .transition(.asymmetric(
+                insertion: .scale.combined(with: .opacity),
+                removal: .scale.combined(with: .opacity)
+            ))
+            .animation(.easeInOut(duration: 0.5), value: message)
+        }
+    }
+}
+
+// MARK: - Preview 
