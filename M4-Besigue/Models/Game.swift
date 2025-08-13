@@ -2171,7 +2171,7 @@ class Game: ObservableObject {
      * This method enforces all drawing rules including:
      * - Player type verification (human vs AI)
      * - Draw order enforcement (currentDrawIndex)
-     * - Meld choice blocking (awaitingMeldChoice)
+     * - Special handling for trick winners during meld choice phase
      * - Per-player draw gating (hasDrawnForNextTrick)
      * - Deck availability and hand size limits
      * 
@@ -2181,16 +2181,35 @@ class Game: ObservableObject {
      * @note This method replaces the previous UI-level validation logic
      * @note Called by both UI components and AI decision logic
      * @note Ensures consistent rule enforcement across all game interactions
+     * @note Trick winners can choose to draw instead of melding during awaitingMeldChoice phase
      */
     func canPlayerDraw(_ player: Player) -> Bool {
         // Only human players can draw through UI (AI draws automatically)
         guard player.type == .human else { return false }
         
-        // Block drawing while a meld decision is pending
-        guard !awaitingMeldChoice else { return false }
-        
         // Find player index for draw order enforcement
         guard let playerIndex = players.firstIndex(where: { $0.id == player.id }) else { return false }
+        
+        // Special case: If this is the trick winner during meld choice phase, allow drawing
+        // This gives the winner the choice between melding and drawing
+        if awaitingMeldChoice && player.id == trickWinnerId {
+            // Trick winner can choose to draw instead of melding
+            // Verify deck has cards available
+            guard !deck.isEmpty else { return false }
+            
+            // Check hand size limit (9 cards maximum)
+            guard player.hand.count < 9 else { return false }
+            
+            // Check if player has already drawn for this trick
+            let hasAlreadyDrawn = hasDrawnForNextTrick[player.id, default: false]
+            guard !hasAlreadyDrawn else { return false }
+            
+            return true
+        }
+        
+        // Normal draw cycle rules (not during meld choice phase)
+        // Block drawing while a meld decision is pending for non-winners
+        guard !awaitingMeldChoice else { return false }
         
         // Enforce draw order - only the player at currentDrawIndex can draw
         guard playerIndex == currentDrawIndex else { return false }
