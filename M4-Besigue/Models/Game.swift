@@ -2241,6 +2241,14 @@ class Game: ObservableObject {
                         p.isCurrentPlayer = false
                     }
                 }
+                
+                // If the new current player (trick leader) is AI, trigger their play turn
+                if currentPlayer.type == .ai {
+                    print("🤖 AI trick leader \(currentPlayer.name) - triggering automatic play")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        self.processAITurn()
+                    }
+                }
             } else {
                 // Move to next player who needs to draw
                 currentDrawIndex = (currentDrawIndex + 1) % playerCount
