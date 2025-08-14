@@ -65,6 +65,9 @@ class Game: ObservableObject {
     // AI Service
     private let aiService: AIService
     
+    // AI Response Coordinator
+    private var aiResponseCoordinator: AIResponseCoordinator!
+    
     // Game settings
     let playerCount: Int
     let isOnline: Bool
@@ -369,6 +372,9 @@ class Game: ObservableObject {
         // Set up players from configuration
         updatePlayersFromConfiguration()
         
+        // Initialize AI Response Coordinator after players are set up
+        self.aiResponseCoordinator = AIResponseCoordinator(aiService: aiService, game: self)
+        
         print("🎮 Game initialized with \(players.count) players")
     }
     
@@ -510,15 +516,8 @@ class Game: ObservableObject {
             // FIX: Set phase to playing after random dealer determination
             currentPhase = .playing
             
-            // If the first player is an AI, trigger their turn immediately
-            if currentPlayer.type == .ai {
-                print("🤖 AI first player \(currentPlayer.name) - starting AI turn for initial trick")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    self.processAITurn()
-                }
-            } else {
-                print("👤 Human first player \(currentPlayer.name) - waiting for human to start initial trick")
-            }
+            // Let AI Response Coordinator handle AI responses
+            aiResponseCoordinator.handleAIResponseIfNeeded()
             
         case .drawJacks:
             // Use the existing dealer determination phase
@@ -543,18 +542,7 @@ class Game: ObservableObject {
         print("🃏 Deck has \(deck.cards.count) cards remaining")
     }
     
-    // Process AI dealer determination
-    private func processAIDealerDetermination() {
-        guard currentPhase == .dealerDetermination && currentPlayer.type == .ai else { return }
-        
-        print("🤖 AI player \(currentPlayer.name) is drawing for dealer determination...")
-        
-        // AI draws a card for dealer determination
-        drawCardForDealerDetermination()
-        
-        // Note: Player transition is now handled in drawCardForDealerDetermination
-        // No need to duplicate the logic here
-    }
+    // AI dealer determination is now handled by AIResponseCoordinator
     
     // Deal cards to all players
     private func dealCards() {
@@ -589,90 +577,11 @@ class Game: ObservableObject {
         
         print("🔄 Turn moved to: \(currentPlayer.name) (index: \(currentPlayerIndex))")
         
-        // Process AI turn if it's an AI player's turn
-        if currentPlayer.type == .ai {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.processAITurn()
-            }
-        }
+        // Let AI Response Coordinator handle AI responses
+        aiResponseCoordinator.handleAIResponseIfNeeded()
     }
     
-    // Process AI turn
-    func processAITurn() {
-        guard currentPlayer.type == .ai else { return }
-        
-        // AI needs to draw a card first if it hasn't drawn for this trick
-        if mustDrawCard && !hasDrawnForNextTrick[currentPlayer.id, default: false] && !deck.isEmpty {
-            print("🤖 AI \(currentPlayer.name) needs to draw a card first")
-            
-            // AI draws a card
-            if let card = deck.drawCard() {
-                currentPlayer.addCards([card])
-                hasDrawnForNextTrick[currentPlayer.id] = true
-                print("🤖 AI \(currentPlayer.name) drew \(card.displayName)")
-                
-                // Post notification for view state to trigger draw animation
-                NotificationCenter.default.post(
-                    name: .cardDrawn,
-                    object: card
-                )
-                
-                // Check if ALL players have drawn for this trick
-                let allHaveDrawn = players.allSatisfy { hasDrawnForNextTrick[$0.id, default: false] }
-                
-                if allHaveDrawn {
-                    print("🔄 All players have drawn - starting new trick")
-                    // All players have drawn, start new trick
-                    startNewTrick()
-                } else {
-                    print("🔄 Not all players have drawn yet - continuing draw cycle")
-                    // Move to next player who needs to draw
-                    currentDrawIndex = (currentDrawIndex + 1) % playerCount
-                    
-                    // Only move currentPlayerIndex if the current player has already drawn
-                    // This allows the current player to play their card after drawing
-                    if hasDrawnForNextTrick[currentPlayer.id, default: false] {
-                        // Current player has drawn, they can play - don't change currentPlayerIndex
-                        print("🔄 \(currentPlayer.name) has drawn and can now play - keeping turn")
-                    } else {
-                        // Current player hasn't drawn yet, move to next player
-                        currentPlayerIndex = currentDrawIndex
-                        currentPlayer.isCurrentPlayer = true
-                        
-                        // Clear previous player's current status
-                        for (index, player) in players.enumerated() {
-                            if index != currentPlayerIndex {
-                                player.isCurrentPlayer = false
-                            }
-                        }
-                        
-                        print("🔄 Moved to next player: \(currentPlayer.name) (index: \(currentPlayerIndex))")
-                        
-                        // If next player is AI, trigger AI turn
-                        if currentPlayer.type == .ai {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                                self.processAITurn()
-                            }
-                        }
-                    }
-                }
-                return
-            }
-        }
-        
-        // If AI can meld (it just won a trick), it decides on melds first.
-        if canPlayerMeld {
-            let meldsToDeclare = aiService.decideMeldsToDeclare(for: currentPlayer, in: self)
-            for meld in meldsToDeclare {
-                declareMeld(meld, by: currentPlayer)
-            }
-        }
-        
-        // AI then plays a card
-        if let cardToPlay = aiService.chooseCardToPlay(for: currentPlayer, in: self) {
-            playCard(cardToPlay, from: currentPlayer)
-        }
-    }
+    // AI turn processing is now handled by AIResponseCoordinator
     
     // Start a new trick
     func startNewTrick() {
@@ -933,6 +842,7 @@ class Game: ObservableObject {
         
         // Set up draw cycle starting with the winner
         currentDrawIndex = currentPlayerIndex
+        // Set up play cycle starting with the winner so they can play after drawing
         currentPlayIndex = currentPlayerIndex
         
         // Set the trick leader to the winner for the new trick
@@ -952,15 +862,8 @@ class Game: ObservableObject {
         
         print("🏆 TRICK COMPLETION FINALIZED")
         
-        // If the winner is an AI player, automatically start their turn (draw + play)
-        if currentPlayer.type == .ai {
-            print("🤖 AI winner \(currentPlayer.name) - automatically starting AI turn for new trick")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.processAITurn()
-            }
-        } else {
-            print("👤 Human winner \(currentPlayer.name) - waiting for human to start new trick")
-        }
+        // Let AI Response Coordinator handle AI responses
+        aiResponseCoordinator.handleAIResponseIfNeeded()
     }
     
     // Clear the trick area when winner takes action
@@ -1041,96 +944,13 @@ class Game: ObservableObject {
         }
     }
     
-    // Trigger AI draw if it's their turn
-    private func triggerAIDrawIfNeeded() {
-        let player = players[currentDrawIndex]
-        if player.type == .ai && !hasDrawnForNextTrick[player.id, default: false] && !deck.isEmpty {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                _ = self.drawCard(for: player)
-            }
-        }
-    }
+    // AI processing is now handled by AIResponseCoordinator
     
-    // Trigger AI play if it's their turn
-    private func triggerAIPlayIfNeeded() {
-        let player = players[currentPlayIndex]
-        if player.type == .ai && hasDrawnForNextTrick[player.id, default: false] {
-            let playable = player.getPlayableCards(leadSuit: currentTrick.first?.suit, trumpSuit: trumpSuit)
-            if let card = playable.first {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    self.playCardForCurrentPlayTurn(card)
-                }
-            }
-        }
-    }
+    // AI processing is now handled by AIResponseCoordinator
     
-    // Process AI trick winner decision
-    private func processAITrickWinner() {
-        guard currentPlayer.type == .ai else { return }
-        
-        print("🤖 AI trick winner processing for \(currentPlayer.name)")
-        
-        // AI decides whether to meld first
-        let meldsToDeclare = aiService.decideMeldsToDeclare(for: currentPlayer, in: self)
-        if !meldsToDeclare.isEmpty {
-            // AI chooses to meld
-            for meld in meldsToDeclare {
-                declareMeld(meld, by: currentPlayer)
-            }
-        }
-        
-        // AI draws a card (if available) with animation
-        if !deck.isEmpty {
-            // Check 9-card limit for AI player
-            if currentPlayer.hand.count >= 9 {
-                print("❌ AI DRAW FAILED - \(currentPlayer.name) already has 9 cards (limit reached)")
-                continueAfterAIDraw()
-                return
-            }
-            
-            if let card = deck.drawCard() {
-                let playerCard = PlayerCard(card: card)
-                
-                print("🎬 Starting AI draw animation for \(currentPlayer.name)")
-                
-                // Start AI draw animation
-                isAIDrawingCard = true
-                aiDrawnCard = playerCard
-                
-                // Animate the draw
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    print("🎬 AI draw animation completed, adding card to hand")
-                    self.currentPlayer.addCards([card])
-                    print("🤖 \(self.currentPlayer.name) drew a card")
-                    
-                    // End animation
-                    self.isAIDrawingCard = false
-                    self.aiDrawnCard = nil
-                    
-                    // Continue with game flow
-                    self.continueAfterAIDraw()
-                }
-            } else {
-                // No card to draw, continue immediately
-                continueAfterAIDraw()
-            }
-        } else {
-            // No cards in deck, continue immediately
-            continueAfterAIDraw()
-        }
-    }
+    // AI processing is now handled by AIResponseCoordinator
     
-    // Continue game flow after AI draw
-    private func continueAfterAIDraw() {
-        print("🔄 Continuing after AI draw")
-        
-        // Reset meld choice state
-        awaitingMeldChoice = false
-        mustDrawCard = false
-        
-        // Start new trick with the same player (trick winner)
-        startNewTrick()
-    }
+    // AI processing is now handled by AIResponseCoordinator
     
 
     
@@ -1737,12 +1557,18 @@ class Game: ObservableObject {
         
         print("🔍 CAN PLAY CARD CHECK:")
         print("   Player: \(currentPlayer.name)")
+        print("   Player ID: \(currentPlayer.id)")
         print("   Has drawn: \(hasDrawn)")
         print("   Trick count: \(currentTrick.count)")
         print("   Player count: \(playerCount)")
         print("   Trick not full: \(trickNotFull)")
         print("   Is first trick: \(isFirstTrick)")
         print("   Draw pile empty: \(drawPileEmpty)")
+        print("   All players drawn status:")
+        for (index, player) in players.enumerated() {
+            let drawn = hasDrawnForNextTrick[player.id, default: false]
+            print("     \(player.name) (index \(index)): \(drawn)")
+        }
         print("   Result: \((hasDrawn || isFirstTrick || drawPileEmpty) && trickNotFull)")
         
         // Can play if: (has drawn OR it's the first trick OR draw pile empty) AND trick is not full
@@ -1801,11 +1627,8 @@ class Game: ObservableObject {
                 print("🔄 Moving to next player: \(currentPlayer.name)")
                 
                 // If next player is AI, continue the process
-                if currentPlayer.type == .ai {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        self.processAIDealerDetermination()
-                    }
-                }
+                // Let AI Response Coordinator handle AI responses
+                aiResponseCoordinator.handleAIResponseIfNeeded()
             }
         } else {
             print("❌ No cards left in deck for dealer determination")
@@ -2061,54 +1884,47 @@ class Game: ObservableObject {
                 object: card
             )
             
+            // After drawing, this player can now play a card
+            // They don't need to wait for other players to draw
+            print("🔄 \(player.name) has drawn and can now play a card")
+            
             // Check if ALL players have drawn for this trick
             let allHaveDrawn = players.allSatisfy { hasDrawnForNextTrick[$0.id, default: false] }
             
             if allHaveDrawn {
-                // All players have drawn, switch to play cycle
-                print("🔄 All players have drawn - switching to play cycle")
+                // All players have drawn, complete the draw cycle
+                print("🔄 All players have drawn - draw cycle complete")
                 mustDrawCard = false
-                currentPlayIndex = currentTrickLeader
-                currentPlayerIndex = currentTrickLeader
-                currentPlayer.isCurrentPlayer = true
                 
-                // Clear previous player's current status
-                for (index, p) in players.enumerated() {
-                    if index != currentPlayerIndex {
-                        p.isCurrentPlayer = false
-                    }
-                }
+                // The current player (who just drew) can now play
+                // No need to change currentPlayerIndex - they stay as current player
+                print("🔄 \(currentPlayer.name) can now play a card (all players drawn)")
                 
-                // If the new current player (trick leader) is AI, trigger their play turn
-                if currentPlayer.type == .ai {
-                    print("🤖 AI trick leader \(currentPlayer.name) - triggering automatic play")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        self.processAITurn()
-                    }
-                }
+                // Let AI Response Coordinator handle AI responses
+                aiResponseCoordinator.handleAIResponseIfNeeded()
             } else {
                 // Move to next player who needs to draw
                 currentDrawIndex = (currentDrawIndex + 1) % playerCount
                 
-                // Set current player to the next player who needs to draw
-                currentPlayerIndex = currentDrawIndex
-                currentPlayer.isCurrentPlayer = true
+                // Get the next player who needs to draw (but don't change currentPlayerIndex)
+                let nextDrawPlayer = players[currentDrawIndex]
+                nextDrawPlayer.isCurrentPlayer = true
                 
                 // Clear all player current status first
                 for (index, p) in players.enumerated() {
-                    if index != currentPlayerIndex {
+                    if index != currentDrawIndex {
                         p.isCurrentPlayer = false
                     }
                 }
                 
-                print("🔄 Draw turn moved to: \(currentPlayer.name) (index: \(currentPlayerIndex))")
+                print("🔄 Draw turn moved to: \(nextDrawPlayer.name) (index: \(currentDrawIndex))")
+                print("🔍 DEBUG: Current draw index: \(currentDrawIndex)")
+                print("🔍 DEBUG: Current play index: \(currentPlayIndex)")
+                print("🔍 DEBUG: Current player index: \(currentPlayerIndex)")
+                print("🔍 DEBUG: Is next draw player AI? \(nextDrawPlayer.type == .ai)")
                 
-                // If next player is AI, trigger AI turn
-                if currentPlayer.type == .ai {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        self.processAITurn()
-                    }
-                }
+                // Let AI Response Coordinator handle AI responses
+                aiResponseCoordinator.handleAIResponseIfNeeded()
             }
             
             return true
