@@ -825,29 +825,115 @@ private func chooseFollowCardEndgame(player: Player, game: Game, playableCards: 
 
 // MARK: - AI Player Extension
 extension Player {
-    /// Make AI decisions for this player
+    /**
+     * Comprehensive AI decision-making method that handles all AI actions in sequence.
+     * 
+     * This method coordinates the complete AI turn including:
+     * 1. Card drawing (if it's the AI's draw turn and they haven't drawn)
+     * 2. Meld evaluation and declaration (if melding is allowed)
+     * 3. Card playing (if in appropriate game phase)
+     * 
+     * The method follows the game rules: players must draw before playing
+     * (unless the draw pile is empty), and melding can occur when allowed.
+     * 
+     * @param game The current game state containing all game logic and state
+     * @param aiService The AI service providing strategic decision-making capabilities
+     * 
+     * @note This method is called by AIResponseCoordinator when it's the AI's turn
+     * @note The method automatically handles the draw-then-play sequence required by game rules
+     * @note Meld decisions are made strategically based on the AI's current hand and game state
+     */
     func makeAIDecision(in game: Game, aiService: AIService) {
-        guard type == .ai else { return }
+        // Ensure this is an AI player before proceeding
+        guard type == .ai else { 
+            print("🤖 DEBUG: makeAIDecision called for non-AI player \(name)")
+            return 
+        }
         
-        // Handle melding if allowed (when AI wins a trick)
+        print("🤖 AI \(name) making decisions - Phase: \(game.currentPhase)")
+        
+        // STEP 1: Handle card drawing if it's the AI's draw turn and they haven't drawn yet
+        // This ensures the AI follows the "draw before play" rule
+        let isCurrentDrawPlayer = game.currentDrawIndex == game.players.firstIndex(where: { $0.id == self.id })
+        let hasNotDrawn = !game.hasDrawnForNextTrick[self.id, default: false]
+        let canDraw = !game.deck.isEmpty && game.validateHandSizeLimit(for: self)
+        
+        if isCurrentDrawPlayer && hasNotDrawn && canDraw {
+            print("🤖 AI \(name) drawing card as part of decision sequence")
+            
+            // AI draws a card from the deck
+            if let card = game.deck.drawCard() {
+                // Add the drawn card to the AI's hand
+                self.addCards([card])
+                
+                // Mark that this AI has drawn for the current trick
+                game.hasDrawnForNextTrick[self.id] = true
+                
+                print("🤖 AI \(name) successfully drew \(card.displayName)")
+                print("🤖 AI \(name) hand size after drawing: \(self.hand.count)")
+                
+                // Post notification for view state to trigger draw animation
+                NotificationCenter.default.post(
+                    name: .cardDrawn,
+                    object: card
+                )
+            } else {
+                print("🤖 ERROR: AI \(name) failed to draw card - deck may be empty")
+            }
+        } else if isCurrentDrawPlayer && hasNotDrawn && !canDraw {
+            print("🤖 AI \(name) cannot draw: deck empty=\(game.deck.isEmpty), hand limit valid=\(game.validateHandSizeLimit(for: self))")
+        }
+        
+        // STEP 2: Handle melding if allowed (when AI wins a trick or during meld phase)
+        // Meld decisions are made strategically based on the AI's current hand
         if game.canPlayerMeld {
+            print("🤖 AI \(name) evaluating melding opportunities")
+            
+            // Get strategic meld recommendations from the AI service
             let meldsToDeclare = aiService.decideMeldsToDeclare(for: self, in: game)
+            
+            // Execute each recommended meld
             for meld in meldsToDeclare {
+                print("🤖 AI \(name) declaring meld: \(meld)")
                 game.declareMeld(meld, by: self)
             }
             
-            // Select trump if not already selected
-            if game.trumpSuit == nil {
-                // The decision to declare a marriage to set the trump
-                // is now handled within decideMeldsToDeclare.
+            if !meldsToDeclare.isEmpty {
+                print("🤖 AI \(name) declared \(meldsToDeclare.count) melds")
+            } else {
+                print("🤖 AI \(name) chose not to declare any melds")
             }
+            
+            // Note: Trump selection is now handled within decideMeldsToDeclare
+            // when the AI declares a royal marriage
         }
         
-        // Handle card playing in playing or endgame phases
-        if game.currentPhase == .playing || game.currentPhase == .endgame {
+        // STEP 3: Handle card playing in appropriate game phases
+        // The AI can only play cards after drawing (unless it's the first trick or draw pile is empty)
+        let canPlay = game.currentPhase == .playing || game.currentPhase == .endgame
+        let hasDrawnOrCanSkipDraw = game.hasDrawnForNextTrick[self.id, default: false] || 
+                                   game.isFirstTrick || 
+                                   game.deck.isEmpty
+        
+        if canPlay && hasDrawnOrCanSkipDraw {
+            print("🤖 AI \(name) evaluating card play options")
+            
+            // Get strategic card selection from the AI service
             if let cardToPlay = aiService.chooseCardToPlay(for: self, in: game) {
+                print("🤖 AI \(name) playing card: \(cardToPlay.displayName)")
+                
+                // Execute the card play through the game logic
                 game.playCard(cardToPlay, from: self)
+            } else {
+                print("🤖 AI \(name) could not select a card to play")
             }
+        } else if canPlay && !hasDrawnOrCanSkipDraw {
+            print("🤖 AI \(name) cannot play yet - must draw first or wait for appropriate phase")
         }
+        
+        print("🤖 AI \(name) decision sequence completed")
+        
+        // Note: AI state management is now handled by the serial queue in AIResponseCoordinator
+        // No need to post notifications or manually reset state
     }
 } 

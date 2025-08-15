@@ -511,13 +511,18 @@ class Game: ObservableObject {
             currentPlayerIndex = (dealerIndex + 1) % players.count
             currentTrickLeader = currentPlayerIndex
             currentPlayer.isCurrentPlayer = true // Set the first player as current
+            
+            // 🔧 NEW: Synchronize both indices
+            currentPlayIndex = currentPlayerIndex  // Keep them in sync
+            
             print("🎯 First player: \(currentPlayer.name)")
             
             // FIX: Set phase to playing after random dealer determination
             currentPhase = .playing
             
-            // Let AI Response Coordinator handle AI responses
-            aiResponseCoordinator.handleAIResponseIfNeeded()
+            // Register AI positions AFTER dealer determination and first player selection
+            // This ensures the AI positions match the actual game rotation
+            aiResponseCoordinator.registerAIPositions()
             
         case .drawJacks:
             // Use the existing dealer determination phase
@@ -572,13 +577,15 @@ class Game: ObservableObject {
         // Move to next player
         currentPlayerIndex = (currentPlayerIndex + 1) % playerCount
         
+        // 🔧 NEW: Synchronize playIndex with currentPlayerIndex
+        currentPlayIndex = currentPlayerIndex
+        
         // Set new current player
         currentPlayer.isCurrentPlayer = true
         
         print("🔄 Turn moved to: \(currentPlayer.name) (index: \(currentPlayerIndex))")
         
-        // Let AI Response Coordinator handle AI responses
-        aiResponseCoordinator.handleAIResponseIfNeeded()
+        // AI Response Coordinator will handle AI responses automatically based on indices
     }
     
     // AI turn processing is now handled by AIResponseCoordinator
@@ -686,7 +693,11 @@ class Game: ObservableObject {
                 self.completeTrick()
             } else {
                 print("   ➡️ Moving to next player...")
+                // 🔧 FIX: Update indices BEFORE AI evaluation triggers
                 self.nextPlayer()
+                
+                // 🔧 FIX: Ensure AI evaluation happens after index update
+                // The AIResponseCoordinator will now see the correct synchronized indices
             }
         }
     }
@@ -862,8 +873,7 @@ class Game: ObservableObject {
         
         print("🏆 TRICK COMPLETION FINALIZED")
         
-        // Let AI Response Coordinator handle AI responses
-        aiResponseCoordinator.handleAIResponseIfNeeded()
+        // AI Response Coordinator will handle AI responses automatically based on indices
     }
     
     // Clear the trick area when winner takes action
@@ -1627,8 +1637,7 @@ class Game: ObservableObject {
                 print("🔄 Moving to next player: \(currentPlayer.name)")
                 
                 // If next player is AI, continue the process
-                // Let AI Response Coordinator handle AI responses
-                aiResponseCoordinator.handleAIResponseIfNeeded()
+                // AI Response Coordinator will handle AI responses automatically based on indices
             }
         } else {
             print("❌ No cards left in deck for dealer determination")
@@ -1900,8 +1909,7 @@ class Game: ObservableObject {
                 // No need to change currentPlayerIndex - they stay as current player
                 print("🔄 \(currentPlayer.name) can now play a card (all players drawn)")
                 
-                // Let AI Response Coordinator handle AI responses
-                aiResponseCoordinator.handleAIResponseIfNeeded()
+                // AI Response Coordinator will handle AI responses automatically based on indices
             } else {
                 // Move to next player who needs to draw
                 currentDrawIndex = (currentDrawIndex + 1) % playerCount
@@ -1923,8 +1931,7 @@ class Game: ObservableObject {
                 print("🔍 DEBUG: Current player index: \(currentPlayerIndex)")
                 print("🔍 DEBUG: Is next draw player AI? \(nextDrawPlayer.type == .ai)")
                 
-                // Let AI Response Coordinator handle AI responses
-                aiResponseCoordinator.handleAIResponseIfNeeded()
+                // AI Response Coordinator will handle AI responses automatically based on indices
             }
             
             return true
