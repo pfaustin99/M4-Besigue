@@ -36,8 +36,8 @@ class AIResponseCoordinator: ObservableObject {
      * - currentDrawIndex: When it's an AI's turn to draw
      * - currentPlayIndex: When it's an AI's turn to play
      * 
-     * Each index change triggers a separate handler that notifies the specific
-     * AI player at that index to make their decision.
+     * Separate monitoring ensures each action is triggered exactly once
+     * without duplicate notifications or overlapping triggers.
      * 
      * @note Monitoring continues until the coordinator is deallocated or stopped.
      */
@@ -48,22 +48,22 @@ class AIResponseCoordinator: ObservableObject {
             return
         }
         
-        print("🤖 AI Response Coordinator: Starting game state monitoring")
+        print("🤖 AI Response Coordinator: Starting separate game state monitoring")
         
-        // 1) When the draw index changes → notify AI at that index to draw
+        // 1) Draw monitoring (separate, always works)
         game.$currentDrawIndex
             .removeDuplicates()
-            .filter { [weak self] _ in 
+            .filter { [weak self] _ in
                 guard let self = self else { return false }
-                return !self.game.isFirstTrick 
-            } // don't draw during initial trick
+                return !self.game.isFirstTrick
+            }
             .receive(on: aiQueue)
             .sink { [weak self] drawIndex in
                 self?.handleAIDrawTurn(index: drawIndex)
             }
             .store(in: &cancellables)
         
-        // 2) When the play index changes → notify AI at that index to play
+        // 2) Play monitoring (separate, always works)
         game.$currentPlayIndex
             .removeDuplicates()
             .receive(on: aiQueue)
@@ -72,8 +72,18 @@ class AIResponseCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
         
+        // 3) Trick winner monitoring (separate, always works)
+        game.$winningCardIndex
+            .compactMap { $0 }  // Filter out nil values
+            .removeDuplicates()
+            .receive(on: aiQueue)
+            .sink { [weak self] winningIndex in
+                self?.handleTrickWinner(index: winningIndex)
+            }
+            .store(in: &cancellables)
+        
         isMonitoring = true
-        print("🤖 AI Response Coordinator: Game state monitoring active")
+        print("🤖 AI Response Coordinator: Separate game state monitoring active (draw + play + trick winner)")
     }
     
     /**
@@ -98,6 +108,31 @@ class AIResponseCoordinator: ObservableObject {
     }
     
     // MARK: - AI Action Handlers
+    
+    /**
+     * Handles turn changes when currentPlayerIndex changes.
+     * 
+     * This method is called when it's an AI's turn to act and notifies
+     * the specific AI player at that index to make their decision.
+     * 
+     * @param index The index of the player whose turn it is to act
+     */
+    private func handleAITurn(index: Int) {
+        // Validate bounds first
+        guard index >= 0 && index < game.players.count else {
+            print("🤖 ERROR: Player index \(index) out of bounds (0-\(game.players.count-1))")
+            return
+        }
+        
+        // Check if AI exists at that index
+        let player = game.players[index]
+        guard player.type == .ai else { return }
+        
+        print("🤖 AI \(player.name) at index \(index) notified of turn")
+        
+        // Notify the specific AI to make their decision
+        player.makeAIDecision(in: game, aiService: aiService)
+    }
     
     /**
      * Handles draw turns when currentDrawIndex changes.
@@ -144,6 +179,31 @@ class AIResponseCoordinator: ObservableObject {
         guard player.type == .ai else { return }
         
         print("🤖 AI \(player.name) at index \(index) notified of play turn")
+        
+        // Notify the specific AI to make their decision
+        player.makeAIDecision(in: game, aiService: aiService)
+    }
+    
+    /**
+     * Handles trick winner notifications when winningCardIndex changes.
+     * 
+     * This method is called when an AI wins a trick and notifies
+     * the specific AI player at that index to make their decision.
+     * 
+     * @param index The index of the player who won the trick
+     */
+    private func handleTrickWinner(index: Int) {
+        // Validate bounds first
+        guard index >= 0 && index < game.players.count else {
+            print("🤖 ERROR: Winning index \(index) out of bounds (0-\(game.players.count-1))")
+            return
+        }
+        
+        // Check if AI exists at that index
+        let player = game.players[index]
+        guard player.type == .ai else { return }
+        
+        print("🤖 AI \(player.name) at index \(index) notified of trick win")
         
         // Notify the specific AI to make their decision
         player.makeAIDecision(in: game, aiService: aiService)
