@@ -520,9 +520,9 @@ class Game: ObservableObject {
             // FIX: Set phase to playing after random dealer determination
             currentPhase = .playing
             
-            // Register AI positions AFTER dealer determination and first player selection
-            // This ensures the AI positions match the actual game rotation
-            aiResponseCoordinator.registerAIPositions()
+            // Start AI monitoring AFTER dealer determination and first player selection
+            // This ensures the AI coordinator can monitor the actual game rotation
+            aiResponseCoordinator.startMonitoring()
             
         case .drawJacks:
             // Use the existing dealer determination phase

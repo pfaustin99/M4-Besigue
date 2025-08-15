@@ -5,22 +5,20 @@ import Combine
 class AIResponseCoordinator: ObservableObject {
     
     // MARK: - Properties
-    private let aiService: AIService
+    
+    /// The game instance being monitored
     private let game: Game
     
-    // MARK: - AI Position Management
-    /// Stores each AI player's registered positions in the game rotation
-    /// Key: Player UUID, Value: Tuple of (drawIndex, playIndex)
-    private var aiPositions: [UUID: (drawIndex: Int, playIndex: Int)] = [:]
+    /// The AI service for strategic decision-making
+    private let aiService: AIService
     
-    // MARK: - Game State Monitoring
-    /// Combine cancellables for monitoring game state changes
-    private var cancellables: Set<AnyCancellable> = []
+    /// Set of cancellables for Combine subscriptions
+    private var cancellables = Set<AnyCancellable>()
     
-    /// Flag indicating whether the coordinator is actively monitoring game state
-    private var isMonitoring: Bool = false
+    /// Flag indicating if monitoring is active
+    private var isMonitoring = false
     
-    /// Serial queue to keep AI decisions ordered (prevents re-entrancy races)
+    /// Serial queue for processing AI actions sequentially
     private let aiQueue = DispatchQueue(label: "game.ai.queue", qos: .userInitiated)
     
     // MARK: - Initialization
@@ -31,48 +29,15 @@ class AIResponseCoordinator: ObservableObject {
     
     // MARK: - Public Interface
     
-    // MARK: - AI Position Registration and Monitoring
-    
-    /**
-     * Registers AI player positions in the game rotation after cards are dealt.
-     * 
-     * This method captures each AI player's position in the draw and play cycles
-     * so the coordinator can monitor when it's their turn to act. Positions are
-     * registered based on the player's index in the players array at the time
-     * of registration.
-     * 
-     * @note This method should be called after dealing cards when the game
-     *       rotation is established but before the first trick begins.
-     * @note Only AI players are registered; human players are ignored.
-     * @note Positions are stored as (drawIndex, playIndex) tuples for each AI player.
-     */
-    func registerAIPositions() {
-        // Clear any existing registrations
-        aiPositions.removeAll()
-        
-        print("🤖 AI Response Coordinator: Starting AI position registration")
-        
-        // Register each AI player's position in the game rotation
-        for (index, player) in game.players.enumerated() where player.type == .ai {
-            aiPositions[player.id] = (drawIndex: index, playIndex: index)
-            print("🤖 Registered AI \(player.name) at position \(index)")
-        }
-        
-        print("🤖 AI positions registered: \(aiPositions)")
-        
-        // Start monitoring game state changes after registration
-        startMonitoring()
-    }
-    
     /**
      * Starts monitoring game state changes to automatically trigger AI actions.
      * 
      * This method sets up Combine publishers to watch for changes in:
      * - currentDrawIndex: When it's an AI's turn to draw
-     * - currentPlayIndex: When it's an AI's turn to play (with trick winner check)
+     * - currentPlayIndex: When it's an AI's turn to play
      * 
-     * The AI will automatically respond to these state changes without
-     * requiring manual intervention.
+     * Each index change triggers a separate handler that notifies the specific
+     * AI player at that index to make their decision.
      * 
      * @note Monitoring continues until the coordinator is deallocated or stopped.
      */
@@ -85,7 +50,7 @@ class AIResponseCoordinator: ObservableObject {
         
         print("🤖 AI Response Coordinator: Starting game state monitoring")
         
-        // 1) When the draw index changes → allow (or perform) draws (but not during initial trick)
+        // 1) When the draw index changes → notify AI at that index to draw
         game.$currentDrawIndex
             .removeDuplicates()
             .filter { [weak self] _ in 
@@ -93,47 +58,17 @@ class AIResponseCoordinator: ObservableObject {
                 return !self.game.isFirstTrick 
             } // don't draw during initial trick
             .receive(on: aiQueue)
-            .map { [weak self] idx in
-                guard let self = self else { return (0, nil, nil, false, true) }
-                return (idx,
-                 self.game.players[safe: idx]?.id,
-                 self.game.players[safe: idx]?.type,
-                 self.game.hasDrawnForNextTrick[self.game.players[safe: idx]?.id ?? UUID(), default: false],
-                 self.game.deck.isEmpty)
-            }
-            .receive(on: RunLoop.main)
-            .sink { [weak self] (drawIdx, playerId, playerType, hasDrawn, deckEmpty) in
-                self?.handleDrawTurn(
-                    drawIndex: drawIdx,
-                    playerId: playerId,
-                    playerType: playerType,
-                    hasAlreadyDrawn: hasDrawn,
-                    deckEmpty: deckEmpty
-                )
+            .sink { [weak self] drawIndex in
+                self?.handleAIDrawTurn(index: drawIndex)
             }
             .store(in: &cancellables)
         
-        // 2) When the play index changes → it's someone's turn to play (AI checks trick winner first)
+        // 2) When the play index changes → notify AI at that index to play
         game.$currentPlayIndex
             .removeDuplicates()
             .receive(on: aiQueue)
-            .map { [weak self] idx in
-                guard let self = self else { return (0, nil, nil, 0, -1) }
-                return (idx,
-                 self.game.players[safe: idx]?.id,
-                 self.game.players[safe: idx]?.type,
-                 self.game.currentPlayerIndex,
-                 self.game.winningCardIndex ?? -1)
-            }
-            .receive(on: RunLoop.main)
-            .sink { [weak self] (playIdx, playerId, playerType, currentPlayerIdx, winningIdx) in
-                self?.handleTurnToPlay(
-                    index: playIdx,
-                    playerId: playerId,
-                    playerType: playerType,
-                    currentPlayerIndex: currentPlayerIdx,
-                    winningCardIndex: winningIdx
-                )
+            .sink { [weak self] playIndex in
+                self?.handleAIPlayTurn(index: playIndex)
             }
             .store(in: &cancellables)
         
@@ -167,122 +102,51 @@ class AIResponseCoordinator: ObservableObject {
     /**
      * Handles draw turns when currentDrawIndex changes.
      * 
-     * This method is called when it's someone's turn to draw and determines
-     * if an AI player should draw a card.
+     * This method is called when it's someone's turn to draw and notifies
+     * the specific AI player at that index to make their draw decision.
      * 
-     * @param drawIndex The index of the player whose turn it is to draw
-     * @param playerId The ID of the player at the draw index
-     * @param playerType The type of player (human or AI)
-     * @param hasAlreadyDrawn Whether the player has already drawn for this trick
-     * @param deckEmpty Whether the draw pile is empty
+     * @param index The index of the player whose turn it is to draw
      */
-    private func handleDrawTurn(
-        drawIndex: Int,
-        playerId: UUID?,
-        playerType: PlayerType?,
-        hasAlreadyDrawn: Bool,
-        deckEmpty: Bool
-    ) {
-        print("🤖 Handling draw turn - Index: \(drawIndex), Player: \(playerType?.rawValue ?? "nil")")
-        
-        // Check if AI needs to draw
-        if let playerId = playerId,
-           let playerType = playerType,
-           playerType == .ai,
-           let aiPosition = aiPositions[playerId],
-           drawIndex == aiPosition.drawIndex,
-           !hasAlreadyDrawn,
-           !deckEmpty {
-            
-            if let drawAIPlayer = game.players.first(where: { $0.id == playerId }) {
-                print("🤖 AI \(drawAIPlayer.name) needs to draw - it's their draw turn")
-                
-                // AI draws a card
-                print("🤖 AI \(drawAIPlayer.name) executing draw sequence")
-                drawAIPlayer.makeAIDecision(in: game, aiService: aiService)
-            }
+    private func handleAIDrawTurn(index: Int) {
+        // Validate bounds first
+        guard index >= 0 && index < game.players.count else {
+            print("🤖 ERROR: Draw index \(index) out of bounds (0-\(game.players.count-1))")
+            return
         }
+        
+        // Check if AI exists at that index
+        let player = game.players[index]
+        guard player.type == .ai else { return }
+        
+        print("🤖 AI \(player.name) at index \(index) notified of draw turn")
+        
+        // Notify the specific AI to make their decision
+        player.makeAIDecision(in: game, aiService: aiService)
     }
     
     /**
      * Handles play turns when currentPlayIndex changes.
      * 
-     * This method is called when it's someone's turn to play and determines
-     * if an AI player should play a card. The AI ALWAYS checks if it's the
-     * trick winner before taking any action.
+     * This method is called when it's someone's turn to play and notifies
+     * the specific AI player at that index to make their play decision.
      * 
      * @param index The index of the player whose turn it is to play
-     * @param playerId The ID of the player at the play index
-     * @param playerType The type of player (human or AI)
-     * @param currentPlayerIndex The current player index for validation
-     * @param winningCardIndex The index of the winning card (if any)
      */
-    private func handleTurnToPlay(
-        index: Int,
-        playerId: UUID?,
-        playerType: PlayerType?,
-        currentPlayerIndex: Int,
-        winningCardIndex: Int
-    ) {
-        print("🤖 Handling turn to play - Index: \(index), Player: \(playerType?.rawValue ?? "nil"), Current: \(currentPlayerIndex), Winning: \(winningCardIndex)")
-        
-        // Check if AI can play
-        if let playerId = playerId,
-           let playerType = playerType,
-           playerType == .ai,
-           let aiPosition = aiPositions[playerId],
-           index == aiPosition.playIndex {
-            
-            // CRITICAL: Only allow AI to play if it's actually the current player
-            if index == currentPlayerIndex {
-                if let playAIPlayer = game.players.first(where: { $0.id == playerId }) {
-                    
-                    // 🎯 ALWAYS check if AI is the trick winner first
-                    let isTrickWinner = winningCardIndex == index
-                    
-                    if isTrickWinner {
-                        print("🤖 AI \(playAIPlayer.name) is the trick winner - handling trick resolution sequence")
-                        
-                        // Trick winner sequence: Meld (optional) → Draw → Play
-                        // 1. Check if AI can meld
-                        if game.canPlayerMeld {
-                            print("🤖 AI \(playAIPlayer.name) evaluating melding opportunities")
-                            // AI will handle melding in makeAIDecision
-                        }
-                        
-                        // 2. AI draws a card (unless it's the first trick or deck is empty)
-                        if !game.isFirstTrick && !game.deck.isEmpty {
-                            print("🤖 AI \(playAIPlayer.name) drawing card as trick winner")
-                            // AI will handle drawing in makeAIDecision
-                        }
-                        
-                        // 3. AI plays a card
-                        print("🤖 AI \(playAIPlayer.name) executing play sequence as trick winner")
-                        playAIPlayer.makeAIDecision(in: game, aiService: aiService)
-                        
-                    } else {
-                        // Not trick winner - normal play turn
-                        print("🤖 AI \(playAIPlayer.name) is not the trick winner - normal play turn")
-                        
-                        // Check if AI has drawn (or can skip drawing in first trick)
-                        let hasDrawn = game.hasDrawnForNextTrick[playerId, default: false]
-                        let canSkipDraw = game.isFirstTrick || game.deck.isEmpty
-                        
-                        if hasDrawn || canSkipDraw {
-                            print("🤖 AI \(playAIPlayer.name) can play - it's their play turn")
-                            
-                            // AI plays a card
-                            print("🤖 AI \(playAIPlayer.name) executing play sequence")
-                            playAIPlayer.makeAIDecision(in: game, aiService: aiService)
-                        } else {
-                            print("🤖 AI \(playAIPlayer.name) cannot play yet - must draw first")
-                        }
-                    }
-                }
-            } else {
-                print("🤖 AI at play index \(index) is not the current player (\(currentPlayerIndex)) - skipping play")
-            }
+    private func handleAIPlayTurn(index: Int) {
+        // Validate bounds first
+        guard index >= 0 && index < game.players.count else {
+            print("🤖 ERROR: Play index \(index) out of bounds (0-\(game.players.count-1))")
+            return
         }
+        
+        // Check if AI exists at that index
+        let player = game.players[index]
+        guard player.type == .ai else { return }
+        
+        print("🤖 AI \(player.name) at index \(index) notified of play turn")
+        
+        // Notify the specific AI to make their decision
+        player.makeAIDecision(in: game, aiService: aiService)
     }
 }
 
