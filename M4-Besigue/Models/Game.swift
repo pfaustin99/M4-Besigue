@@ -105,6 +105,7 @@ class Game: ObservableObject {
     
     // MARK: - Game State
     @Published var isFirstTrick: Bool = true  // Track if we're still in the first trick
+    @Published var trickEpoch: Int = 0  // Unique number to prevent AI from repeating calls
     
     // User message state
     @Published var userMessage: String? = nil
@@ -373,7 +374,7 @@ class Game: ObservableObject {
         updatePlayersFromConfiguration()
         
         // Initialize AI Response Coordinator after players are set up
-        self.aiResponseCoordinator = AIResponseCoordinator(aiService: aiService, game: self)
+        self.aiResponseCoordinator = AIResponseCoordinator(game: self, aiService: aiService)
         
         print("🎮 Game initialized with \(players.count) players")
     }
@@ -420,6 +421,7 @@ class Game: ObservableObject {
         currentTrick.removeAll()
         currentTrickLeader = 0
         trickHistory.removeAll()
+        trickEpoch = 0  // Reset trick epoch for new game
         roundNumber = 1
         canPlayerMeld = false
         dealerDeterminationCards.removeAll()
@@ -602,6 +604,10 @@ class Game: ObservableObject {
         print("   Is showing completed trick: \(isShowingCompletedTrick)")
         print("   Completed trick count: \(completedTrick.count)")
         
+        // Increment trick epoch to prevent AI from repeating calls
+        trickEpoch += 1
+        print("🔄 Trick epoch incremented to: \(trickEpoch)")
+        
         currentTrick.removeAll()
         currentTrickLeader = currentPlayerIndex
         
@@ -614,7 +620,7 @@ class Game: ObservableObject {
         
         // Set up draw cycle for the new trick
         currentDrawIndex = currentTrickLeader
-        currentPlayIndex = currentTrickLeader
+      //  currentPlayIndex = currentTrickLeader
         isDrawCycle = true
         mustDrawCard = true
         
@@ -625,6 +631,12 @@ class Game: ObservableObject {
         
         print("🔄 Draw cycle initialized - \(currentPlayer.name) can draw a card")
         print("🔄 Must draw card: \(mustDrawCard)")
+        
+        // Clear AI tracking dictionaries for the new trick
+        aiService.lastPlayedTrickByPlayer.removeAll()
+        aiService.lastMeldHandledTrickByPlayer.removeAll() // if you want to be extra safe
+        
+        print("🔄 AI tracking dictionaries cleared for new trick")
         
         // Don't immediately trigger AI turn - let the draw cycle proceed naturally
         // The AI will draw when it's their turn in the draw cycle
@@ -785,6 +797,12 @@ class Game: ObservableObject {
             print("   Current trick cards: \(currentTrick.map { $0.displayName })")
             print("   Winning card index: \(winningCardIndex ?? -1)")
             
+            // Add the completed trick to trickHistory BEFORE storing in completedTrick
+            trickHistory.append(currentTrick)
+            print("🏆 ADDED TO TRICK HISTORY:")
+            print("   Trick history count: \(trickHistory.count)")
+            print("   Current trick added to history: \(currentTrick.map { $0.displayName })")
+            
             completedTrick = currentTrick
             completedTrickWinnerIndex = winningCardIndex
             
@@ -819,8 +837,9 @@ class Game: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
             print("🏆 Calling clearTrickArea after 3.2s delay")
             self.clearTrickArea()
-            // After clearing the trick area, we can start a new trick
-            // The currentTrick array will be cleared in startNewTrick when it's actually called
+            // After clearing the trick area, start a new trick
+            print("🏆 Starting new trick after clearing trick area")
+            self.startNewTrick()
         }
         
         // Clear the user message after a delay
@@ -852,9 +871,9 @@ class Game: ObservableObject {
         }
         
         // Set up draw cycle starting with the winner
-        currentDrawIndex = currentPlayerIndex
+        // currentDrawIndex = currentPlayerIndex
         // Set up play cycle starting with the winner so they can play after drawing
-        currentPlayIndex = currentPlayerIndex
+        // currentPlayIndex = currentPlayerIndex
         
         // Set the trick leader to the winner for the new trick
         currentTrickLeader = currentPlayerIndex

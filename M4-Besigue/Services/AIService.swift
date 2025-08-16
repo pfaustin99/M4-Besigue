@@ -96,6 +96,14 @@ class AIService: ObservableObject {
     }
     
     var cardMemory = CardMemory()
+
+    /// Per-trick fuse to ensure the AI evaluates/declares melds at most once per trick
+    /// Keyed by AI player ID → last trick index for which the meld window was handled
+    var lastMeldHandledTrickByPlayer: [UUID: Int] = [:]
+
+    /// Per-trick fuse to ensure the AI plays at most once per trick
+    /// Keyed by AI player ID → last trick index in which a play was made
+    var lastPlayedTrickByPlayer: [UUID: Int] = [:]
     
     // MARK: - Advanced Trick-Taking Inference
     // Track which suits each opponent is void in (endgame only)
@@ -119,9 +127,9 @@ class AIService: ObservableObject {
     }
     // Helper: Are opponents likely out of trump?
     func opponentsLikelyOutOfTrump(trumpSuit: Suit?, allPlayers: [Player], selfPlayer: Player) -> Bool {
-        guard let trumpSuit = trumpSuit else { 
+        guard let trumpSuit = trumpSuit else {
             print("🔍 AI DEBUG: No trump suit set")
-            return false 
+            return false
         }
         
         print("🔍 AI DEBUG: Checking if opponents are out of trump suit: \(trumpSuit.rawValue)")
@@ -256,33 +264,33 @@ class AIService: ObservableObject {
             // If in endgame and opponents are out of trump, allow brisque cards
             if allowBrisqueInEndgame {
                 let safe = candidates.filter { !meldCardIDs.contains($0.id) }
-                if !safe.isEmpty { 
+                if !safe.isEmpty {
                     print("🔍 AI DEBUG: Safe cards (endgame, no meld): \(safe.map { $0.displayName })")
-                    return safe 
+                    return safe
                 }
                 let notMeld = candidates.filter { !meldCardIDs.contains($0.id) }
-                if !notMeld.isEmpty { 
+                if !notMeld.isEmpty {
                     print("🔍 AI DEBUG: Not meld cards: \(notMeld.map { $0.displayName })")
-                    return notMeld 
+                    return notMeld
                 }
                 print("🔍 AI DEBUG: Using all candidates: \(candidates.map { $0.displayName })")
                 return candidates
             } else {
                 // Normal filtering: avoid meld and brisque cards
                 let safe = candidates.filter { !meldCardIDs.contains($0.id) && !$0.isBrisque }
-                if !safe.isEmpty { 
+                if !safe.isEmpty {
                     print("🔍 AI DEBUG: Safe cards (normal): \(safe.map { $0.displayName })")
-                    return safe 
+                    return safe
                 }
                 let notMeld = candidates.filter { !meldCardIDs.contains($0.id) }
-                if !notMeld.isEmpty { 
+                if !notMeld.isEmpty {
                     print("🔍 AI DEBUG: Not meld cards: \(notMeld.map { $0.displayName })")
-                    return notMeld 
+                    return notMeld
                 }
                 let notBrisque = candidates.filter { !$0.isBrisque }
-                if !notBrisque.isEmpty { 
+                if !notBrisque.isEmpty {
                     print("🔍 AI DEBUG: Not brisque cards: \(notBrisque.map { $0.displayName })")
-                    return notBrisque 
+                    return notBrisque
                 }
                 print("🔍 AI DEBUG: Using all candidates: \(candidates.map { $0.displayName })")
                 return candidates
@@ -363,8 +371,8 @@ class AIService: ObservableObject {
         guard let trumpSuit = trumpSuit else { return false }
         
         let trumpCards = player.cardsOfSuit(trumpSuit)
-        let highTrumpCards = trumpCards.filter { 
-            [.ace, .ten, .king, .queen, .jack].contains($0.value) 
+        let highTrumpCards = trumpCards.filter {
+            [.ace, .ten, .king, .queen, .jack].contains($0.value)
         }
         
         return highTrumpCards.count >= 2
@@ -515,8 +523,8 @@ class AIService: ObservableObject {
         var score = 0
         
         // Count high cards
-        let highCards = player.hand.filter { 
-            [.ace, .ten, .king, .queen, .jack].contains($0.value) 
+        let highCards = player.hand.filter {
+            [.ace, .ten, .king, .queen, .jack].contains($0.value)
         }
         score += highCards.count * 10
         
@@ -827,113 +835,118 @@ private func chooseFollowCardEndgame(player: Player, game: Game, playableCards: 
 extension Player {
     /**
      * Comprehensive AI decision-making method that handles all AI actions in sequence.
-     * 
+     *
      * This method coordinates the complete AI turn including:
      * 1. Card drawing (if it's the AI's draw turn and they haven't drawn)
-     * 2. Meld evaluation and declaration (if melding is allowed)
-     * 3. Card playing (if in appropriate game phase)
-     * 
+     * 2. Card playing (if in appropriate game phase)
+     *    (Note: Melding is evaluated **only once** when this AI is the trick winner, handled at the top of this method.)
+     *
      * The method follows the game rules: players must draw before playing
      * (unless the draw pile is empty), and melding can occur when allowed.
-     * 
+     *
      * @param game The current game state containing all game logic and state
      * @param aiService The AI service providing strategic decision-making capabilities
-     * 
+     *
      * @note This method is called by AIResponseCoordinator when it's the AI's turn
      * @note The method automatically handles the draw-then-play sequence required by game rules
      * @note Meld decisions are made strategically based on the AI's current hand and game state
      */
     func makeAIDecision(in game: Game, aiService: AIService) {
         // Ensure this is an AI player before proceeding
-        guard type == .ai else { 
+        guard type == .ai else {
             print("🤖 DEBUG: makeAIDecision called for non-AI player \(name)")
-            return 
+            return
         }
-        
+
         print("🤖 AI \(name) making decisions - Phase: \(game.currentPhase)")
-        
+
+        // --- Winner-first meld handling (once per trick) ---
+        let trickNumber = game.trickHistory.count
+        let myIndex = game.players.firstIndex(where: { $0.id == self.id })
+        let isWinner = (game.winningCardIndex == myIndex)
+
+        if isWinner && game.canPlayerMeld {
+            let lastHandled = aiService.lastMeldHandledTrickByPlayer[self.id]
+            if lastHandled != trickNumber {
+                print("🤖 AI \(name) is trick winner — evaluating melds first (trick \(trickNumber))")
+                let meldsToDeclare = aiService.decideMeldsToDeclare(for: self, in: game)
+                for meld in meldsToDeclare {
+                    print("🤖 AI \(name) declaring meld: \(meld)")
+                    game.declareMeld(meld, by: self)
+                }
+                if meldsToDeclare.isEmpty {
+                    print("🤖 AI \(name) chose not to declare any melds (winner window)")
+                } else {
+                    print("🤖 AI \(name) declared \(meldsToDeclare.count) meld(s) (winner window)")
+                }
+                // Mark meld window handled for this trick to prevent re-entry on subsequent DRAW/PLAY calls
+                aiService.lastMeldHandledTrickByPlayer[self.id] = trickNumber
+                // Early return: do not draw or play in the same invocation as the winner meld window
+                return
+            } else {
+                print("🤖 AI \(name) has already handled meld window for trick \(trickNumber), skipping winner meld step")
+            }
+        }
         // STEP 1: Handle card drawing if it's the AI's draw turn and they haven't drawn yet
         // This ensures the AI follows the "draw before play" rule
         let isCurrentDrawPlayer = game.currentDrawIndex == game.players.firstIndex(where: { $0.id == self.id })
         let hasNotDrawn = !game.hasDrawnForNextTrick[self.id, default: false]
         let canDraw = !game.deck.isEmpty && game.validateHandSizeLimit(for: self)
-        
+
         if isCurrentDrawPlayer && hasNotDrawn && canDraw {
             print("🤖 AI \(name) drawing card as part of decision sequence")
+
+            // Use the game's drawCard method to ensure proper draw cycle progression
+            let drawSuccess = game.drawCard(for: self)
             
-            // AI draws a card from the deck
-            if let card = game.deck.drawCard() {
-                // Add the drawn card to the AI's hand
-                self.addCards([card])
-                
-                // Mark that this AI has drawn for the current trick
-                game.hasDrawnForNextTrick[self.id] = true
-                
-                print("🤖 AI \(name) successfully drew \(card.displayName)")
+            if drawSuccess {
+                print("🤖 AI \(name) successfully drew card using game.drawCard method")
                 print("🤖 AI \(name) hand size after drawing: \(self.hand.count)")
-                
-                // Post notification for view state to trigger draw animation
-                NotificationCenter.default.post(
-                    name: .cardDrawn,
-                    object: card
-                )
             } else {
-                print("🤖 ERROR: AI \(name) failed to draw card - deck may be empty")
+                print("🤖 ERROR: AI \(name) failed to draw card using game.drawCard method")
             }
+            
+            // Ensure AI returns immediately after drawing a card
+            return
         } else if isCurrentDrawPlayer && hasNotDrawn && !canDraw {
             print("🤖 AI \(name) cannot draw: deck empty=\(game.deck.isEmpty), hand limit valid=\(game.validateHandSizeLimit(for: self))")
         }
-        
-        // STEP 2: Handle melding if allowed (when AI wins a trick or during meld phase)
-        // Meld decisions are made strategically based on the AI's current hand
-        if game.canPlayerMeld {
-            print("🤖 AI \(name) evaluating melding opportunities")
-            
-            // Get strategic meld recommendations from the AI service
-            let meldsToDeclare = aiService.decideMeldsToDeclare(for: self, in: game)
-            
-            // Execute each recommended meld
-            for meld in meldsToDeclare {
-                print("🤖 AI \(name) declaring meld: \(meld)")
-                game.declareMeld(meld, by: self)
-            }
-            
-            if !meldsToDeclare.isEmpty {
-                print("🤖 AI \(name) declared \(meldsToDeclare.count) melds")
-            } else {
-                print("🤖 AI \(name) chose not to declare any melds")
-            }
-            
-            // Note: Trump selection is now handled within decideMeldsToDeclare
-            // when the AI declares a royal marriage
+
+        // (General meld step removed; melding now only happens in winner-first branch)
+
+        // STEP 2: Handle card playing in appropriate game phases
+        // 🔒 Per-trick play fuse: if we already played this trick, do nothing
+        if aiService.lastPlayedTrickByPlayer[self.id] == trickNumber {
+            print("🤖 AI \(name) already played in trick \(trickNumber); skipping play")
+            return
         }
-        
-        // STEP 3: Handle card playing in appropriate game phases
         // The AI can only play cards after drawing (unless it's the first trick or draw pile is empty)
         let canPlay = game.currentPhase == .playing || game.currentPhase == .endgame
-        let hasDrawnOrCanSkipDraw = game.hasDrawnForNextTrick[self.id, default: false] || 
-                                   game.isFirstTrick || 
+        let hasDrawnOrCanSkipDraw = game.hasDrawnForNextTrick[self.id, default: false] ||
+                                   game.isFirstTrick ||
                                    game.deck.isEmpty
-        
+
         if canPlay && hasDrawnOrCanSkipDraw {
             print("🤖 AI \(name) evaluating card play options")
-            
+
             // Get strategic card selection from the AI service
             if let cardToPlay = aiService.chooseCardToPlay(for: self, in: game) {
                 print("🤖 AI \(name) playing card: \(cardToPlay.displayName)")
-                
+
                 // Execute the card play through the game logic
                 game.playCard(cardToPlay, from: self)
+                // ✅ Mark this trick as played to prevent a second play this trick
+                aiService.lastPlayedTrickByPlayer[self.id] = trickNumber
             } else {
                 print("🤖 AI \(name) could not select a card to play")
             }
         } else if canPlay && !hasDrawnOrCanSkipDraw {
             print("🤖 AI \(name) cannot play yet - must draw first or wait for appropriate phase")
         }
-        
+
         print("🤖 AI \(name) decision sequence completed")
-        
+
         // Note: AI state management is now handled by the serial queue in AIResponseCoordinator
         // No need to post notifications or manually reset state
     }
-} 
+}
