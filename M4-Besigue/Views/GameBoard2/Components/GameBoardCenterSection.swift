@@ -129,13 +129,15 @@ struct CompletedTrickView: View {
             startWinningCardAnimation()
         }
         .onChange(of: cards.count) { _, newCount in
-            // Reset animation when new cards are added
-            resetAnimation()
-            startWinningCardAnimation()
+            // Only start animation if we haven't already started it
+            if animationPhase == .initial {
+                startWinningCardAnimation()
+            }
         }
         .onDisappear {
-            // Clean up timer
+            // Clean up timer and reset animation state
             animationTimer?.invalidate()
+            resetAnimation()
         }
     }
     
@@ -176,29 +178,33 @@ struct CompletedTrickView: View {
     
     // Start the winning card animation sequence
     private func startWinningCardAnimation() {
-        // Reset animation state
-        resetAnimation()
+        // Only start if we're in initial state
+        guard animationPhase == .initial else { return }
         
         // Phase 1: Pop to top
         DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay) {
+            guard animationPhase == .initial else { return }
             winningCardPopped = true
             animationPhase = .popped
         }
         
         // Phase 2: Start shaking
         DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay + 0.6) {
+            guard animationPhase == .popped else { return }
             winningCardShaking = true
             animationPhase = .shaking
         }
         
         // Phase 3: Start rotation
         DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay + 1.2) {
+            guard animationPhase == .shaking else { return }
             winningCardRotating = true
             animationPhase = .rotating
         }
         
         // Phase 4: Animation complete
         DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay + 2.0) {
+            guard animationPhase == .rotating else { return }
             animationPhase = .complete
         }
     }
