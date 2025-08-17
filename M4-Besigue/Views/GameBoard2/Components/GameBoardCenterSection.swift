@@ -125,13 +125,27 @@ struct CompletedTrickView: View {
             }
         }
         .onAppear {
+            print("🎭 CompletedTrickView appeared")
+            print("   cards.count: \(cards.count)")
+            print("   isShowingCompletedTrick: \(game.isShowingCompletedTrick)")
+            print("   cards == completedTrick: \(cards == game.completedTrick)")
+            print("   animationPhase: \(animationPhase)")
+            
             // Start winning card animation sequence
             startWinningCardAnimation()
         }
         .onChange(of: cards.count) { _, newCount in
+            print("🎭 CompletedTrickView - cards.count changed to: \(newCount)")
+            print("   isShowingCompletedTrick: \(game.isShowingCompletedTrick)")
+            print("   cards == completedTrick: \(cards == game.completedTrick)")
+            print("   animationPhase: \(animationPhase)")
+            
             // Only start animation if this is the completed trick AND we haven't already started it
             if game.isShowingCompletedTrick && cards == game.completedTrick && animationPhase == .initial {
+                print("🎭 Starting animation from onChange trigger")
                 startWinningCardAnimation()
+            } else {
+                print("🎭 Animation NOT started from onChange - conditions not met")
             }
         }
         .onDisappear {
@@ -178,13 +192,18 @@ struct CompletedTrickView: View {
     
     // Start the winning card animation sequence
     private func startWinningCardAnimation() {
-        // Only start if this is the completed trick AND we're in initial state
-        guard game.isShowingCompletedTrick && cards == game.completedTrick && animationPhase == .initial else { return }
-        
-        print("🎉 Starting winning card animation for completed trick!")
+        print("🎉 startWinningCardAnimation() called")
         print("   isShowingCompletedTrick: \(game.isShowingCompletedTrick)")
         print("   cards == completedTrick: \(cards == game.completedTrick)")
         print("   animationPhase: \(animationPhase)")
+        
+        // Only start if this is the completed trick AND we're in initial state
+        guard game.isShowingCompletedTrick && cards == game.completedTrick && animationPhase == .initial else { 
+            print("🎉 Animation NOT started - guard condition failed")
+            return 
+        }
+        
+        print("🎉 Starting winning card animation for completed trick!")
         
         // Phase 1: Pop to top
         DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay) {
