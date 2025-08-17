@@ -129,8 +129,8 @@ struct CompletedTrickView: View {
             startWinningCardAnimation()
         }
         .onChange(of: cards.count) { _, newCount in
-            // Only start animation if we haven't already started it
-            if animationPhase == .initial {
+            // Only start animation if this is the completed trick AND we haven't already started it
+            if game.isShowingCompletedTrick && cards == game.completedTrick && animationPhase == .initial {
                 startWinningCardAnimation()
             }
         }
@@ -178,8 +178,13 @@ struct CompletedTrickView: View {
     
     // Start the winning card animation sequence
     private func startWinningCardAnimation() {
-        // Only start if we're in initial state
-        guard animationPhase == .initial else { return }
+        // Only start if this is the completed trick AND we're in initial state
+        guard game.isShowingCompletedTrick && cards == game.completedTrick && animationPhase == .initial else { return }
+        
+        print("🎉 Starting winning card animation for completed trick!")
+        print("   isShowingCompletedTrick: \(game.isShowingCompletedTrick)")
+        print("   cards == completedTrick: \(cards == game.completedTrick)")
+        print("   animationPhase: \(animationPhase)")
         
         // Phase 1: Pop to top
         DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay) {
