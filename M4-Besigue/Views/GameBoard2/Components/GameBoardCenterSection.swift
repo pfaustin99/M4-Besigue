@@ -1,5 +1,14 @@
 import SwiftUI
 
+// MARK: - Shake Effect Modifier
+struct ShakeEffect: GeometryEffect {
+    var animatableData: CGFloat
+    
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        ProjectionTransform(CGAffineTransform(translationX: 10 * sin(animatableData * .pi * CGFloat(6)), y: 0))
+    }
+}
+
 /// GameBoardCenterSection - Center section containing the main game area
 struct GameBoardCenterSection: View {
     @ObservedObject var game: Game
@@ -7,6 +16,13 @@ struct GameBoardCenterSection: View {
     let gameRules: GameRules
     let geometry: GeometryProxy
     
+    // Dynamic sizing for trick area (Option B)
+    private var trickAreaMaxWidth: CGFloat {
+        let w = geometry.size.width
+        return w < 768 ? w * 0.9 : min(w * 0.6, 720)
+    }
+    private let trickAreaAspect: CGFloat = 4.0 / 3.0
+
     var body: some View {
         VStack {
             // Main trick area content
@@ -18,7 +34,8 @@ struct GameBoardCenterSection: View {
                     gameRules: gameRules,
                     geometry: geometry
                 )
-                .frame(width: 400, height: 300) // Increased to accommodate larger cards
+                .frame(maxWidth: trickAreaMaxWidth)
+                .aspectRatio(trickAreaAspect, contentMode: .fit)
                 .transition(.asymmetric(
                     insertion: .scale.combined(with: .opacity),
                     removal: .scale.combined(with: .opacity)
@@ -32,7 +49,8 @@ struct GameBoardCenterSection: View {
                     gameRules: gameRules,
                     geometry: geometry
                 )
-                .frame(width: 400, height: 300) // Increased to accommodate larger cards
+                .frame(maxWidth: trickAreaMaxWidth)
+                .aspectRatio(trickAreaAspect, contentMode: .fit)
                 .transition(.asymmetric(
                     insertion: .move(edge: .bottom).combined(with: .opacity),
                     removal: .move(edge: .top).combined(with: .opacity)
@@ -41,7 +59,8 @@ struct GameBoardCenterSection: View {
             } else {
                 // Empty state - minimal and clean
                 Color.clear
-                    .frame(width: 400, height: 300) // Increased to match
+                    .frame(maxWidth: trickAreaMaxWidth)
+                    .aspectRatio(trickAreaAspect, contentMode: .fit)
             }
             
             Spacer()
@@ -73,31 +92,46 @@ struct CompletedTrickView: View {
     let geometry: GeometryProxy
     
     // Animation state for winning card
-    @State private var winningCardVisible = false
+    @State private var winningCardPopped = false
+    @State private var winningCardShaking = false
+    @State private var winningCardRotating = false
+    @State private var animationPhase: AnimationPhase = .initial
     @State private var animationTimer: Timer?
+    
+    enum AnimationPhase {
+        case initial, popped, shaking, rotating, complete
+    }
     
     var body: some View {
         VStack(spacing: 0) {
             // Main card display - natural stacking like real cards on a table
             ZStack {
-                // Display cards in natural stacked order (winning card on top)
+                // Display cards in natural stacked order (winning card pops to top after animation)
                 ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
                     CardView(card: card, onTap: {}) // No-op for display-only cards
                         .frame(width: trickCardSize.width, height: trickCardSize.height)
                         .rotationEffect(.degrees(naturalCardRotation(for: index)))
                         .offset(naturalCardOffset(for: index))
-                        .zIndex(Double(cards.count - index)) // Winning card (last played) on top
-                        .animation(.easeInOut(duration: 0.6), value: cards.count)
+                        .zIndex(winningCardPopped && game.completedTrickWinnerIndex == index 
+                            ? Double(cards.count + 10)  // Winning card on very top
+                            : Double(cards.count - index)) // Normal stacking order
+                        .scaleEffect(winningCardPopped && game.completedTrickWinnerIndex == index ? 1.1 : 1.0)
+                        .modifier(ShakeEffect(animatableData: winningCardShaking && game.completedTrickWinnerIndex == index ? 1 : 0))
+                        .rotationEffect(.degrees(winningCardRotating && game.completedTrickWinnerIndex == index ? 360 : 0))
+                        .animation(.easeInOut(duration: TrickAnimationTiming.winningCardRotationDuration), value: winningCardRotating)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.6), value: winningCardPopped)
+                        .animation(.easeInOut(duration: TrickAnimationTiming.winningCardShakeDuration), value: winningCardShaking)
                 }
             }
         }
         .onAppear {
-            // Start winning card visibility timer
-            startWinningCardTimer()
+            // Start winning card animation sequence
+            startWinningCardAnimation()
         }
         .onChange(of: cards.count) { _, newCount in
-            // Reset timer when new cards are added
-            startWinningCardTimer()
+            // Reset animation when new cards are added
+            resetAnimation()
+            startWinningCardAnimation()
         }
         .onDisappear {
             // Clean up timer
@@ -118,8 +152,8 @@ struct CompletedTrickView: View {
     
     // Natural card rotation - like real cards thrown on a table with larger differences
     private func naturalCardRotation(for index: Int) -> Double {
-        let baseRotation = -25.0 // Increased base rotation for more dramatic look
-        let rotationVariation = Double(index) * 12.0 // Much larger variation per card
+        let baseRotation = -35.0 // Increased base rotation for more dramatic look - wss -30
+        let rotationVariation = Double(index) * 20.0 // Much larger variation per card - was 12
         let winningCardBonus = index == cards.count - 1 ? 15.0 : 0.0 // Winning card much more upright
         
         return baseRotation + rotationVariation + winningCardBonus
@@ -140,15 +174,51 @@ struct CompletedTrickView: View {
         )
     }
     
-    // Timer to control winning card visibility
+    // Start the winning card animation sequence
+    private func startWinningCardAnimation() {
+        // Reset animation state
+        resetAnimation()
+        
+        // Phase 1: Pop to top
+        DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay) {
+            winningCardPopped = true
+            animationPhase = .popped
+        }
+        
+        // Phase 2: Start shaking
+        DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay + 0.6) {
+            winningCardShaking = true
+            animationPhase = .shaking
+        }
+        
+        // Phase 3: Start rotation
+        DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay + 1.2) {
+            winningCardRotating = true
+            animationPhase = .rotating
+        }
+        
+        // Phase 4: Animation complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay + 2.0) {
+            animationPhase = .complete
+        }
+    }
+    
+    // Reset animation state
+    private func resetAnimation() {
+        winningCardPopped = false
+        winningCardShaking = false
+        winningCardRotating = false
+        animationPhase = .initial
+    }
+    
+    // Timer to control winning card visibility (kept for compatibility)
     private func startWinningCardTimer() {
         // Cancel existing timer
         animationTimer?.invalidate()
         
-        // Set new timer for 0.75 seconds (between 0.5-1.0 as requested)
-        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: false) { _ in
-            // This will be handled by the game logic when clearing the trick
-            // The timer ensures the winning card stays visible for the specified duration
+        // Set new timer for the total animation duration
+        animationTimer = Timer.scheduledTimer(withTimeInterval: TrickAnimationTiming.winningCardDisplayDuration, repeats: false) { _ in
+            // Animation sequence is handled by the new animation system
         }
     }
 }

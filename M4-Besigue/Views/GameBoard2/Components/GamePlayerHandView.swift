@@ -22,7 +22,7 @@ struct GamePlayerHandView: View {
     
     // MARK: - Responsive Stacking
     private var humanCardSpacing: CGFloat {
-        geometry.size.width < 768 ? -20 : -25  // More overlap on iPhone
+        geometry.size.width < 768 ? -33 : -25  // More overlap on iPhone
     }
     
     private var aiCardSpacing: CGFloat {
@@ -78,58 +78,7 @@ struct GamePlayerHandView: View {
     private var humanPlayerHandView: some View {
         HStack(spacing: humanCardSpacing) {
             ForEach(player.held) { card in
-                CardView(
-                    card: card,
-                    isSelected: viewState.selectedCards.contains(card),
-                    isPlayable: true, // Human player cards are always playable for visual purposes
-                    showHint: false,
-                    isDragTarget: viewState.draggedOverCard?.id == card.id,
-                    size: humanCardSize
-                ) {
-                    // Single tap - select/deselect for melding
-                    handleCardTap(card)
-                }
-                .onTapGesture(count: 2) {
-                    // Double tap - play the card
-                    handleCardDoubleTap(card)
-                }
-                .onDrag {
-                    // Track drag start
-                    viewState.setDragging(true)
-                    // Create drag item with card ID for reordering
-                    return NSItemProvider(object: card.id.uuidString as NSString)
-                } preview: {
-                    // Show a preview of the card being dragged
-                    CardView(
-                        card: card,
-                        isSelected: false,
-                        isPlayable: true,
-                        showHint: false,
-                        isDragTarget: false,
-                        size: humanCardSize
-                    ) {
-                        // Empty action for preview
-                    }
-                    .scaleEffect(0.8)
-                    .opacity(0.8)
-                }
-                .onDrop(of: [.text], delegate: EnhancedCardDropDelegate(
-                    card: card,
-                    cards: player.held,
-                    onReorder: { newOrder in
-                        handleHandReorder(newOrder)
-                    },
-                    onDragEnter: { card in
-                        viewState.setDraggedOverCard(card)
-                    },
-                    onDragExit: { _ in
-                        viewState.clearDraggedOverCard()
-                    },
-                    onDragEnd: {
-                        viewState.setDragging(false)
-                        viewState.clearDraggedOverCard()
-                    }
-                ))
+                humanCardView(for: card)
             }
         }
         .frame(width: humanContainerSize.width, height: humanContainerSize.height)
@@ -139,8 +88,63 @@ struct GamePlayerHandView: View {
                 .stroke(isCurrentTurn ? Color.blue : Color.clear, lineWidth: 2)
                 .opacity(isCurrentTurn ? 0.6 : 0.0)
         )
-                            // Draw button moved to permanent location in GameBoardBottomSection
+        // Draw button moved to permanent location in GameBoardBottomSection
         .animation(.easeInOut(duration: 0.3), value: isCurrentTurn)
+    }
+    
+    // MARK: - Individual Human Card View
+    
+    private func humanCardView(for card: PlayerCard) -> some View {
+        CardView(
+            card: card,
+            isSelected: viewState.selectedCards.contains(card),
+            isPlayable: true, // Human player cards are always playable for visual purposes
+            showHint: false,
+            isDragTarget: viewState.draggedOverCard?.id == card.id
+        ) {
+            // Single tap - select/deselect for melding
+            handleCardTap(card)
+        }
+        .onTapGesture(count: 2) {
+            // Double tap - play the card
+            handleCardDoubleTap(card)
+        }
+        .onDrag {
+            // Track drag start
+            viewState.setDragging(true)
+            // Create drag item with card ID for reordering
+            return NSItemProvider(object: card.id.uuidString as NSString)
+        } preview: {
+            // Show a preview of the card being dragged
+            CardView(
+                card: card,
+                isSelected: false,
+                isPlayable: true,
+                showHint: false,
+                isDragTarget: false
+            ) {
+                // Empty action for preview
+            }
+            .scaleEffect(0.8)
+            .opacity(0.8)
+        }
+        .onDrop(of: [.text], delegate: EnhancedCardDropDelegate(
+            card: card,
+            cards: player.held,
+            onReorder: { newOrder in
+                handleHandReorder(newOrder)
+            },
+            onDragEnter: { card in
+                viewState.setDraggedOverCard(card)
+            },
+            onDragExit: { _ in
+                viewState.clearDraggedOverCard()
+            },
+            onDragEnd: {
+                viewState.setDragging(false)
+                viewState.clearDraggedOverCard()
+            }
+        ))
     }
     
     // MARK: - AI Player Hand View

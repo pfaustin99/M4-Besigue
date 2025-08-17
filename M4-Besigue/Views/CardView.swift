@@ -7,15 +7,22 @@ struct CardView: View {
     let showHint: Bool
     let isDragTarget: Bool
     let onTap: () -> Void
-    let size: CGSize
     
-    init(card: PlayerCard, isSelected: Bool = false, isPlayable: Bool = true, showHint: Bool = false, isDragTarget: Bool = false, size: CGSize = CGSize(width: 80, height: 112), onTap: @escaping () -> Void) {
+    // Computed property to calculate card size based on screen width
+    private var size: CGSize {
+        let screenWidth = UIScreen.main.bounds.width
+        let width = min(max(screenWidth * 0.12, 70), 120)
+        let height = width * (112.0 / 80.0)
+        return CGSize(width: width, height: height)
+    }
+    
+    // Removed size parameter from initializer
+    init(card: PlayerCard, isSelected: Bool = false, isPlayable: Bool = true, showHint: Bool = false, isDragTarget: Bool = false, onTap: @escaping () -> Void) {
         self.card = card
         self.isSelected = isSelected
         self.isPlayable = isPlayable
         self.showHint = showHint
         self.isDragTarget = isDragTarget
-        self.size = size
         self.onTap = onTap
     }
     

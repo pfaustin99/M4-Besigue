@@ -620,7 +620,8 @@ class Game: ObservableObject {
         
         // Set up draw cycle for the new trick
         currentDrawIndex = currentTrickLeader
-      //  currentPlayIndex = currentTrickLeader
+        currentPlayIndex = currentTrickLeader
+        
         isDrawCycle = true
         mustDrawCard = true
         
@@ -820,9 +821,9 @@ class Game: ObservableObject {
                 print("   completedTrick count is now: \(self.completedTrick.count)")
             }
             
-            // Clear the completed trick after 3 seconds to allow proper display
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                print("🏆 Clearing completed trick after 3.0s delay")
+            // Clear the completed trick after animation completes to allow proper display
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8 + TrickAnimationTiming.winningCardDisplayDuration + 0.2) {
+                print("🏆 Clearing completed trick after animation completes")
                 self.completedTrick.removeAll()
                 self.completedTrickWinnerIndex = nil
                 self.isShowingCompletedTrick = false
@@ -832,10 +833,10 @@ class Game: ObservableObject {
         }
         
         // Clear the trick area after the completed trick display is finished
-        // This ensures the completed trick is visible for the full 3 seconds
-        print("   Setting up clearTrickArea delay for 3.2s...")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
-            print("🏆 Calling clearTrickArea after 3.2s delay")
+        // This ensures the completed trick is visible for the full animation duration
+        print("   Setting up clearTrickArea delay for animation completion...")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8 + TrickAnimationTiming.winningCardDisplayDuration + 0.4) {
+            print("🏆 Calling clearTrickArea after animation completion")
             self.clearTrickArea()
             // After clearing the trick area, start a new trick
             print("🏆 Starting new trick after clearing trick area")

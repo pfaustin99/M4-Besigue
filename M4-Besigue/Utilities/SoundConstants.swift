@@ -104,3 +104,12 @@ struct SoundConstants {
         ]
     }
 } 
+
+// MARK: - Animation Timing Constants
+struct TrickAnimationTiming {
+    static let winningCardPopDelay: Double = 0.2        // Delay before winning card pops
+    static let winningCardShakeDuration: Double = 0.6   // Shake animation duration
+    static let winningCardRotationDuration: Double = 0.8 // 360° rotation duration
+    static let winningCardDisplayDuration: Double = 2.0 // Total time winning card is highlighted
+    static let trickRemovalDuration: Double = 0.5       // Time to remove trick pile
+} 
