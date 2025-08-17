@@ -114,7 +114,7 @@ struct CompletedTrickView: View {
                         .offset(naturalCardOffset(for: index))
                         .zIndex(winningCardPopped && game.completedTrickWinnerIndex == index 
                             ? Double(cards.count + 10)  // Winning card on very top
-                            : Double(cards.count - index)) // Normal stacking order
+                            : Double(index)) // Normal stacking order: first card on bottom, last card on top
                         .scaleEffect(winningCardPopped && game.completedTrickWinnerIndex == index ? 1.1 : 1.0)
                         .modifier(ShakeEffect(animatableData: winningCardShaking && game.completedTrickWinnerIndex == index ? 1 : 0))
                         .rotationEffect(.degrees(winningCardRotating && game.completedTrickWinnerIndex == index ? 360 : 0))
