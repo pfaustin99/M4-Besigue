@@ -233,6 +233,10 @@ struct HumanActionButtonsView: View {
     let viewState: GameBoardViewState2
     let geometry: GeometryProxy
     
+    // Animation state for draw button flash
+    @State private var drawButtonFlashScale: CGFloat = 1.0
+    @State private var drawButtonFlashOpacity: Double = 1.0
+    
     // MARK: - Responsive Sizing
     private var buttonSpacing: CGFloat {
         geometry.size.width < 768 ? 20 : 30
@@ -280,6 +284,10 @@ struct HumanActionButtonsView: View {
             }
             .disabled(!canDraw)
             .foregroundColor(drawButtonTextColor)
+            .scaleEffect(drawButtonFlashScale)
+            .opacity(drawButtonFlashOpacity)
+            .animation(.easeInOut(duration: 0.3), value: drawButtonFlashScale)
+            .animation(.easeInOut(duration: 0.3), value: drawButtonFlashOpacity)
             
             // Declare Meld Button
             Button(action: {
@@ -304,6 +312,12 @@ struct HumanActionButtonsView: View {
             }
             .disabled(!canMeld)
             .foregroundColor(meldButtonTextColor)
+        }
+        .onChange(of: canDraw) { _, newCanDraw in
+            // Flash the draw button when it becomes active
+            if newCanDraw && !canDraw {
+                triggerDrawButtonFlash()
+            }
         }
        // .padding(.top, 20)
     }
@@ -345,6 +359,34 @@ struct HumanActionButtonsView: View {
     private var canMeld: Bool {
         guard let human = game.players.first(where: { $0.type == .human }) else { return false }
         return game.canPlayerMeld(human, selectedCards: viewState.selectedCards)
+    }
+    
+    // MARK: - Animation Methods
+    
+    /**
+     * Triggers a flash animation on the draw button when it becomes active.
+     * 
+     * This creates a visual feedback effect that draws the player's attention
+     * to the newly activated draw button.
+     */
+    private func triggerDrawButtonFlash() {
+        // Reset to normal state
+        drawButtonFlashScale = 1.0
+        drawButtonFlashOpacity = 1.0
+        
+        // Flash sequence: scale up and fade out, then return to normal
+        withAnimation(.easeInOut(duration: 0.15)) {
+            drawButtonFlashScale = 1.2
+            drawButtonFlashOpacity = 0.8
+        }
+        
+        // Return to normal state
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                drawButtonFlashScale = 1.0
+                drawButtonFlashOpacity = 1.0
+            }
+        }
     }
     
     // MARK: - Button Colors
