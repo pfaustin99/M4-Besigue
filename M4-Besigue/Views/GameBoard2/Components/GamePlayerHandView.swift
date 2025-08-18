@@ -82,12 +82,7 @@ struct GamePlayerHandView: View {
             }
         }
         .frame(width: humanContainerSize.width, height: humanContainerSize.height)
-        .overlay(
-            // Visual indicator when it's the human player's turn
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(isCurrentTurn ? Color.blue : Color.clear, lineWidth: 2)
-                .opacity(isCurrentTurn ? 0.6 : 0.0)
-        )
+        // Removed light blue border indicator - now using name plate flash instead
         // Draw button moved to permanent location in GameBoardBottomSection
         .animation(.easeInOut(duration: 0.3), value: isCurrentTurn)
     }

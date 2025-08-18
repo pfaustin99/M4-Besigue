@@ -10,6 +10,10 @@ struct GamePlayerNameView: View {
     // Add explicit state observation to force UI updates
     @State private var currentScore: Int = 0
     
+    // MARK: - Flash Animation State
+    @State private var namePlateFlashScale: CGFloat = 1.0
+    @State private var namePlateFlashOpacity: Double = 1.0
+    
     // MARK: - Device Detection
     private var isIPad: Bool {
         // Use a reasonable threshold for iPad detection
@@ -105,6 +109,10 @@ struct GamePlayerNameView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(namePlateBorderColor, lineWidth: 2)
             )
+            .scaleEffect(namePlateFlashScale)
+            .opacity(namePlateFlashOpacity)
+            .animation(.easeInOut(duration: 0.3), value: namePlateFlashScale)
+            .animation(.easeInOut(duration: 0.3), value: namePlateFlashOpacity)
             
             // Floating score circle
             ZStack {
@@ -140,6 +148,34 @@ struct GamePlayerNameView: View {
             // Force UI update when any player's score changes
             print("🔄 Any player score changed, updating UI for \(player.name)")
         }
+        .onChange(of: isCurrentTurn) { _, newTurn in
+            if newTurn {
+                triggerNamePlateFlash()
+            }
+        }
+    }
+    
+    // MARK: - Flash Animation
+    private func triggerNamePlateFlash() {
+        // Reset to normal state
+        namePlateFlashScale = 1.0
+        namePlateFlashOpacity = 1.0
+        
+        // Flash sequence: scale up and fade out, then return to normal
+        withAnimation(.easeInOut(duration: 0.15)) {
+            namePlateFlashScale = 1.2
+            namePlateFlashOpacity = 0.8
+        }
+        
+        // Return to normal state
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                namePlateFlashScale = 1.0
+                namePlateFlashOpacity = 1.0
+            }
+        }
+        
+        print("💡 Flash animation triggered for \(player.name) as it became the current turn.")
     }
 }
 
