@@ -145,7 +145,13 @@ class Player: ObservableObject, Identifiable {
     
     // Add points to score
     func addPoints(_ points: Int) {
+        let oldScore = score
         score += points
+        print("💰 SCORE UPDATE: \(name)")
+        print("   Old score: \(oldScore)")
+        print("   Points added: \(points)")
+        print("   New score: \(score)")
+        print("   @Published score property updated: \(score)")
     }
     
     // Add a meld to the player's declared melds
