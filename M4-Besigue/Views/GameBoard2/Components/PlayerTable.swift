@@ -35,7 +35,8 @@ struct PlayerTable: View {
             // Floating player name - always upright, positioned outside rotation
             GamePlayerNameView(
                 player: player,
-                isCurrentTurn: isCurrentTurn
+                isCurrentTurn: isCurrentTurn,
+                allPlayers: game.players
             )
             .offset(nameOffset(for: position))
         }
