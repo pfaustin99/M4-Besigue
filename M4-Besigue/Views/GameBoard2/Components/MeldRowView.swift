@@ -87,8 +87,13 @@ private struct GameBoardMeldView: View {
         switch type {
         case .royalMarriage: return "crown.fill"
         case .commonMarriage: return "heart.fill"
-        case .pinochle: return "diamond.fill"
-        case .dix: return "6.circle.fill"
+        case .besigue: return "star.fill"
+        case .fourJacks: return "j.circle.fill"
+        case .fourQueens: return "q.circle.fill"
+        case .fourKings: return "k.circle.fill"
+        case .fourAces: return "a.circle.fill"
+        case .fourJokers: return "joker.fill"
+        case .sequence: return "list.number"
         }
     }
     
