@@ -10,6 +10,21 @@ struct GamePlayerNameView: View {
     // Add explicit state observation to force UI updates
     @State private var currentScore: Int = 0
     
+    // MARK: - Device Detection
+    private var isIPad: Bool {
+        // Use a reasonable threshold for iPad detection
+        UIScreen.main.bounds.width >= 768
+    }
+    
+    // MARK: - Responsive Font Sizing
+    private var playerNameFont: Font {
+        isIPad ? .body : .callout
+    }
+    
+    private var scoreFont: Font {
+        isIPad ? .body : .callout
+    }
+    
     // Computed properties for ranking and colors
     private var playerRanking: Int {
         let sortedPlayers = allPlayers.sorted { $0.score > $1.score }
@@ -22,12 +37,12 @@ struct GamePlayerNameView: View {
     }
     
     private var scoreCircleColor: Color {
-        // Check if all players have score <= 0
+        // Check if all players have score <= 0 (except dog/last place)
         let allScoresZeroOrNegative = allPlayers.allSatisfy { $0.score <= 0 }
         
         if allScoresZeroOrNegative {
             // If all scores are 0 or negative, use black background for all
-            return Color.black // Black background for all players when all at 0
+            return Color.black
         } else {
             // Normal ranking colors
             switch playerRanking {
@@ -45,60 +60,70 @@ struct GamePlayerNameView: View {
         print("👑 LEADING CHECK: \(player.name) - isLeading: \(leading)")
         return leading
     }
-
+    
+    // MARK: - Active Turn Styling (like Draw button)
+    private var namePlateColor: Color {
+        isCurrentTurn ? Color(hex: "00209F") : Color.white
+    }
+    
+    private var namePlateBorderColor: Color {
+        isCurrentTurn ? Color(hex: "F1B517") : Color(hex: "F1B517")
+    }
+    
+    private var namePlateTextColor: Color {
+        isCurrentTurn ? .white : .black
+    }
+    
     var body: some View {
-        HStack(spacing: 6) {
-            // Player name
-            Text(player.name)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(isCurrentTurn ? .white : .secondary)
+        HStack(spacing: 8) {
+            // Player name plate
+            HStack(spacing: 4) {
+                Text(player.name)
+                    .font(playerNameFont)
+                    .fontWeight(.semibold)
+                    .foregroundColor(namePlateTextColor)
+                
+                if isCurrentTurn {
+                    Image(systemName: "person.fill")
+                        .foregroundColor(.yellow)
+                        .font(.caption2)
+                }
+                
+                if player.type == .ai {
+                    Image(systemName: "cpu")
+                        .foregroundColor(.blue)
+                        .font(.caption2)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(namePlateColor)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(namePlateBorderColor, lineWidth: 2)
+            )
             
             // Floating score circle
             ZStack {
                 Circle()
                     .fill(scoreCircleColor)
-                    .frame(width: 24, height: 24)
-                    .shadow(color: .black.opacity(0.3), radius: 2, x: 1, y: 1)
+                    .frame(width: 32, height: 32)
+                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                 
                 Text("\(currentScore)")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(scoreFont)
+                    .fontWeight(.bold)
+                    .foregroundColor(scoreCircleColor == Color(hex: "F1B517") ? .black : .white)
             }
             .scaleEffect(isLeading ? 1.1 : 1.0)
-            .animation(.easeInOut(duration: 0.3), value: isLeading)
-
-            // Current turn indicator
-            if isCurrentTurn {
-                Image(systemName: "person.fill")
-                    .foregroundColor(.yellow)
-                    .font(.caption2)
-            }
-
-            // AI indicator
-            if player.type == .ai {
-                Image(systemName: "cpu")
-                    .foregroundColor(.blue)
-                    .font(.caption2)
-            }
+            .overlay(
+                Circle()
+                    .stroke(isLeading ? Color(hex: "F1B517") : Color.clear, lineWidth: 2)
+            )
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(
-                    isCurrentTurn 
-                        ? Color.blue.opacity(0.3) 
-                        : Color.black.opacity(0.2)
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(
-                    isLeading ? Color(hex: "F1B517").opacity(0.6) : Color.clear,
-                    lineWidth: 1.5
-                )
-        )
         .animation(.easeInOut(duration: 0.3), value: scoreCircleColor)
         .animation(.easeInOut(duration: 0.3), value: isLeading)
         .onAppear {
@@ -113,7 +138,7 @@ struct GamePlayerNameView: View {
         }
         .onChange(of: allPlayers.map { $0.score }) { _, _ in
             // Force UI update when any player's score changes
-            print("🔄 Any player score changed - forcing UI refresh for \(player.name)")
+            print("🔄 Any player score changed, updating UI for \(player.name)")
         }
     }
 }
