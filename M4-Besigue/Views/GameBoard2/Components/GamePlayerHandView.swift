@@ -17,7 +17,22 @@ struct GamePlayerHandView: View {
     }
     
     private var aiCardSize: CGSize {
-        geometry.size.width < 768 ? CGSize(width: 30, height: 45) : CGSize(width: 50, height: 75)
+        let hasMelds = !player.meldsDeclared.isEmpty
+        let isLandscape = geometry.size.width > geometry.size.height
+        
+        if hasMelds {
+            // Reduce opponent card size when they have melds to make room
+            if isLandscape {
+                // iPad landscape: wider left-to-right, reduce card width
+                return geometry.size.width < 768 ? CGSize(width: 25, height: 37) : CGSize(width: 40, height: 60)
+            } else {
+                // iPhone portrait: taller top-to-bottom, reduce card height
+                return geometry.size.width < 768 ? CGSize(width: 28, height: 35) : CGSize(width: 45, height: 56)
+            }
+        } else {
+            // Normal opponent card sizes
+            return geometry.size.width < 768 ? CGSize(width: 30, height: 45) : CGSize(width: 50, height: 75)
+        }
     }
     
     // MARK: - Responsive Stacking
@@ -50,13 +65,18 @@ struct GamePlayerHandView: View {
         let cardHeight = aiCardSize.height
         let spacing = aiCardSpacing
         let cardCount = CGFloat(player.held.count)
+        let hasMelds = !player.meldsDeclared.isEmpty
         
         if isHorizontal {
             let totalWidth = max(cardWidth, cardWidth + (spacing * (cardCount - 1)))
-            return CGSize(width: totalWidth, height: cardHeight)
+            // Add extra width when melds are present for better visibility
+            let meldAdjustment = hasMelds ? 20.0 : 0.0
+            return CGSize(width: totalWidth + meldAdjustment, height: cardHeight)
         } else {
             let totalHeight = max(cardHeight, cardHeight + (spacing * (cardCount - 1)))
-            return CGSize(width: cardWidth, height: totalHeight)
+            // Add extra height when melds are present for better visibility
+            let meldAdjustment = hasMelds ? 25.0 : 0.0
+            return CGSize(width: cardWidth, height: totalHeight + meldAdjustment)
         }
     }
     
