@@ -3,7 +3,7 @@ import SwiftUI
 
 /// GamePlayerNameView - Standalone view for displaying the player's name, status, and floating score circle
 struct GamePlayerNameView: View {
-    let player: Player
+    @ObservedObject var player: Player
     let isCurrentTurn: Bool
     let allPlayers: [Player] // Need all players to determine ranking
     
