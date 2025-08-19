@@ -269,7 +269,15 @@ struct PlayerCard: Identifiable, Equatable, Hashable {
     let card: Card
     var usedInMeldTypes: Set<MeldType> = []
     
-    var id: UUID { card.id }
+    // Make id a stored property instead of computed to ensure stability
+    let id: UUID
+    
+    init(card: Card) {
+        self.card = card
+        self.id = card.id  // Set the ID directly from the Card
+        self.usedInMeldTypes = []
+    }
+    
     var suit: Suit? { card.suit }
     var value: CardValue? { card.value }
     var isJoker: Bool { card.isJoker }

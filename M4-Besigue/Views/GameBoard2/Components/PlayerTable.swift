@@ -59,7 +59,7 @@ struct PlayerTable: View {
             }
         case .top:
             // Top player: melds below held cards (towards trick area)
-            VStack(spacing: isLandscape ? 6 : 4) {
+            VStack(spacing: isLandscape ? 6 : 4) { // was 6 : 4
                 GamePlayerHandView(
                     player: player,
                     isHuman: isHumanPlayer,

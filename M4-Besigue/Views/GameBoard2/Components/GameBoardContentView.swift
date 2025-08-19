@@ -22,7 +22,7 @@ struct GameBoardContentView: View {
                 geometry: geometry
             )
             
-            Spacer(minLength: 200)  // Push center section down with minimum 50 points
+            Spacer(minLength: 100)  // Push center section down with minimum 200 points
             
             // Center section: Main game area
             GameBoardCenterSection(

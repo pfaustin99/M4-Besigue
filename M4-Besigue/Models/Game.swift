@@ -1356,6 +1356,21 @@ class Game: ObservableObject {
             }
         }
         
+        // Check for sequence if 3 cards are selected
+        if cards.count == 3 {
+            for suit in Suit.allCases {
+                let hasAce = cards.contains { $0.value == .ace && $0.suit == suit }
+                let hasTen = cards.contains { $0.value == .ten && $0.suit == suit }
+                let hasJack = cards.contains { $0.value == .jack && $0.suit == suit }
+                print("   🔍 Checking sequene for \(suit.rawValue): Ace=\(hasAce), Ten=\(hasTen), Jack=\(hasJack)")
+                if hasAce && hasTen && hasJack && suit == trumpSuit{
+                    print("   ✅ Found Sequence for \(suit.rawValue)")
+                    return .sequence
+                }
+            }
+
+        }
+        
         // Check for four of a kind
         if cards.count == 4 {
             print("   🔍 Checking four of a kind...")
@@ -1412,7 +1427,7 @@ class Game: ObservableObject {
         case .fourKings: return settings.fourKingsPoints
         case .fourAces: return settings.fourAcesPoints
         case .fourJokers: return settings.fourJokersPoints
-        case .sequence: return 100 // Default for sequence
+        case .sequence: return settings.sequencePoints
         }
     }
     
@@ -2126,9 +2141,11 @@ class Game: ObservableObject {
         // Check if card play is currently allowed
         guard canPlayCard() else { return false }
         
-        // Verify the card belongs to the player
-        guard player.held.contains(where: { $0.id == card.id }) else { return false }
-        
+        // Verify the card belongs to the player (either in hand or melded)
+        let cardInHeld = player.held.contains(where: { $0.id == card.id })
+        let cardInMelded = player.melded.contains(where: { $0.id == card.id })
+        guard cardInHeld || cardInMelded else { return false }
+
         return true
     }
     

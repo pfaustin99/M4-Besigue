@@ -52,7 +52,7 @@ struct GameBoardMeldView: View {
     }
     
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 8) {
             // Meld cards with better visibility and interaction
             HStack(spacing: -3) {  // Reduced overlap for better card visibility
                 ForEach(meld.cardIDs, id: \.self) { cardId in
@@ -115,10 +115,10 @@ struct GameBoardMeldView: View {
     }
     
     private func handleCardDoubleTap(_ card: PlayerCard) {
-        // Play the card from meld area
-        // This would need to be implemented in the game logic
-        print("🎴 Double-tapped meld card: \(card) - attempting to play")
-        // TODO: Implement card playing from meld area
+        if game.canPlayerPlayCardFromHand(player, card: card) {
+            game.playCard(card, from: player)
+            viewState.clearSelectedCards()
+        }
     }
     
     private func meldTypeIcon(for type: MeldType) -> String {

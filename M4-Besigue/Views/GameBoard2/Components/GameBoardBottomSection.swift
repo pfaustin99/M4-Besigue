@@ -8,13 +8,14 @@ struct GameBoardBottomSection: View {
     let geometry: GeometryProxy
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 2) {
             // Action buttons
             GameActionButtonsView(
                 game: game,
                 viewState: viewState
             )
-            
+    
+            /* NO LONGER USING
             // Player melded cards area
             if let currentPlayer = game.players.first(where: { $0.isCurrentPlayer }) {
                 GamePlayerMeldedCardsView(
@@ -24,6 +25,7 @@ struct GameBoardBottomSection: View {
                     viewState: viewState
                 )
             }
+             */
             
             // Permanent Draw and Meld buttons below human hand
             HumanActionButtonsView(

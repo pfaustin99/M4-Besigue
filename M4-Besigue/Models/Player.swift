@@ -154,56 +154,109 @@ class Player: ObservableObject, Identifiable {
         print("   @Published score property updated: \(score)")
     }
     
-    // Add a meld to the player's declared melds
+    // Moves only held cards into `melded`. If a card is already in `melded`, it is not duplicated.
+    // For all referenced cards (held or already-melded), mark usage and update meldedOrder once.
+    // Missing IDs are logged and ignored (defensive).
     func declareMeld(_ meld: Meld) {
-        // For each card UUID in meld.cardIDs:
-        for cardID in meld.cardIDs {
-            // Find the PlayerCard in held or melded
-            if let heldIndex = held.firstIndex(where: { $0.id == cardID }) {
-                let card = held.remove(at: heldIndex)
-                if !melded.contains(where: { $0.id == cardID }) {
-                    melded.append(card)
-                }
-                // Update usedInMeldTypes
-                if let meldedIndex = melded.firstIndex(where: { $0.id == cardID }) {
-                    melded[meldedIndex].usedInMeldTypes.insert(meld.type)
-                }
-            } else if let meldedIndex = melded.firstIndex(where: { $0.id == cardID }) {
-                melded[meldedIndex].usedInMeldTypes.insert(meld.type)
+        // PURPOSE: Only move cards from `held` to `melded` for this meld.
+        //          Cards already in `melded` must NOT be duplicated.
+        //          All referenced cards (held + already-melded) should have their
+        //          `usedInMeldTypes` updated and appear once in `meldedOrder`.
+
+        // 0) Sanitize input: de-duplicate requested IDs while preserving order.
+        var seen = Set<UUID>()
+        let requestedIDs = meld.cardIDs.filter { seen.insert($0).inserted }
+
+        // 1) Snapshot membership sets to partition the request quickly.
+        let heldIDs   = Set(held.map { $0.id })
+        let meldedIDs = Set(melded.map { $0.id })
+
+        var idsFromHeld: [UUID] = []
+        var idsFromMelded: [UUID] = []
+        var idsMissing: [UUID] = []
+
+        for id in requestedIDs {
+            if heldIDs.contains(id) {
+                idsFromHeld.append(id)
+            } else if meldedIDs.contains(id) {
+                idsFromMelded.append(id)
             } else {
-                print("⚠️ Card with ID \(cardID) not found in held or melded when declaring meld.")
-            }
-            // Update meldedOrder: add new cards to the end if not already present
-            if !meldedOrder.contains(cardID) {
-                meldedOrder.append(cardID)
+                // Defensive: UI/AI should only send IDs that exist.
+                idsMissing.append(id)
             }
         }
-        meldsDeclared.append(meld)
+
+        if !idsMissing.isEmpty {
+            print("⚠️ declareMeld: some IDs not found in held or melded for \(name): \(idsMissing)")
+            // Proceed with known cards; this keeps the method tolerant to minor UI desyncs.
+        }
+
+        // 2) Move ONLY the held cards into `melded` (no duplicates by ID).
+        //    Collect removed cards in the same order as requested.
+        var movedCards: [PlayerCard] = []
+        for id in idsFromHeld {
+            if let idx = held.firstIndex(where: { $0.id == id }) {
+                let card = held.remove(at: idx)
+                if !melded.contains(where: { $0.id == card.id }) {
+                    movedCards.append(card)
+                } else {
+                    // Extremely defensive: if the card is already present in `melded`, skip appending.
+                    print("⚠️ declareMeld: \(card.displayName) already in melded; skipping append")
+                }
+            }
+        }
+        // Append all newly moved cards in order.
+        melded.append(contentsOf: movedCards)
+
+        // 3) Mark usage for ALL referenced cards (those we just moved and those already in `melded`).
+        for id in (idsFromHeld + idsFromMelded) {
+            if let mIdx = melded.firstIndex(where: { $0.id == id }) {
+                melded[mIdx].usedInMeldTypes.insert(meld.type)
+            } else {
+                // If it was from held, it should now be in melded; if from melded, it should have been present.
+                // Log defensively if not found.
+                print("⚠️ declareMeld: could not mark usage for id \(id) in melded")
+            }
+        }
+
+        // 4) Maintain user-visible melded order (append each once, following the incoming order).
+       // for id in requestedIDs where !meldedOrder.contains(id) {
+        for id in requestedIDs where !meldedOrder.contains(id) && idsFromHeld.contains(id) {
+            meldedOrder.append(id)
+        }
+
+        // 5) Record a sanitized copy of the meld (unique card IDs only) and award points.
+        let recorded = Meld(cardIDs: requestedIDs, type: meld.type, pointValue: meld.pointValue, roundNumber: meld.roundNumber)
+        meldsDeclared.append(recorded)
         addPoints(meld.pointValue)
-        print("🎴 \(name) declared \(meld.type.name) with \(meld.cardIDs.count) cards")
-        print("   Cards moved from held to meld: \(meld.cardIDs)")
-        print("   Remaining held cards: \(held.count)")
-        print("   Total melds: \(meldsDeclared.count)")
-        print("   Melded order: \(meldedOrder.count) cards")
+
+        // 6) Logging for debugging / analytics.
+        print("🎴 \(name) declared \(meld.type.name) with \(requestedIDs.count) unique cards")
+        print("   Moved from held → melded: \(idsFromHeld)")
+        print("   Referenced already in melded: \(idsFromMelded)")
+        print("   Remaining held: \(held.count), Melded: \(melded.count), MeldedOrder: \(meldedOrder.count)")
     }
     
     // Get melded cards in user-defined order
     func getMeldedCardsInOrder() -> [PlayerCard] {
-        // Use meldedOrder to order melded cards
-        var orderedCards: [PlayerCard] = []
-        // Add cards in the order specified by meldedOrder
-        for cardId in meldedOrder {
-            if let card = melded.first(where: { $0.id == cardId }) {
-                orderedCards.append(card)
+        // Build an ordered list of melded cards based on `meldedOrder`,
+        // then append any remaining melded cards we didn’t list yet.
+        var ordered: [PlayerCard] = []
+        var seen = Set<UUID>()
+
+        // First, take cards in the explicit user-defined order.
+        for id in meldedOrder {
+            if let card = melded.first(where: { $0.id == id }), seen.insert(id).inserted {
+                ordered.append(card)
             }
         }
-        // Add any cards that might not be in meldedOrder (fallback)
+        // Then, include any other melded cards not yet included (by ID).
         for card in melded {
-            if !orderedCards.contains(card) {
-                orderedCards.append(card)
+            if seen.insert(card.id).inserted {
+                ordered.append(card)
             }
         }
-        return orderedCards
+        return ordered
     }
     
     // Update melded card order (called when user drags and drops)
@@ -311,4 +364,4 @@ enum MeldType: String, CaseIterable, Codable, Hashable {
         default: return nil
         }
     }
-} 
+}
