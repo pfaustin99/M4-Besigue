@@ -11,20 +11,38 @@ struct GameBoardMeldRowView: View {
     var body: some View {
         if !player.meldsDeclared.isEmpty {
             HStack(spacing: 2) {  // Tighter spacing for overlay effect
-                ForEach(player.meldsDeclared, id: \.id) { meld in
+                ForEach(Array(player.meldsDeclared.enumerated()), id: \.element.id) { index, meld in
                     GameBoardMeldView(
                         meld: meld, 
                         player: player, 
                         isHuman: isHuman, 
                         geometry: geometry,
                         game: game,
-                        viewState: viewState
+                        viewState: viewState,
+                        displayedCardUUIDs: getDisplayedCardUUIDs(for: meld, at: index)
                     )
                     .offset(y: -2)  // Slight upward offset for overlay effect
                 }
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
+        }
+    }
+    
+    /// Get the card UUIDs that should be displayed for this specific meld
+    /// This prevents duplication across all melds for the player
+    private func getDisplayedCardUUIDs(for meld: Meld, at index: Int) -> [UUID] {
+        var allDisplayedUUIDs: Set<UUID> = []
+        
+        // Collect all UUIDs from previous melds
+        for i in 0..<index {
+            let previousMeld = player.meldsDeclared[i]
+            allDisplayedUUIDs.formUnion(previousMeld.cardIDs)
+        }
+        
+        // For this meld, only show cards that haven't been displayed yet
+        return meld.cardIDs.filter { cardId in
+            !allDisplayedUUIDs.contains(cardId)
         }
     }
 }
@@ -37,9 +55,7 @@ struct GameBoardMeldView: View {
     let geometry: GeometryProxy
     let game: Game
     let viewState: GameBoardViewState2
-    
-    // Track which card UUIDs have already been displayed across all melds
-    @State private var displayedCardUUIDs: Set<UUID> = []
+    let displayedCardUUIDs: [UUID]
     
     private var meldCardSize: CGSize {
         let isLandscape = geometry.size.width > geometry.size.height
@@ -58,26 +74,21 @@ struct GameBoardMeldView: View {
         VStack(spacing: 8) {
             // Meld cards with better visibility and interaction
             HStack(spacing: -3) {  // Reduced overlap for better card visibility
-                ForEach(meld.cardIDs, id: \.self) { cardId in
-                    // Only show cards that are part of THIS specific meld AND haven't been displayed yet
-                    if let card = player.melded.first(where: { $0.id == cardId }),
-                       !displayedCardUUIDs.contains(cardId) {
-                        displayedCardUUIDs.insert(cardId)
-                        CardView(
-                            card: card,
-                            isSelected: viewState.selectedCards.contains(card),
-                            isPlayable: true,  // Meld cards are playable
-                            showHint: false,
-                            isDragTarget: viewState.draggedOverCard?.id == card.id
-                        ) {
-                            // Single tap - select/deselect for additional melding
-                            handleCardTap(card)
-                        }
-                        .frame(width: meldCardSize.width, height: meldCardSize.height)
-                        .onTapGesture(count: 2) {
-                            // Double tap - play the card
-                            handleCardDoubleTap(card)
-                        }
+                ForEach(filteredMeldCards, id: \.id) { card in
+                    CardView(
+                        card: card,
+                        isSelected: viewState.selectedCards.contains(card),
+                        isPlayable: true,  // Meld cards are playable
+                        showHint: false,
+                        isDragTarget: viewState.draggedOverCard?.id == card.id
+                    ) {
+                        // Single tap - select/deselect for additional melding
+                        handleCardTap(card)
+                    }
+                    .frame(width: meldCardSize.width, height: meldCardSize.height)
+                    .onTapGesture(count: 2) {
+                        // Double tap - play the card
+                        handleCardDoubleTap(card)
                     }
                 }
             }
@@ -106,6 +117,21 @@ struct GameBoardMeldView: View {
                     .stroke(Color.white.opacity(0.7), lineWidth: 1.5)
             )
         }
+    }
+    
+    // MARK: - Computed Properties
+    
+    /// Filter meld cards to only show cards that should be displayed for this meld
+    private var filteredMeldCards: [PlayerCard] {
+        var cards: [PlayerCard] = []
+        
+        for cardId in displayedCardUUIDs {
+            if let card = player.melded.first(where: { $0.id == cardId }) {
+                cards.append(card)
+            }
+        }
+        
+        return cards
     }
     
     // MARK: - Card Interaction Logic
