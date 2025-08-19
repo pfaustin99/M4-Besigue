@@ -39,7 +39,13 @@ struct PlayerTable: View {
         case .bottom:
             // Bottom player: melds above held cards (towards trick area)
             VStack(spacing: isLandscape ? 6 : 4) {
-                GameBoardMeldRowView(player: player, isHuman: isHumanPlayer, geometry: geometry)
+                GameBoardMeldRowView(
+                    player: player, 
+                    isHuman: isHumanPlayer, 
+                    geometry: geometry,
+                    game: game,
+                    viewState: viewState
+                )
                 GamePlayerHandView(
                     player: player,
                     isHuman: isHumanPlayer,
@@ -64,14 +70,26 @@ struct PlayerTable: View {
                     game: game,
                     viewState: viewState
                 )
-                GameBoardMeldRowView(player: player, isHuman: isHumanPlayer, geometry: geometry)
+                GameBoardMeldRowView(
+                    player: player, 
+                    isHuman: isHumanPlayer, 
+                    geometry: geometry,
+                    game: game,
+                    viewState: viewState
+                )
             }
         case .right:
             // Right player: melds left of held cards (towards trick area)
             if isLandscape {
                 // iPad landscape: use HStack for left-to-right layout
                 HStack(spacing: 6) {
-                    GameBoardMeldRowView(player: player, isHuman: isHumanPlayer, geometry: geometry)
+                    GameBoardMeldRowView(
+                        player: player, 
+                        isHuman: isHumanPlayer, 
+                        geometry: geometry,
+                        game: game,
+                        viewState: viewState
+                    )
                     GamePlayerHandView(
                         player: player,
                         isHuman: isHumanPlayer,
@@ -86,7 +104,13 @@ struct PlayerTable: View {
             } else {
                 // iPhone portrait: use VStack for top-to-bottom layout
                 VStack(spacing: 4) {
-                    GameBoardMeldRowView(player: player, isHuman: isHumanPlayer, geometry: geometry)
+                    GameBoardMeldRowView(
+                        player: player, 
+                        isHuman: isHumanPlayer, 
+                        geometry: geometry,
+                        game: game,
+                        viewState: viewState
+                    )
                     GamePlayerHandView(
                         player: player,
                         isHuman: isHumanPlayer,
@@ -114,7 +138,13 @@ struct PlayerTable: View {
                         game: game,
                         viewState: viewState
                     )
-                    GameBoardMeldRowView(player: player, isHuman: isHumanPlayer, geometry: geometry)
+                    GameBoardMeldRowView(
+                        player: player, 
+                        isHuman: isHumanPlayer, 
+                        geometry: geometry,
+                        game: game,
+                        viewState: viewState
+                    )
                 }
             } else {
                 // iPhone portrait: use VStack for top-to-bottom layout
@@ -129,7 +159,13 @@ struct PlayerTable: View {
                         game: game,
                         viewState: viewState
                     )
-                    GameBoardMeldRowView(player: player, isHuman: isHumanPlayer, geometry: geometry)
+                    GameBoardMeldRowView(
+                        player: player, 
+                        isHuman: isHumanPlayer, 
+                        geometry: geometry,
+                        game: game,
+                        viewState: viewState
+                    )
                 }
             }
         }

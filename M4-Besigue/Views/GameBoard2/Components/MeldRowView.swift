@@ -5,13 +5,22 @@ struct GameBoardMeldRowView: View {
     let player: Player
     let isHuman: Bool
     let geometry: GeometryProxy
+    let game: Game
+    let viewState: GameBoardViewState2
     
     var body: some View {
         if !player.meldsDeclared.isEmpty {
             HStack(spacing: 2) {  // Tighter spacing for overlay effect
                 ForEach(player.meldsDeclared, id: \.id) { meld in
-                    GameBoardMeldView(meld: meld, player: player, isHuman: isHuman, geometry: geometry)
-                        .offset(y: -2)  // Slight upward offset for overlay effect
+                    GameBoardMeldView(
+                        meld: meld, 
+                        player: player, 
+                        isHuman: isHuman, 
+                        geometry: geometry,
+                        game: game,
+                        viewState: viewState
+                    )
+                    .offset(y: -2)  // Slight upward offset for overlay effect
                 }
             }
             .padding(.horizontal, 4)
@@ -21,11 +30,13 @@ struct GameBoardMeldRowView: View {
 }
 
 /// GameBoardMeldView - Individual meld display
-private struct GameBoardMeldView: View {
+struct GameBoardMeldView: View {
     let meld: Meld
     let player: Player
     let isHuman: Bool
     let geometry: GeometryProxy
+    let game: Game
+    let viewState: GameBoardViewState2
     
     private var meldCardSize: CGSize {
         let isLandscape = geometry.size.width > geometry.size.height
@@ -42,17 +53,25 @@ private struct GameBoardMeldView: View {
     
     var body: some View {
         VStack(spacing: 2) {
-            // Meld cards with better visibility
+            // Meld cards with better visibility and interaction
             HStack(spacing: -3) {  // Reduced overlap for better card visibility
                 ForEach(meld.cardIDs, id: \.self) { cardId in
                     if let card = findCard(with: cardId) {
                         CardView(
                             card: card,
-                            isSelected: false,
-                            isPlayable: false,
-                            showHint: false
-                        ) { }
+                            isSelected: viewState.selectedCards.contains(card),
+                            isPlayable: true,  // Meld cards are playable
+                            showHint: false,
+                            isDragTarget: viewState.draggedOverCard?.id == card.id
+                        ) {
+                            // Single tap - select/deselect for additional melding
+                            handleCardTap(card)
+                        }
                         .frame(width: meldCardSize.width, height: meldCardSize.height)
+                        .onTapGesture(count: 2) {
+                            // Double tap - play the card
+                            handleCardDoubleTap(card)
+                        }
                     }
                 }
             }
@@ -81,6 +100,25 @@ private struct GameBoardMeldView: View {
                     .stroke(Color.white.opacity(0.7), lineWidth: 1.5)
             )
         }
+    }
+    
+    // MARK: - Card Interaction Logic
+    
+    private func handleCardTap(_ card: PlayerCard) {
+        if viewState.selectedCards.contains(card) {
+            // Deselect the card
+            viewState.deselectCard(card)
+        } else {
+            // Select the card for additional melding
+            viewState.selectCard(card)
+        }
+    }
+    
+    private func handleCardDoubleTap(_ card: PlayerCard) {
+        // Play the card from meld area
+        // This would need to be implemented in the game logic
+        print("🎴 Double-tapped meld card: \(card) - attempting to play")
+        // TODO: Implement card playing from meld area
     }
     
     private func meldTypeIcon(for type: MeldType) -> String {
