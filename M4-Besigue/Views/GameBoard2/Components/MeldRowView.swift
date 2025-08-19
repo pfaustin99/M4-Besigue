@@ -38,6 +38,9 @@ struct GameBoardMeldView: View {
     let game: Game
     let viewState: GameBoardViewState2
     
+    // Track which card UUIDs have already been displayed across all melds
+    @State private var displayedCardUUIDs: Set<UUID> = []
+    
     private var meldCardSize: CGSize {
         let isLandscape = geometry.size.width > geometry.size.height
         let isIPad = geometry.size.width >= 768
@@ -56,7 +59,10 @@ struct GameBoardMeldView: View {
             // Meld cards with better visibility and interaction
             HStack(spacing: -3) {  // Reduced overlap for better card visibility
                 ForEach(meld.cardIDs, id: \.self) { cardId in
-                    if let card = findCard(with: cardId) {
+                    // Only show cards that are part of THIS specific meld AND haven't been displayed yet
+                    if let card = player.melded.first(where: { $0.id == cardId }),
+                       !displayedCardUUIDs.contains(cardId) {
+                        displayedCardUUIDs.insert(cardId)
                         CardView(
                             card: card,
                             isSelected: viewState.selectedCards.contains(card),
