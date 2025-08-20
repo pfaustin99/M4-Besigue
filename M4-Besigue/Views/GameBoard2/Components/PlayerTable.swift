@@ -58,29 +58,18 @@ struct PlayerTable: View {
                 )
             }
         case .top:
-            // Top player: name before hand, then melds below (towards trick area)
-            VStack(spacing: isLandscape ? 6 : 4) {
-                // Top player name positioned before their hand
-                HStack(spacing: 8) {
-                    GamePlayerNameView(
-                        player: player,
-                        isCurrentTurn: isCurrentTurn,
-                        allPlayers: game.players
-                    )
-                    .rotationEffect(.degrees(0)) // Keep name upright
-                    
-                    GamePlayerHandView(
-                        player: player,
-                        isHuman: isHumanPlayer,
-                        isCurrentTurn: isCurrentTurn,
-                        angle: 0,
-                        isHorizontal: true,
-                        geometry: geometry,
-                        game: game,
-                        viewState: viewState
-                    )
-                }
-                
+            // Top player: melds below held cards (towards trick area)
+            VStack(spacing: isLandscape ? 6 : 4) { // was 6 : 4
+                GamePlayerHandView(
+                    player: player,
+                    isHuman: isHumanPlayer,
+                    isCurrentTurn: isCurrentTurn,
+                    angle: 0,
+                    isHorizontal: true,
+                    geometry: geometry,
+                    game: game,
+                    viewState: viewState
+                )
                 GameBoardMeldRowView(
                     player: player, 
                     isHuman: isHumanPlayer, 
@@ -213,8 +202,7 @@ struct PlayerTable: View {
         case .bottom: 
             return hasMelds ? CGSize(width: 0, height: -meldSpacing) : CGSize(width: 0, height: -baseSpacing)
         case .top: 
-            // Top player name is now integrated into layout, no floating name needed
-            return CGSize(width: 0, height: 0)
+            return hasMelds ? CGSize(width: 0, height: meldSpacing) : CGSize(width: 0, height: baseSpacing)
         case .right: 
             return hasMelds ? CGSize(width: -meldSpacing, height: 0) : CGSize(width: -baseSpacing, height: 0)
         case .left: 
