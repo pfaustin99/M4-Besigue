@@ -116,8 +116,8 @@ struct CompletedTrickView: View {
                             ? Double(cards.count + 10)  // Winning card on very top
                             : Double(index)) // Normal stacking order: first card on bottom, last card on top
                         .scaleEffect(winningCardPopped && game.completedTrickWinnerIndex == index ? 1.1 : 1.0)
-                        .modifier(ShakeEffect(animatableData: winningCardShaking && game.completedTrickWinnerIndex == index ? 1 : 0))
-                        .rotationEffect(.degrees(winningCardRotating && game.completedTrickWinnerIndex == index ? 360 : 0))
+                    //    .modifier(ShakeEffect(animatableData: winningCardShaking && game.completedTrickWinnerIndex == index ? 1 : 0))
+                   //     .rotationEffect(.degrees(winningCardRotating && game.completedTrickWinnerIndex == index ? 360 : 0))
                         .animation(.easeInOut(duration: TrickAnimationTiming.winningCardRotationDuration), value: winningCardRotating)
                         .animation(.spring(response: 0.6, dampingFraction: 0.6), value: winningCardPopped)
                         .animation(.easeInOut(duration: TrickAnimationTiming.winningCardShakeDuration), value: winningCardShaking)
@@ -213,18 +213,18 @@ struct CompletedTrickView: View {
         }
         
         // Phase 2: Start shaking
-        DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay + 0.6) {
+  /*      DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay + 0.6) {
             guard animationPhase == .popped else { return }
             winningCardShaking = true
             animationPhase = .shaking
         }
         
         // Phase 3: Start rotation
-        DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay + 1.2) {
+       DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay + 1.2) {
             guard animationPhase == .shaking else { return }
             winningCardRotating = true
             animationPhase = .rotating
-        }
+        } */
         
         // Phase 4: Animation complete
         DispatchQueue.main.asyncAfter(deadline: .now() + TrickAnimationTiming.winningCardPopDelay + 2.0) {
