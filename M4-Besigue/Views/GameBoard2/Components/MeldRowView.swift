@@ -10,7 +10,7 @@ struct GameBoardMeldRowView: View {
     
     var body: some View {
         if !player.meldsDeclared.isEmpty {
-            HStack(spacing: 2) {  // Tighter spacing for overlay effect
+            HStack(spacing: 2) {  // Tighter spacing for overlay effect - was 2
                 ForEach(Array(player.meldsDeclared.enumerated()), id: \.element.id) { index, meld in
                     GameBoardMeldView(
                         meld: meld, 
@@ -73,7 +73,7 @@ struct GameBoardMeldView: View {
     var body: some View {
         VStack(spacing: 8) {
             // Meld cards with better visibility and interaction
-            HStack(spacing: -3) {  // Reduced overlap for better card visibility
+            HStack(spacing: meldCardSpacing) {  // Reduced overlap for better card visibility - was -3
                 ForEach(filteredMeldCards, id: \.id) { card in
                     CardView(
                         card: card,
@@ -89,6 +89,46 @@ struct GameBoardMeldView: View {
                     .onTapGesture(count: 2) {
                         // Double tap - play the card
                         handleCardDoubleTap(card)
+                    }
+                    // Add drag and drop for human player meld reordering
+                    .if(isHuman) { view in
+                        view
+                            .onDrag {
+                                // Track drag start
+                                viewState.setDragging(true)
+                                // Create drag item with card ID for reordering
+                                return NSItemProvider(object: card.id.uuidString as NSString)
+                            } preview: {
+                                // Show a preview of the card being dragged
+                                CardView(
+                                    card: card,
+                                    isSelected: false,
+                                    isPlayable: true,
+                                    showHint: false,
+                                    isDragTarget: false
+                                ) {
+                                    // Empty action for preview
+                                }
+                                .scaleEffect(0.8)
+                                .opacity(0.8)
+                            }
+                            .onDrop(of: [.text], delegate: MeldCardDropDelegate(
+                                card: card,
+                                player: player,
+                                onReorder: { newOrder in
+                                    handleMeldReorder(newOrder)
+                                },
+                                onDragEnter: { card in
+                                    viewState.setDraggedOverCard(card)
+                                },
+                                onDragExit: { _ in
+                                    viewState.clearDraggedOverCard()
+                                },
+                                onDragEnd: {
+                                    viewState.setDragging(false)
+                                    viewState.clearDraggedOverCard()
+                                }
+                            ))
                     }
                 }
             }
@@ -153,6 +193,12 @@ struct GameBoardMeldView: View {
         }
     }
     
+    private func handleMeldReorder(_ newOrder: [PlayerCard]) {
+        // Update the player's melded cards order
+        player.melded = newOrder
+        print("🔄 Meld reordered: \(newOrder.map { $0.displayName })")
+    }
+    
     private func meldTypeIcon(for type: MeldType) -> String {
         switch type {
         case .royalMarriage: return "crown.fill"
@@ -170,4 +216,78 @@ struct GameBoardMeldView: View {
     private func findCard(with id: UUID) -> PlayerCard? {
         return player.cardByID(id)
     }
-} 
+    
+    private var meldCardSpacing: CGFloat {
+        geometry.size.width < 768 ? -15 : 30  // More overlap on iPhone
+    }
+}
+
+// MARK: - Drag and Drop Support
+
+/// MeldCardDropDelegate - Handles drag and drop for meld card reordering
+struct MeldCardDropDelegate: DropDelegate {
+    let card: PlayerCard
+    let player: Player
+    let onReorder: ([PlayerCard]) -> Void
+    let onDragEnter: (PlayerCard) -> Void
+    let onDragExit: (PlayerCard) -> Void
+    let onDragEnd: () -> Void
+    
+    func performDrop(info: DropInfo) -> Bool {
+        guard let itemProvider = info.itemProviders(for: [.text]).first else { return false }
+        
+        itemProvider.loadObject(ofClass: NSString.self) { string, error in
+            guard let uuidString = string as? String,
+                  let uuid = UUID(uuidString: uuidString),
+                  let draggedCard = player.cardByID(uuid) else { return }
+            
+            DispatchQueue.main.async {
+                reorderCards(draggedCard: draggedCard, targetCard: card)
+            }
+        }
+        
+        return true
+    }
+    
+    func dropEntered(info: DropInfo) {
+        onDragEnter(card)
+    }
+    
+    func dropExited(info: DropInfo) {
+        onDragExit(card)
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        return DropProposal(operation: .move)
+    }
+    
+    private func reorderCards(draggedCard: PlayerCard, targetCard: PlayerCard) {
+        var newOrder = player.melded
+        
+        // Find indices
+        guard let draggedIndex = newOrder.firstIndex(where: { $0.id == draggedCard.id }),
+              let targetIndex = newOrder.firstIndex(where: { $0.id == targetCard.id }) else { return }
+        
+        // Remove dragged card
+        newOrder.remove(at: draggedIndex)
+        
+        // Insert at target position
+        newOrder.insert(draggedCard, at: targetIndex)
+        
+        // Call the reorder callback
+        onReorder(newOrder)
+    }
+}
+
+// MARK: - View Extension for Conditional Modifiers
+
+extension View {
+    @ViewBuilder
+    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
+    }
+}
