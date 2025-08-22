@@ -185,17 +185,17 @@ struct PlayerTable: View {
         let isHuman = isHumanPlayer
         let isLandscape = geometry.size.width > geometry.size.height
         
-        // Base spacing adjusted for device orientation
+        // Base spacing for positioning names over the cards
         let baseSpacing: CGFloat = if isHuman {
-            isLandscape ? 140 : 120  // iPad landscape needs more space
+            isLandscape ? 20 : 15  // Reduced spacing to position over cards
         } else {
-            isLandscape ? 100 : 80   // AI cards smaller but need visibility
+            isLandscape ? 15 : 10   // Reduced spacing for AI players
         }
         
         let meldSpacing: CGFloat = if isHuman {
-            isLandscape ? 140 : 120  // Extra space for human melds - was 190 : 170
+            isLandscape ? 20 : 15  // Reduced spacing to position over cards
         } else {
-            isLandscape ? 150 : 130  // Extra space for AI melds
+            isLandscape ? 15 : 10   // Reduced spacing for AI players
         }
         
         switch position {
@@ -280,6 +280,7 @@ struct SimplePlayerNameView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(namePlateBorderColor, lineWidth: 2)
             )
+            .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4) // Enhanced shadow for floating names
         }
     }
 }

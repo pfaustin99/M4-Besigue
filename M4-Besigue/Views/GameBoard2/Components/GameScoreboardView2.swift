@@ -107,7 +107,7 @@ struct PlayerScoresGridView: View {
 // MARK: - Player Score Card View
 struct PlayerScoreCardView: View {
     let playerNumber: Int
-    let player: Player
+    @ObservedObject var player: Player  // Make sure we observe the player
     let isCurrentTurn: Bool
     let allPlayers: [Player]
     let scoreFont: Font
@@ -160,6 +160,13 @@ struct PlayerScoreCardView: View {
         isCurrentTurn ? .white : .white
     }
     
+    // MARK: - Player Display Name
+    private var displayName: String {
+        let defaultName = "Player \(playerNumber)"
+        // If the player's name is different from the default "Player #", use the real name
+        return player.name != defaultName ? player.name : defaultName
+    }
+    
     // MARK: - Flexible Circle Sizing
     private var circleSize: CGSize {
         let digitCount = String(player.score).count
@@ -180,7 +187,7 @@ struct PlayerScoreCardView: View {
     var body: some View {
         HStack(spacing: 8) {
             // Player name and number
-            Text("Player \(playerNumber)(\(player.name)):")
+            Text("\(displayName):")
                 .font(scoreFont)
                 .foregroundColor(namePlateTextColor)
                 .lineLimit(1)
@@ -217,7 +224,11 @@ struct PlayerScoreCardView: View {
         .animation(.easeInOut(duration: 0.3), value: scoreCircleColor)
         .animation(.easeInOut(duration: 0.3), value: isLeading)
         .animation(.easeInOut(duration: 0.3), value: isCurrentTurn)
+        .onAppear {
+            print("🎯 Scoreboard: \(displayName) score: \(player.score)")
+        }
+        .onChange(of: player.score) { _, newScore in
+            print("🔄 Scoreboard: \(displayName) score changed to: \(newScore)")
+        }
     }
-}
-
-// PlayerScoreCardView removed - scores now displayed next to player names 
+} 
