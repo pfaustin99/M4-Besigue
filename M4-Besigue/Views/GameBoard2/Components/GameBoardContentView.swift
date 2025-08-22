@@ -81,8 +81,10 @@ struct GameBoardContentView: View {
         let isLandscape = geometry.size.width > geometry.size.height
         let baseSpacing: CGFloat = isLandscape ? 120 : 150
         
-        // Add extra space if top player has melds to prevent overlap
-        if let topPlayer = game.players.first(where: { $0.id == game.players[2].id }) {
+        // Safely check if there are enough players and if top player has melds
+        // Top player is typically at index 2 (3rd player) in a 4-player game
+        if game.players.count > 2 {
+            let topPlayer = game.players[2]
             let hasMelds = !topPlayer.meldsDeclared.isEmpty
             return hasMelds ? baseSpacing + 40 : baseSpacing
         }
