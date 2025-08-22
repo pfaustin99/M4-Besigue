@@ -38,7 +38,8 @@ struct PlayerTable: View {
         switch position {
         case .bottom:
             // Bottom player: melds above held cards (towards trick area)
-            VStack(spacing: isLandscape ? 3 : 2) {  // 2-3px spacing between melds and held cards
+            // Use dynamic spacing that accounts for button heights and prevents overlap
+            VStack(spacing: getMeldSpacing(for: position, isLandscape: isLandscape)) {
                 GameBoardMeldRowView(
                     player: player, 
                     isHuman: isHumanPlayer, 
@@ -59,7 +60,7 @@ struct PlayerTable: View {
             }
         case .top:
             // Top player: melds below held cards (towards trick area)
-            VStack(spacing: isLandscape ? 3 : 2) {  // 2-3px spacing between held cards and melds
+            VStack(spacing: getMeldSpacing(for: position, isLandscape: isLandscape)) {
                 GamePlayerHandView(
                     player: player,
                     isHuman: isHumanPlayer,
@@ -80,7 +81,7 @@ struct PlayerTable: View {
             }
         case .right:
             // Right player: melds left of held cards (towards trick area)
-            HStack(spacing: isLandscape ? 3 : 2) {  // 2-3px spacing between melds and held cards
+            HStack(spacing: getMeldSpacing(for: position, isLandscape: isLandscape)) {
                 GameBoardMeldRowView(
                     player: player, 
                     isHuman: isHumanPlayer, 
@@ -101,7 +102,7 @@ struct PlayerTable: View {
             }
         case .left:
             // Left player: melds right of held cards (towards trick area)
-            HStack(spacing: isLandscape ? 3 : 2) {  // 2-3px spacing between held cards and melds
+            HStack(spacing: getMeldSpacing(for: position, isLandscape: isLandscape)) {
                 GamePlayerHandView(
                     player: player,
                     isHuman: isHumanPlayer,
@@ -121,6 +122,41 @@ struct PlayerTable: View {
                 )
             }
         }
+    }
+    
+    // MARK: - Dynamic Meld Spacing
+    
+    /// Calculates appropriate spacing between melds and held cards based on position and device
+    private func getMeldSpacing(for position: TablePosition, isLandscape: Bool) -> CGFloat {
+        let baseSpacing: CGFloat = isLandscape ? 3 : 2
+        
+        // For bottom player (human), add extra spacing to prevent button overlap
+        if position == .bottom && isHumanPlayer {
+            let hasMelds = !player.meldsDeclared.isEmpty
+            let meldCount = player.meldsDeclared.count
+            
+            if hasMelds {
+                // Calculate required spacing to prevent overlap with buttons
+                let buttonHeight: CGFloat = isLandscape ? 50 : 60
+                let meldHeight: CGFloat = isLandscape ? 60 : 80
+                let safetyMargin: CGFloat = 15
+                
+                // Ensure there's enough space between melds and held cards
+                let requiredSpacing = max(baseSpacing, safetyMargin)
+                
+                // Add extra bottom margin if melds would push held cards too close to buttons
+                let totalMeldHeight = CGFloat(meldCount) * meldHeight
+                let availableSpace = geometry.size.height * 0.3 // Use 30% of screen height for bottom area
+                
+                if totalMeldHeight > availableSpace * 0.4 { // If melds take more than 40% of available space
+                    return requiredSpacing + 10 // Add extra spacing
+                }
+                
+                return requiredSpacing
+            }
+        }
+        
+        return baseSpacing
     }
 
     private func rotation(for position: TablePosition) -> Angle {

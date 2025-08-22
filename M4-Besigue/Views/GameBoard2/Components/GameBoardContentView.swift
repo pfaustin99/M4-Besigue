@@ -22,7 +22,8 @@ struct GameBoardContentView: View {
                 geometry: geometry
             )
             
-            Spacer(minLength: 150)  // Push center section down with minimum 200 points
+            // Dynamic spacing that accounts for meld heights
+            Spacer(minLength: getDynamicTopSpacing())
             
             // Center section: Main game area
             GameBoardCenterSection(
@@ -32,7 +33,8 @@ struct GameBoardContentView: View {
                 geometry: geometry
             )
             
-            Spacer()  // Push center section up from bottom
+            // Dynamic spacing that accounts for meld heights and prevents button overlap
+            Spacer(minLength: getDynamicBottomSpacing())
             
             // Bottom section: Player hand and actions
             GameBoardBottomSection(
@@ -70,6 +72,47 @@ struct GameBoardContentView: View {
                 geometry: geometry
             )
         )
+    }
+    
+    // MARK: - Dynamic Spacing Calculations
+    
+    /// Calculates dynamic top spacing based on device and player count
+    private func getDynamicTopSpacing() -> CGFloat {
+        let isLandscape = geometry.size.width > geometry.size.height
+        let baseSpacing: CGFloat = isLandscape ? 120 : 150
+        
+        // Add extra space if top player has melds to prevent overlap
+        if let topPlayer = game.players.first(where: { $0.id == game.players[2].id }) {
+            let hasMelds = !topPlayer.meldsDeclared.isEmpty
+            return hasMelds ? baseSpacing + 40 : baseSpacing
+        }
+        
+        return baseSpacing
+    }
+    
+    /// Calculates dynamic bottom spacing to prevent melds from overlapping buttons
+    private func getDynamicBottomSpacing() -> CGFloat {
+        let isLandscape = geometry.size.width > geometry.size.height
+        let baseSpacing: CGFloat = isLandscape ? 80 : 100
+        
+        // Get human player to check for melds
+        if let humanPlayer = game.players.first(where: { $0.type == .human }) {
+            let hasMelds = !humanPlayer.meldsDeclared.isEmpty
+            let meldCount = humanPlayer.meldsDeclared.count
+            
+            // Calculate required spacing based on meld count and size
+            let meldHeight: CGFloat = isLandscape ? 60 : 80  // Approximate meld row height
+            let meldSpacing: CGFloat = isLandscape ? 3 : 2   // Spacing between melds and held cards
+            let buttonHeight: CGFloat = isLandscape ? 50 : 60 // Approximate button height
+            let safetyMargin: CGFloat = 20 // Extra space to prevent overlap
+            
+            if hasMelds {
+                let totalMeldHeight = CGFloat(meldCount) * meldHeight + meldSpacing + buttonHeight + safetyMargin
+                return max(baseSpacing, totalMeldHeight)
+            }
+        }
+        
+        return baseSpacing
     }
 }
 

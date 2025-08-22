@@ -36,6 +36,41 @@ struct GameBoardBottomSection: View {
         }
         .padding(.horizontal)
         .padding(.bottom, 8)
+        .background(
+            // Safety background to ensure buttons are always visible
+            Rectangle()
+                .fill(Color.clear)
+                .frame(height: getRequiredButtonHeight())
+                .clipped()
+        )
+    }
+    
+    // MARK: - Button Height Calculation
+    
+    /// Calculates the required height for the button area to prevent overlap
+    private func getRequiredButtonHeight() -> CGFloat {
+        let isLandscape = geometry.size.width > geometry.size.height
+        let baseButtonHeight: CGFloat = isLandscape ? 50 : 60
+        let padding: CGFloat = 16
+        let spacing: CGFloat = 2
+        
+        // Check if human player has melds that might overlap
+        if let humanPlayer = game.players.first(where: { $0.type == .human }) {
+            let hasMelds = !humanPlayer.meldsDeclared.isEmpty
+            let meldCount = humanPlayer.meldsDeclared.count
+            
+            if hasMelds {
+                // Add extra height to ensure buttons are never overlapped
+                let meldHeight: CGFloat = isLandscape ? 60 : 80
+                let safetyMargin: CGFloat = 20
+                let totalMeldHeight = CGFloat(meldCount) * meldHeight
+                
+                // Return the larger of base height or meld height + safety margin
+                return max(baseButtonHeight + padding + spacing, totalMeldHeight + safetyMargin)
+            }
+        }
+        
+        return baseButtonHeight + padding + spacing
     }
 }
 
