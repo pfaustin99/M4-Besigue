@@ -76,16 +76,26 @@ struct PlayerScoresGridView: View {
     var body: some View {
         LazyVGrid(columns: gridColumns, spacing: 8) {
             ForEach(Array(game.players.enumerated()), id: \.element.id) { index, player in
+                let isCurrentTurn = index == game.currentPlayerIndex
                 PlayerScoreCardView(
                     playerNumber: index + 1,
                     player: player,
-                    isCurrentTurn: index == game.currentPlayerIndex,
+                    isCurrentTurn: isCurrentTurn,
                     allPlayers: game.players,
                     scoreFont: scoreFont
                 )
+                .onAppear {
+                    print("🎯 Scoreboard Grid: Player \(index + 1) (\(player.name)) - isCurrentTurn: \(isCurrentTurn), currentPlayerIndex: \(game.currentPlayerIndex)")
+                }
             }
         }
         .padding(.horizontal, 16)
+        .onAppear {
+            print("🎯 Scoreboard Grid: Total players: \(game.players.count), Current player index: \(game.currentPlayerIndex)")
+        }
+        .onChange(of: game.currentPlayerIndex) { _, newIndex in
+            print("🔄 Scoreboard Grid: Current player changed to index: \(newIndex)")
+        }
     }
     
     // MARK: - Grid Layout
@@ -226,9 +236,14 @@ struct PlayerScoreCardView: View {
         .animation(.easeInOut(duration: 0.3), value: isCurrentTurn)
         .onAppear {
             print("🎯 Scoreboard: \(displayName) score: \(player.score)")
+            print("🎯 Scoreboard: \(displayName) isCurrentTurn: \(isCurrentTurn), namePlateColor: \(namePlateColor), namePlateBorderColor: \(namePlateBorderColor)")
+            print("🎯 Scoreboard: \(displayName) playerRanking: \(playerRanking), scoreCircleColor: \(scoreCircleColor)")
         }
         .onChange(of: player.score) { _, newScore in
             print("🔄 Scoreboard: \(displayName) score changed to: \(newScore)")
+        }
+        .onChange(of: isCurrentTurn) { _, newTurn in
+            print("🔄 Scoreboard: \(displayName) turn changed to: \(newTurn)")
         }
     }
 } 
