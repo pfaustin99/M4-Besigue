@@ -47,8 +47,8 @@ struct GamePlayersLayoutView: View {
             // iPad (Landscape): Wide spread horizontally, compact vertically
             switch position {
             case .bottom:
-                // Position bottom player at the bottom of their allocated space
-                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.8)
+                // Position bottom player higher within their allocated space
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.7)
             case .top:
                 // Position top player at the top of their allocated space
                 return CGPoint(x: safeWidth / 2, y: safeHeight * 0.2)
@@ -61,8 +61,8 @@ struct GamePlayersLayoutView: View {
             // iPhone (Portrait): Tall spread vertically, compact horizontally
             switch position {
             case .bottom:
-                // Position bottom player at the bottom of their allocated space
-                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.85)
+                // Position bottom player higher within their allocated space
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.75)
             case .top:
                 // Position top player at the top of their allocated space
                 return CGPoint(x: safeWidth / 2, y: safeHeight * 0.15)

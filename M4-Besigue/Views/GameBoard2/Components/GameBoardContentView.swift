@@ -33,7 +33,7 @@ struct GameBoardContentView: View {
                 geometry: geometry
             )
             
-            // Player hands layout - positioned above bottom section to respect spacing
+            // Player hands layout - positioned closer to center to prevent button overlap
             GamePlayersLayoutView(
                 game: game,
                 settings: settings,
@@ -42,8 +42,8 @@ struct GameBoardContentView: View {
             )
             .frame(height: getPlayerLayoutHeight())
             
-            // Dynamic spacing that accounts for meld heights and prevents button overlap
-            Spacer(minLength: getDynamicBottomSpacing())
+            // Minimal spacing to ensure separation from bottom buttons
+            Spacer(minLength: 20)
             
             // Bottom section: Player hand and actions
             GameBoardBottomSection(
@@ -120,7 +120,7 @@ struct GameBoardContentView: View {
     /// Calculates the height needed for the player layout area
     private func getPlayerLayoutHeight() -> CGFloat {
         let isLandscape = geometry.size.width > geometry.size.height
-        let baseHeight: CGFloat = isLandscape ? 200 : 250
+        let baseHeight: CGFloat = isLandscape ? 150 : 180  // Reduced from 200/250
         
         // Get human player to check for melds
         if let humanPlayer = game.players.first(where: { $0.type == .human }) {
@@ -129,10 +129,10 @@ struct GameBoardContentView: View {
             
             if hasMelds {
                 // Calculate required height for melds + held cards + spacing
-                let meldHeight: CGFloat = isLandscape ? 60 : 80
-                let heldCardHeight: CGFloat = isLandscape ? 80 : 100
-                let spacing: CGFloat = isLandscape ? 20 : 30
-                let safetyMargin: CGFloat = 40
+                let meldHeight: CGFloat = isLandscape ? 50 : 60  // Reduced from 60/80
+                let heldCardHeight: CGFloat = isLandscape ? 60 : 70  // Reduced from 80/100
+                let spacing: CGFloat = isLandscape ? 15 : 20  // Reduced from 20/30
+                let safetyMargin: CGFloat = 25  // Reduced from 40
                 
                 let totalHeight = CGFloat(meldCount) * meldHeight + heldCardHeight + spacing + safetyMargin
                 return max(baseHeight, totalHeight)
