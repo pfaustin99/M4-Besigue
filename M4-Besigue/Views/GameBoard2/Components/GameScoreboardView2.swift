@@ -79,6 +79,8 @@ struct PlayerScoresGridView: View {
                 PlayerScoreCardView(
                     playerNumber: index + 1,
                     player: player,
+                    isCurrentTurn: index == game.currentPlayerIndex,
+                    allPlayers: game.players,
                     scoreFont: scoreFont
                 )
             }
@@ -106,31 +108,115 @@ struct PlayerScoresGridView: View {
 struct PlayerScoreCardView: View {
     let playerNumber: Int
     let player: Player
+    let isCurrentTurn: Bool
+    let allPlayers: [Player]
     let scoreFont: Font
     
+    // MARK: - Device Detection
+    private var isIPad: Bool {
+        UIScreen.main.bounds.width >= 768
+    }
+    
+    // MARK: - Computed Properties
+    private var playerRanking: Int {
+        let sortedPlayers = allPlayers.sorted { $0.score > $1.score }
+        let ranking = sortedPlayers.firstIndex(where: { $0.id == player.id }) ?? 0
+        return ranking
+    }
+    
+    private var scoreCircleColor: Color {
+        // Check if all players have score <= 0 (except dog/last place)
+        let allScoresZeroOrNegative = allPlayers.allSatisfy { $0.score <= 0 }
+        
+        if allScoresZeroOrNegative {
+            // If all scores are 0 or negative, use black background for all
+            return Color.black
+        } else {
+            // Normal ranking colors
+            switch playerRanking {
+            case 0: return Color(hex: "F1B517") // Regal Gold - 1st place
+            case 1: return Color(hex: "016A16") // Forest Green - 2nd place
+            case 2: return Color(hex: "00209F") // Deep Navy Blue - 3rd place
+            case 3: return Color(hex: "D21034") // Royal Crimson - 4th place
+            default: return Color.black // Default black background
+            }
+        }
+    }
+    
+    private var isLeading: Bool {
+        return playerRanking == 0
+    }
+    
+    // MARK: - Turn Highlighting
+    private var namePlateColor: Color {
+        isCurrentTurn ? Color(hex: "00209F") : Color.black.opacity(0.7)
+    }
+    
+    private var namePlateBorderColor: Color {
+        isCurrentTurn ? Color(hex: "F1B517") : Color(hex: "F1B517").opacity(0.6)
+    }
+    
+    private var namePlateTextColor: Color {
+        isCurrentTurn ? .white : .white
+    }
+    
+    // MARK: - Flexible Circle Sizing
+    private var circleSize: CGSize {
+        let digitCount = String(player.score).count
+        let baseHeight: CGFloat = isIPad ? 32 : 28
+        let baseWidth: CGFloat = isIPad ? 32 : 28
+        
+        // Calculate width needed for digits + padding
+        let digitWidth: CGFloat = isIPad ? 14 : 12 // Approximate width per digit
+        let padding: CGFloat = isIPad ? 16 : 14
+        let requiredWidth = CGFloat(digitCount) * digitWidth + padding
+        
+        return CGSize(
+            width: max(requiredWidth, baseWidth),
+            height: baseHeight
+        )
+    }
+    
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
+            // Player name and number
             Text("Player \(playerNumber)(\(player.name)):")
                 .font(scoreFont)
-                .foregroundColor(.white)
+                .foregroundColor(namePlateTextColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             
-            Text("[\(player.score)]")
-                .font(scoreFont)
-                .foregroundColor(.white)
-                .fontWeight(.bold)
+            // Score circle
+            ZStack {
+                RoundedRectangle(cornerRadius: circleSize.height / 2)
+                    .fill(scoreCircleColor)
+                    .frame(width: circleSize.width, height: circleSize.height)
+                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                
+                Text("\(player.score)")
+                    .font(scoreFont)
+                    .fontWeight(.bold)
+                    .foregroundColor(scoreCircleColor == Color(hex: "F1B517") ? .black : .white)
+            }
+            .scaleEffect(isLeading ? 1.1 : 1.0)
+            .overlay(
+                RoundedRectangle(cornerRadius: circleSize.height / 2)
+                    .stroke(isLeading ? Color(hex: "F1B517") : Color.clear, lineWidth: 2)
+            )
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color.black.opacity(0.7))
+                .fill(namePlateColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(hex: "F1B517").opacity(0.6), lineWidth: 1)
+                .stroke(namePlateBorderColor, lineWidth: 1.5)
         )
+        .animation(.easeInOut(duration: 0.3), value: scoreCircleColor)
+        .animation(.easeInOut(duration: 0.3), value: isLeading)
+        .animation(.easeInOut(duration: 0.3), value: isCurrentTurn)
     }
 }
 
