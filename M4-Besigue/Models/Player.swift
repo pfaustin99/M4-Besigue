@@ -32,7 +32,9 @@ class Player: ObservableObject, Identifiable {
     @Published var isCurrentPlayer: Bool = false
     
     init(name: String, type: PlayerType) {
-        self.name = name
+        // Enforce 12-character limit for consistent layouts
+        let trimmedName = String(name.prefix(12))
+        self.name = trimmedName
         self.type = type
     }
     

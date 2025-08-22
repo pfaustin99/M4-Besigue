@@ -21,7 +21,7 @@ struct PlayerTable: View {
                 .rotationEffect(rotation(for: position))
             
             // Floating player name - always upright, positioned outside rotation
-            GamePlayerNameView(
+            SimplePlayerNameView(
                 player: player,
                 isCurrentTurn: isCurrentTurn,
                 allPlayers: game.players
@@ -207,6 +207,79 @@ struct PlayerTable: View {
             return hasMelds ? CGSize(width: -meldSpacing, height: 0) : CGSize(width: -baseSpacing, height: 0)
         case .left: 
             return hasMelds ? CGSize(width: meldSpacing, height: 0) : CGSize(width: baseSpacing, height: 0)
+        }
+    }
+}
+
+// MARK: - Simple Player Name View
+/// SimplePlayerNameView - Simplified view for displaying "Player #" with turn highlighting
+struct SimplePlayerNameView: View {
+    @ObservedObject var player: Player
+    let isCurrentTurn: Bool
+    let allPlayers: [Player]
+    
+    // MARK: - Device Detection
+    private var isIPad: Bool {
+        UIScreen.main.bounds.width >= 768
+    }
+    
+    // MARK: - Responsive Font Sizing
+    private var playerNameFont: Font {
+        isIPad ? .body : .callout
+    }
+    
+    // MARK: - Active Turn Styling
+    private var namePlateColor: Color {
+        isCurrentTurn ? Color(hex: "00209F") : Color.white
+    }
+    
+    private var namePlateBorderColor: Color {
+        isCurrentTurn ? Color(hex: "F1B517") : Color(hex: "F1B517")
+    }
+    
+    private var namePlateTextColor: Color {
+        isCurrentTurn ? .white : .black
+    }
+    
+    // Get player number (1-based index)
+    private var playerNumber: Int {
+        if let index = allPlayers.firstIndex(where: { $0.id == player.id }) {
+            return index + 1
+        }
+        return 1
+    }
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            // Player name plate
+            HStack(spacing: 4) {
+                Text("Player \(playerNumber)")
+                    .font(playerNameFont)
+                    .fontWeight(.semibold)
+                    .foregroundColor(namePlateTextColor)
+                
+                if isCurrentTurn {
+                    Image(systemName: "person.fill")
+                        .foregroundColor(.yellow)
+                        .font(.caption2)
+                }
+                
+                if player.type == .ai {
+                    Image(systemName: "cpu")
+                        .foregroundColor(.blue)
+                        .font(.caption2)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(namePlateColor)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(namePlateBorderColor, lineWidth: 2)
+            )
         }
     }
 }
