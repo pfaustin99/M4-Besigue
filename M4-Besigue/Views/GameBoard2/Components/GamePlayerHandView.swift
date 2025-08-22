@@ -13,22 +13,8 @@ struct GamePlayerHandView: View {
     
     // MARK: - Responsive Card Sizing
     private var humanCardSize: CGSize {
-        let hasMelds = !player.meldsDeclared.isEmpty
-        let isLandscape = geometry.size.width > geometry.size.height
-        
-        if hasMelds {
-            // Reduce human card size by 25% when they have melds to make room
-            if isLandscape {
-                // iPad landscape: wider left-to-right, reduce card width
-                return geometry.size.width < 768 ? CGSize(width: 37, height: 56) : CGSize(width: 75, height: 112)
-            } else {
-                // iPhone portrait: taller top-to-bottom, reduce card height
-                return geometry.size.width < 768 ? CGSize(width: 37, height: 56) : CGSize(width: 75, height: 112)
-            }
-        } else {
-            // Normal human card sizes
-            return geometry.size.width < 768 ? CGSize(width: 50, height: 75) : CGSize(width: 100, height: 150)
-        }
+        // Fixed size for human held cards - only meld view gets reduced
+        return geometry.size.width < 768 ? CGSize(width: 50, height: 75) : CGSize(width: 100, height: 150)
     }
     
     private var aiCardSize: CGSize {

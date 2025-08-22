@@ -157,22 +157,8 @@ struct CompletedTrickView: View {
     
     // Use larger card sizes for trick area - more prominent and easier to see
     private var humanCardSize: CGSize {
-        let hasMelds = !game.currentPlayer.meldsDeclared.isEmpty
-        let isLandscape = geometry.size.width > geometry.size.height
-        
-        if hasMelds {
-            // Reduce human card size by 25% when they have melds to make room
-            if isLandscape {
-                // iPad landscape: wider left-to-right, reduce card width
-                return geometry.size.width < 768 ? CGSize(width: 52, height: 79) : CGSize(width: 105, height: 158)
-            } else {
-                // iPhone portrait: taller top-to-bottom, reduce card height
-                return geometry.size.width < 768 ? CGSize(width: 52, height: 79) : CGSize(width: 105, height: 158)
-            }
-        } else {
-            // Normal human card sizes
-            return geometry.size.width < 768 ? CGSize(width: 70, height: 105) : CGSize(width: 140, height: 210)
-        }
+        // Fixed size for human cards in center section - only meld view gets reduced
+        return geometry.size.width < 768 ? CGSize(width: 70, height: 105) : CGSize(width: 140, height: 210)
     }
     
     // Trick area cards are larger than human hand cards for better visibility
