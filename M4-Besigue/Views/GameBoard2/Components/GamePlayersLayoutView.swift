@@ -33,6 +33,7 @@ struct GamePlayersLayoutView: View {
             }
         }
         .frame(width: max(0, geometry.size.width), height: max(0, geometry.size.height))
+        .clipped() // Ensure content doesn't overflow the frame
     }
 
     private func anchorPoint(for position: TablePosition, in size: CGSize) -> CGPoint {
@@ -46,25 +47,29 @@ struct GamePlayersLayoutView: View {
             // iPad (Landscape): Wide spread horizontally, compact vertically
             switch position {
             case .bottom:
-                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.85 - 50)
+                // Position bottom player at the bottom of their allocated space
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.8)
             case .top:
-                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.35 - 50) // y: safeHeight was 0.15, 0.25
+                // Position top player at the top of their allocated space
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.2)
             case .left:
-                return CGPoint(x: safeWidth * 0.15, y: safeHeight / 2 - 50)
+                return CGPoint(x: safeWidth * 0.15, y: safeHeight / 2)
             case .right:
-                return CGPoint(x: safeWidth * 0.85, y: safeHeight / 2 - 50)
+                return CGPoint(x: safeWidth * 0.85, y: safeHeight / 2)
             }
         } else {
             // iPhone (Portrait): Tall spread vertically, compact horizontally
             switch position {
             case .bottom:
-                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.9 - 50)
+                // Position bottom player at the bottom of their allocated space
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.85)
             case .top:
-                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.35 - 50) // was 0.1, 0.2
+                // Position top player at the top of their allocated space
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.15)
             case .left:
-                return CGPoint(x: safeWidth * 0.2, y: safeHeight / 2 - 50)
+                return CGPoint(x: safeWidth * 0.2, y: safeHeight / 2)
             case .right:
-                return CGPoint(x: safeWidth * 0.8, y: safeHeight / 2 - 50)
+                return CGPoint(x: safeWidth * 0.8, y: safeHeight / 2)
             }
         }
     }
