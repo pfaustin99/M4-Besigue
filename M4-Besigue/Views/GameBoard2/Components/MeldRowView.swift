@@ -194,9 +194,22 @@ struct GameBoardMeldView: View {
     }
     
     private func handleMeldReorder(_ newOrder: [PlayerCard]) {
-        // Update the player's melded cards order
-        player.melded = newOrder
-        print("🔄 Meld reordered: \(newOrder.map { $0.displayName })")
+        // Find the meld that contains these cards and update its cardIDs order
+        if let meldIndex = player.meldsDeclared.firstIndex(where: { meld in
+            meld.cardIDs.contains { cardId in
+                newOrder.contains { $0.id == cardId }
+            }
+        }) {
+            // Update the meld's cardIDs to match the new order
+            let newCardIDs = newOrder.map { $0.id }
+            player.meldsDeclared[meldIndex].cardIDs = newCardIDs
+            
+            // Also update player.melded to match the new order
+            player.melded = newOrder
+            
+            print("🔄 Meld reordered: \(newOrder.map { $0.displayName })")
+            print("🔄 Updated meld cardIDs: \(newCardIDs)")
+        }
     }
     
     private func meldTypeIcon(for type: MeldType) -> String {

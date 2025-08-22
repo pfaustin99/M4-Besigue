@@ -269,6 +269,7 @@ class Player: ObservableObject, Identifiable {
         held = newOrder
     }
     
+    
     // Reset player for new game
     func reset() {
         held.removeAll()

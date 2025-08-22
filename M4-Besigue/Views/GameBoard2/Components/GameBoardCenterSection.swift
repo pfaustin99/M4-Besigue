@@ -118,7 +118,7 @@ struct CompletedTrickView: View {
                         .scaleEffect(winningCardPopped && game.completedTrickWinnerIndex == index ? 1.1 : 1.0)
                     //    .modifier(ShakeEffect(animatableData: winningCardShaking && game.completedTrickWinnerIndex == index ? 1 : 0))
                    //     .rotationEffect(.degrees(winningCardRotating && game.completedTrickWinnerIndex == index ? 360 : 0))
-                        .animation(.easeInOut(duration: TrickAnimationTiming.winningCardRotationDuration), value: winningCardRotating)
+                   //     .animation(.easeInOut(duration: TrickAnimationTiming.winningCardRotationDuration), value: winningCardRotating)
                         .animation(.spring(response: 0.6, dampingFraction: 0.6), value: winningCardPopped)
                         .animation(.easeInOut(duration: TrickAnimationTiming.winningCardShakeDuration), value: winningCardShaking)
                 }

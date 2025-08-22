@@ -48,7 +48,7 @@ struct GamePlayersLayoutView: View {
             case .bottom:
                 return CGPoint(x: safeWidth / 2, y: safeHeight * 0.85 - 50)
             case .top:
-                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.25 - 50) // y: safeHeight was 0.15
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.35 - 50) // y: safeHeight was 0.15, 0.25
             case .left:
                 return CGPoint(x: safeWidth * 0.15, y: safeHeight / 2 - 50)
             case .right:
@@ -60,7 +60,7 @@ struct GamePlayersLayoutView: View {
             case .bottom:
                 return CGPoint(x: safeWidth / 2, y: safeHeight * 0.9 - 50)
             case .top:
-                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.2 - 50) // was 0.1
+                return CGPoint(x: safeWidth / 2, y: safeHeight * 0.35 - 50) // was 0.1, 0.2
             case .left:
                 return CGPoint(x: safeWidth * 0.2, y: safeHeight / 2 - 50)
             case .right:

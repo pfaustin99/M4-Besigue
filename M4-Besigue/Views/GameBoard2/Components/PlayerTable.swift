@@ -59,7 +59,7 @@ struct PlayerTable: View {
             }
         case .top:
             // Top player: melds below held cards (towards trick area)
-            VStack(spacing: isLandscape ? 6 : 4) { // was 6 : 4
+            VStack(spacing: isLandscape ? 6 : 4) {
                 GamePlayerHandView(
                     player: player,
                     isHuman: isHumanPlayer,
@@ -193,7 +193,7 @@ struct PlayerTable: View {
         }
         
         let meldSpacing: CGFloat = if isHuman {
-            isLandscape ? 190 : 170  // Extra space for human melds
+            isLandscape ? 140 : 120  // Extra space for human melds - was 190 : 170
         } else {
             isLandscape ? 150 : 130  // Extra space for AI melds
         }
